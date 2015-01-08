@@ -1,4 +1,4 @@
-<?
+<?php
 require('mvc/Router.inc.php');
 $router = new Router();
 

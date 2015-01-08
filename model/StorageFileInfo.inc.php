@@ -1,4 +1,4 @@
-<?
+<?php
 class Zotero_StorageFileInfo {
 	public $hash;
 	public $filename;

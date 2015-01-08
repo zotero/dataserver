@@ -1,4 +1,4 @@
-<?
+<?php
 /*
     Add license block if adding additional code
 */

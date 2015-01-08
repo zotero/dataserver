@@ -1,4 +1,4 @@
-<?
+<?php
 class Z_Unicode {
 	public static function charAt($str, $pos) {
 		return mb_substr($str, $pos, 1);
