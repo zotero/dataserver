@@ -277,7 +277,20 @@ class ApiController extends Controller {
 				$this->permissions->setAnonymous();
 			}
 		}
-		
+
+		if($this->userID) {
+            $rateData = Zotero_API::getRateData($this->method, $this->userID, $_SERVER['REMOTE_ADDR']/*, all parameters required to calculate rate limits and bucket name*/);
+            $rateLimiter = new Z_RateLimiter();
+
+            $res = $rateLimiter->checkRequestRateLimiter($rateData['bucket'], $rateData['rate'], $rateData['burst']);
+        	if(is_array($res)) {
+        		//print_r($res);
+        		if(!$res[0]) {
+                    $this->e429();
+				}
+			}
+		}
+
 		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		
 		// Get object user

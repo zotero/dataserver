@@ -1323,5 +1323,14 @@ class Zotero_API {
 		
 		return $sets;
 	}
+
+	public static function getRateData($method, $userID, $ip) {
+		$rateData = [
+			'bucket' =>  $userID.$ip,
+			'rate' => 1,
+			'burst' => 2
+		];
+		return $rateData;
+	}
 }
 ?>
