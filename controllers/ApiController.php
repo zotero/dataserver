@@ -60,6 +60,8 @@ class ApiController extends Controller {
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
+	protected $concurrentRequestBucket = null;
+	protected $concurrentRequestId = null;
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -278,16 +280,46 @@ class ApiController extends Controller {
 			}
 		}
 
-		if($this->userID) {
-            $rateData = Zotero_API::getRateData($this->method, $this->userID, $_SERVER['REMOTE_ADDR']/*, all parameters required to calculate rate limits and bucket name*/);
-            $rateLimiter = new Z_RateLimiter();
+		$requestLimits = Zotero_API::getRequestLimits([
+			'method' => $this->method,
+			'userID' => $this->userID,
+			'ip' => $_SERVER['REMOTE_ADDR']
+		]);
 
-            $res = $rateLimiter->checkRequestRateLimiter($rateData['bucket'], $rateData['rate'], $rateData['burst']);
-        	if(is_array($res)) {
-        		//print_r($res);
-        		if(!$res[0]) {
-                    $this->e429();
+
+		$this->requestLimiter = new Z_RequestLimiter();
+
+		if ($requestLimits['rate']) {
+			$res = $this->requestLimiter->limitRate($requestLimits['rate']);
+			if ($res) {
+				print_r($res);
+				if (!$res['allowed']) {
+					header("Retry-After: 30");
+					$this->e429();
 				}
+
+				if ($res['warn']) {
+					header("Backoff: 5");
+				}
+			}
+		}
+
+		if ($requestLimits['concurrent']) {
+			$res = $this->requestLimiter->beginConcurrent($requestLimits['concurrent']);
+			$this->concurrentRequestBucket = null;
+			$this->concurrentRequestId = null;
+			if ($res) {
+				if (!$res['allowed']) {
+					header("Retry-After: 30");
+					$this->e429('Too many concurrent requests');
+				}
+
+				if ($res['warn']) {
+					header("Backoff: 5");
+				}
+
+				$this->concurrentRequestBucket = $res['bucket'];
+				$this->concurrentRequestId = $res['id'];
 			}
 		}
 
@@ -953,6 +985,11 @@ class ApiController extends Controller {
 	
 	
 	protected function end() {
+
+		if($this->concurrentRequestId) {
+			$this->requestLimiter->finishConcurrent($this->concurrentRequestBucket, $this->concurrentRequestId);
+		}
+
 		if ($this->profile) {
 			Zotero_DB::profileEnd($this->objectLibraryID, true);
 		}

@@ -1324,13 +1324,40 @@ class Zotero_API {
 		return $sets;
 	}
 
-	public static function getRateData($method, $userID, $ip) {
-		$rateData = [
-			'bucket' =>  $userID.$ip,
-			'rate' => 1,
-			'burst' => 2
+	public static function getRequestLimits($params)
+	{
+		$rate = null;
+		$concurrent = null;
+
+		if ($params['userID']) {
+			$rate = [
+				'bucket' => $params['userID'] . $params['ip'],
+				'limit' => 1,
+				'burst' => 3,
+				'warn' => 1
+			];
+
+			$concurrent = [
+				'bucket' => $params['userID'],
+				'ttl' => 10,
+				'limit' => 2,
+				'warn' => 1
+			];
+		} else {
+			$rate = [
+				'bucket' => $params['ip'],
+				'limit' => 100,
+				'burst' => 3,
+				'warn' => 50
+			];
+		}
+
+		$requestLimits = [
+			'rate' => $rate,
+			'concurrent' => $concurrent
 		];
-		return $rateData;
+
+		return $requestLimits;
 	}
 }
 ?>

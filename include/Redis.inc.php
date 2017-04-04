@@ -21,7 +21,7 @@ class Z_Redis {
 			else {
 				self::$links[$name]->pconnect($host);
 			}
-			self::$links[$name]->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY);
+			self::$links[$name]->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_NONE);
 			if (!empty(Z_CONFIG::$REDIS_PREFIX)) {
 				self::$links[$name]->setOption(Redis::OPT_PREFIX, Z_CONFIG::$REDIS_PREFIX);
 			}
