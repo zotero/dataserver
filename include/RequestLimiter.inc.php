@@ -25,8 +25,13 @@
     ***** END LICENSE BLOCK *****
 */
 
+/**
+ * Notice: we shouldn't use any PHP serializer for redis when using lua scripts
+ */
+
 class Z_RequestLimiter
 {
+
 	protected $request_rate_limiter_lua = '
     local tokens_key = KEYS[1]
     local timestamp_key = KEYS[2]
@@ -78,23 +83,24 @@ class Z_RequestLimiter
     
     return { allowed, count }';
 
-	public function __construct()
-	{
+	public function __construct() {
 		$this->redis = Z_Redis::get();
 		$this->request_rate_limiter_lua_sha1 = sha1($this->request_rate_limiter_lua); //we can hardcode sha1 to prevent calculating it every time
 		$this->concurrent_requests_limiter_lua_sha1 = sha1($this->concurrent_requests_limiter_lua);
 	}
 
-	public function limitRate($params)
-	{
-
+	/**
+	 * Limit request rate for a given bucket
+	 * @param $params - bucket (userid or key), limit (requests per second), burst (multiplier for 'limit'), warn (threshold for remaining requests warning)
+	 * @return array|null
+	 */
+	public function limitRate($params) {
 		$bucket = $params['bucket'];
 		$rate = $params['limit'];
 		$burst = $params['burst'];
 
 		$capacity = $burst * $rate;
 
-		// Make a unique key per user.
 		$prefix = 'rrl:' . $bucket;
 
 		$keys = [$prefix . '.tokens', $prefix . '.timestamp'];
@@ -118,25 +124,30 @@ class Z_RequestLimiter
 			return null;
 		}
 
-		$arr = [
+		return [
 			'allowed' => $res[0],
 			'bucket' => $params['bucket'],
 			'remaining' => $res[1],
-			'warn' => $params['warn'] >= $res[1]
+			'low' => $params['warn'] >= $res[1]
 		];
-
-		return $arr;
 	}
 
-	public function beginConcurrent($params)
-	{
-		$ttl = $params['ttl'];
+	/**
+	 * Limit concurrent request for a bucket.
+	 * This function must be stared before actual API request logic.
+	 * finishConcurrent must be called every time after finishing the API request logic.
+	 * @param $params - bucket (userid or key), ttl (seconds), limit (requests per second)
+	 * @return array|null
+	 */
+	public function beginConcurrent($params) {
+		$ttl = $params['ttl']; //seconds how long the token will be kept (if not removed by finishConcurrent)
 		$capacity = $params['limit'];
 		$timestamp = time();
 		$id = Zotero_Utilities::randomString(10, 'mixed');
-		$key = 'crl' . $params['bucket'];
+		$key = 'crl:' . $params['bucket'];
 
 		try {
+			//tokens with expired TTL are removed (but the same bucket must be hit again, otherwise old token will be kept forever)
 			$this->redis->zRemRangeByScore($key, '-inf', $timestamp - $ttl);
 
 			$keys = [$key];
@@ -155,34 +166,33 @@ class Z_RequestLimiter
 				}
 			}
 		} catch (Exception $e) {
+			Z_Core::logError('Redis error in Z_RequestLimiter::beginConcurrent: '.$e->getMessage());
 			return null;
 		}
 
-		$arr = [
+		return [
 			'allowed' => $res[0],
 			'bucket' => $params['bucket'],
 			'id' => $id,
 			'used' => $res[1],
-			'remaining' => $capacity - $res[1],
-			'warn' => $params['warn'] >= $capacity - $res[1]
+			'remaining' => $capacity - $res[1]
 		];
-
-		return $arr;
 	}
 
-	public function finishConcurrent($bucket, $id)
-	{
-		$key = 'crl' . $bucket;
+	/**
+	 * Must be called every time when beginConcurrent is called
+	 * @param $bucket
+	 * @param $id
+	 */
+	public function finishConcurrent($bucket, $id) {
+		$key = 'crl:' . $bucket;
 		try {
 			$removed = $this->redis->zRem($key, $id);
+			if(!$removed) {
+				Z_Core::logError('Failed to remove key Z_RequestLimiter::finishConcurrent');
+			}
 		} catch (Exception $e) {
-			Z_Core::logError('Redis error: ' . $e->getMessage());
-			return;
+			Z_Core::logError('Redis error in Z_RequestLimiter::finishConcurrent: '.$e->getMessage());
 		}
-
-		if(!$removed) {
-			Z_Core::logError('Failed to remove key Z_RequestLimiter::finishConcurrent');
-		}
-
 	}
 }

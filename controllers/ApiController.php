@@ -60,8 +60,7 @@ class ApiController extends Controller {
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
-	protected $concurrentRequestBucket = null;
-	protected $concurrentRequestId = null;
+	protected $concurrentRequest = null;
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -281,45 +280,52 @@ class ApiController extends Controller {
 		}
 
 		$requestLimits = Zotero_API::getRequestLimits([
-			'method' => $this->method,
 			'userID' => $this->userID,
 			'ip' => $_SERVER['REMOTE_ADDR']
 		]);
 
+		if($requestLimits) {
 
-		$this->requestLimiter = new Z_RequestLimiter();
+			$this->requestLimiter = new Z_RequestLimiter();
 
-		if ($requestLimits['rate']) {
-			$res = $this->requestLimiter->limitRate($requestLimits['rate']);
-			if ($res) {
-				print_r($res);
-				if (!$res['allowed']) {
-					header("Retry-After: 30");
-					$this->e429();
-				}
+			if ($requestLimits['rate']) {
+				$res = $this->requestLimiter->limitRate($requestLimits['rate']);
+				if ($res) {
+					if (!$res['allowed']) {
+						StatsD::increment("api.request.limit.rate.blocked", 1);
+						if (!$requestLimits['rate']['logOnly']) {
+							header("Retry-After: " . rand(1, 10)); //TODO: we should do random or incremental delays
+							$this->e429();
+						}
+					}
 
-				if ($res['warn']) {
-					header("Backoff: 5");
+					if ($res['low']) {
+						if (!$requestLimits['rate']['logOnly']) {
+							StatsD::increment("api.request.limit.rate.low", 1);
+							header("Backoff: 1"); //TODO: we should do random or incremental delays
+						}
+
+					}
 				}
 			}
-		}
 
-		if ($requestLimits['concurrent']) {
-			$res = $this->requestLimiter->beginConcurrent($requestLimits['concurrent']);
-			$this->concurrentRequestBucket = null;
-			$this->concurrentRequestId = null;
-			if ($res) {
-				if (!$res['allowed']) {
-					header("Retry-After: 30");
-					$this->e429('Too many concurrent requests');
+			if ($requestLimits['concurrent']) {
+				$res = $this->requestLimiter->beginConcurrent($requestLimits['concurrent']);
+
+				if ($res) {
+					if (!$res['allowed']) {
+						StatsD::increment("api.request.limit.concurrent.blocked", 1);
+						if (!$requestLimits['concurrent']['logOnly']) {
+							header("Retry-After: " . rand(1, 10)); //TODO: we should do random or incremental delays
+							$this->e429('Too many concurrent requests');
+						}
+					}
+
+					$this->concurrentRequest = [
+						'bucket' => $res['bucket'],
+						'id' => $res['id']
+					];
 				}
-
-				if ($res['warn']) {
-					header("Backoff: 5");
-				}
-
-				$this->concurrentRequestBucket = $res['bucket'];
-				$this->concurrentRequestId = $res['id'];
 			}
 		}
 
@@ -986,8 +992,8 @@ class ApiController extends Controller {
 	
 	protected function end() {
 
-		if($this->concurrentRequestId) {
-			$this->requestLimiter->finishConcurrent($this->concurrentRequestBucket, $this->concurrentRequestId);
+		if($this->concurrentRequest) {
+			$this->requestLimiter->finishConcurrent($this->concurrentRequest['bucket'], $this->concurrentRequest['id']);
 		}
 
 		if ($this->profile) {

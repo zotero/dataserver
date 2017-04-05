@@ -1324,40 +1324,70 @@ class Zotero_API {
 		return $sets;
 	}
 
-	public static function getRequestLimits($params)
-	{
+	public static function getRequestLimits($params) {
 		$rate = null;
 		$concurrent = null;
 
-		if ($params['userID']) {
-			$rate = [
-				'bucket' => $params['userID'] . $params['ip'],
-				'limit' => 1,
-				'burst' => 3,
-				'warn' => 1
-			];
+		if(Z_CONFIG::$REDUCE_LOAD) {
+			if ($params['userID']) {
+				$rate = [
+					'logOnly' => false,
+					'bucket' => $params['userID'] . '_' . $params['ip'],
+					'limit' => 1, //request per second
+					'burst' => 3, //burst multiplier for 'limit'
+					'warn' => 1 //remaining requests threshold to warn client
+				];
 
-			$concurrent = [
-				'bucket' => $params['userID'],
-				'ttl' => 10,
-				'limit' => 2,
-				'warn' => 1
-			];
+				$concurrent = [
+					'logOnly' => false,
+					'bucket' => $params['userID'],
+					'ttl' => 10,
+					'limit' => 2,
+					'warn' => 1
+				];
+			} else {
+				$rate = [
+					'logOnly' => false,
+					'bucket' => $params['ip'],
+					'limit' => 10,
+					'burst' => 1,
+					'warn' => 50
+				];
+			}
 		} else {
-			$rate = [
-				'bucket' => $params['ip'],
-				'limit' => 100,
-				'burst' => 3,
-				'warn' => 50
-			];
+			if ($params['userID']) {
+				$rate = [
+					'logOnly' => false,
+					'bucket' => $params['userID'] . '_' . $params['ip'],
+					'limit' => 1,
+					'burst' => 3,
+					'warn' => 1
+				];
+
+				$concurrent = [
+					'logOnly' => false,
+					'bucket' => $params['userID'],
+					'ttl' => 10,
+					'limit' => 2,
+					'warn' => 1
+				];
+			} else {
+				$rate = [
+					'logOnly' => false,
+					'bucket' => $params['ip'],
+					'limit' => 100,
+					'burst' => 3,
+					'warn' => 50
+				];
+			}
 		}
 
-		$requestLimits = [
+		if(!$rate && !$concurrent) return null;
+
+		return [
 			'rate' => $rate,
 			'concurrent' => $concurrent
 		];
-
-		return $requestLimits;
 	}
 }
 ?>
