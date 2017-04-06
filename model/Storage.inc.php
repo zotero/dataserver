@@ -203,11 +203,10 @@ class Zotero_Storage {
 		
 		return self::addFile($info);
 	}
-	
-	
-	public static function queueUpload($userID, Zotero_StorageFileInfo $info) {
+
+	public static function queueUpload($userID, Zotero_StorageFileInfo $info, $item) {
 		$uploadKey = md5(uniqid(rand(), true));
-		
+
 		$sql = "SELECT COUNT(*) FROM storageUploadQueue WHERE userID=?
 				AND time > (NOW() - INTERVAL " . self::$uploadQueueTimeout . " SECOND)";
 		$num = Zotero_DB::valueQuery($sql, $userID);
@@ -215,16 +214,18 @@ class Zotero_Storage {
 			Z_Core::logError("Too many queued uploads ($num) for user $userID");
 			return false;
 		}
-		
+
 		$sql = "INSERT INTO storageUploadQueue "
-			. "(uploadKey, userID, hash, filename, zip, itemHash, itemFilename, "
+			. "(uploadKey, userID, itemLibraryID, itemKey, hash, filename, zip, itemHash, itemFilename, "
 			. "size, mtime, contentType, charset) "
-			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		Zotero_DB::query(
 			$sql,
 			array(
 				$uploadKey,
 				$userID,
+				$item->libraryID,
+				$item->key,
 				$info->hash,
 				$info->filename,
 				$info->zip ? 1 : 0,
@@ -236,7 +237,7 @@ class Zotero_Storage {
 				$info->charset
 			)
 		);
-		
+
 		return $uploadKey;
 	}
 	
@@ -254,8 +255,32 @@ class Zotero_Storage {
 		}
 		return $info;
 	}
-	
-	
+
+	public static function getUploadQueueItemsAndInfo($hash) {
+		$sql = "SELECT * FROM storageUploadQueue WHERE hash=? GROUP BY itemLibraryID, itemKey";
+
+		$uploads = Zotero_DB::query($sql, $hash);
+
+		$results = [];
+		foreach ($uploads as $upload) {
+			echo $upload['itemLibraryID']. ' '.$upload['itemKey'];
+
+			$info = new Zotero_StorageFileInfo;
+			foreach ($upload as $key => $val) {
+				$info->$key = $val;
+			}
+
+			$item = Zotero_Items::getByLibraryAndKey($upload['itemLibraryID'], $upload['itemKey']);
+
+			$results[] = [
+				'info' => $info,
+				'item'=> $item
+			];
+		}
+
+		return $results;
+	}
+
 	public static function logUpload($uploadUserID, $item, $key, $ipAddress) {
 		$libraryID = $item->libraryID;
 		$ownerUserID = Zotero_Libraries::getOwner($libraryID);
