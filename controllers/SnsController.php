@@ -27,89 +27,89 @@
 
 class SnsController extends Controller
 {
-
-	public function init()
-	{
+	// index.php is calling this function. Maybe we should add it to Controller class.
+	public function init() {
 
 	}
 
-	public function register($hash, $size)
-	{
+	protected function register($hash) {
+		// We don't need to check the file size, because it's
+		// included in file upload signature. We get the file we expected,
+		// or we don't get it at all.
+
+		// Everyting is in one transaction to prevent racing conditions with queueUpload
+		Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+		Zotero_DB::beginTransaction();
+
 		$results = Zotero_Storage::getUploadQueueItemsAndInfo($hash);
 
-		print_r($results);
-
 		foreach ($results as $result) {
-
 			$info = $result['info'];
 			$item = $result['item'];
-
-			if ($info->size != $size) {
-				error_log("Uploaded file size does not match "
-					. "({$info->size} != {$size}) "
-					. "for file {$info->hash}/{$info->filename}");
-				continue;
-			}
-
-			Zotero_DB::profileStart();
-			Zotero_DB::readOnly(false);
-
-			Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-			Zotero_DB::beginTransaction();
 
 			$fileInfo = Zotero_Storage::getLocalFileInfo($info);
 			if ($fileInfo) {
 				$storageFileID = $fileInfo['storageFileID'];
-			} else {
+			}
+			else {
 				$storageFileID = Zotero_Storage::addFile($info);
 			}
 
 			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
-
 			Zotero_Storage::logUpload($info->userID, $item, $info->uploadKey, IPAddress::getIP());
 
-			Zotero_DB::commit();
+			// logUpload removes the current storageUploadQueue row (from $info),
+			// therefore it will be missing in succeedUploadbyHash
+			Z_Core::$MC->set("successfulUploadKey_" . $info->uploadKey, 1, 60);
 		}
+
+		Zotero_Storage::succeedUploadsByHash($hash);
+		Zotero_DB::commit();
 	}
 
-	public function sns()
-	{
+	public function sns() {
+
+		if(!Z_CONFIG::$SNS_USERNAME || !Z_CONFIG::$SNS_PASSWORD) {
+			http_response_code(500);
+			exit;
+		}
+
+		if(!isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
+			http_response_code(401);
+			exit;
+		};
+
 		$username = $_SERVER['PHP_AUTH_USER'];
 		$password = $_SERVER['PHP_AUTH_PW'];
 
-		if ($username != 'user' || $password != 'password') return;
+		if ($username != Z_CONFIG::$SNS_USERNAME || $password != Z_CONFIG::$SNS_PASSWORD) {
+			http_response_code(403);
+			exit;
+		}
 
 		$json = json_decode(file_get_contents("php://input"));
 
+		if ($json->Type == "Notification") {
+			Z_Core::debug("SNS notification: " . $json->Message);
+			$parts = explode(':', $json->TopicArn);
+			$topic = $parts[5];
+			if ($topic == 's3-object-created-'. Z_CONFIG::$S3_BUCKET) {
+				$json2 = json_decode($json->Message);
+				$hash = $json2->Records[0]->s3->object->key;
+				$this->register($hash);
+			}
+		}
 		// This should happen only the first time when SNS is configured
-		if ($json->Type == "SubscriptionConfirmation") {
-
+		else if ($json->Type == "SubscriptionConfirmation") {
 			Z_Core::logError("Possible repeated SNS subscription");
-
 			$curl_handle = curl_init();
 			curl_setopt($curl_handle, CURLOPT_URL, $json->SubscribeURL);
 			curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 2);
 			curl_exec($curl_handle);
 			curl_close($curl_handle);
 		}
-
-		if ($json->Type == "Notification") {
-
-			Z_Core::debug("SNS notification" . $json->Message);
-
-			$parts = explode(':', $json->TopicArn);
-			$topic = $parts[5];
-
-			if ($topic == 's3-object-created-zoterotest1') {
-
-				$json2 = json_decode($json->Message);
-
-				$hash = $json2->Records[0]->s3->object->key;
-				$size = $json2->Records[0]->s3->object->size;
-
-				$this->register($hash, $size);
-			}
+		else {
+			Z_Core::logError("Unknown SNS type: ".$json->Type);
 		}
-
 	}
 }

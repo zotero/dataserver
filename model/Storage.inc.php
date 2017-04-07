@@ -257,7 +257,14 @@ class Zotero_Storage {
 	}
 
 	public static function getUploadQueueItemsAndInfo($hash) {
-		$sql = "SELECT * FROM storageUploadQueue WHERE hash=? GROUP BY itemLibraryID, itemKey";
+		$sql = "SELECT * FROM storageUploadQueue s1 
+					JOIN (
+							SELECT uploadKey, MAX(time) AS time
+							FROM storageUploadQueue
+							GROUP BY userID, itemLibraryID, itemKey
+						 ) AS s2
+				    ON s1.uploadKey = s2.uploadKey
+					WHERE hash=?";
 
 		$uploads = Zotero_DB::query($sql, $hash);
 
@@ -277,8 +284,23 @@ class Zotero_Storage {
 				'item'=> $item
 			];
 		}
-
 		return $results;
+	}
+
+	public static function succeedUploadsByHash($hash) {
+		$sql = 'SELECT uploadKey FROM storageUploadQueue WHERE hash=?';
+		$uploadKeys = Zotero_DB::columnQuery($sql, $hash);
+
+		// This is only needed for older clients who try to file registration
+		if ($uploadKeys) {
+			foreach ($uploadKeys as $uploadKey) {
+				Z_Core::$MC->set("successfulUploadKey_" . $uploadKey, 1, 60);
+			}
+		}
+
+		$sql = 'DELETE FROM storageUploadQueue WHERE hash=?';
+
+		Zotero_DB::query($sql, $hash);
 	}
 
 	public static function logUpload($uploadUserID, $item, $key, $ipAddress) {

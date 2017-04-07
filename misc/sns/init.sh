@@ -1,15 +1,14 @@
-region=us-east-1
-s3_bucket_name=zotero
-http_endpoint=http://user:password@www.zotero.org/sns
-sns_topic_name=s3-object-created-$(echo $s3_bucket_name | tr '.' '-')
-sqs_queue_name=$sns_topic_name
+REGION=us-east-1
+S3_BUCKET_NAME=
+HTTPS_ENDPOINT=
+SNS_TOPIC_NAME=s3-object-created-$(echo $S3_BUCKET_NAME | tr '.' '-')
 
-sns_topic_arn=$(aws sns create-topic --region "$region" --name "$sns_topic_name" --output text --query 'TopicArn')
+sns_topic_arn=$(aws sns create-topic --region "$REGION" --name "$SNS_TOPIC_NAME" --output text --query 'TopicArn')
 
-echo sns_topic_arn=$sns_topic_arn
+echo SNS_TOPIC_ARN=$SNS_TOPIC_ARN
 
 aws sns set-topic-attributes \
-  --topic-arn "$sns_topic_arn" \
+  --topic-arn "$SNS_TOPIC_ARN" \
   --attribute-name Policy \
   --attribute-value \
   '{
@@ -19,24 +18,24 @@ aws sns set-topic-attributes \
               "Effect": "Allow",
               "Principal": { "AWS" : "*" },
               "Action": [ "SNS:Publish" ],
-              "Resource": "'$sns_topic_arn'",
+              "Resource": "'$SNS_TOPIC_ARN'",
               "Condition": {
                   "ArnLike": {
-                      "aws:SourceArn": "arn:aws:s3:*:*:'$s3_bucket_name'"
+                      "aws:SourceArn": "arn:aws:s3:*:*:'$S3_BUCKET_NAME'"
                   }
               }
       }]
   }'
 
 aws s3api put-bucket-notification \
-  --region "$region" \
-  --bucket "$s3_bucket_name" \
+  --region "$REGION" \
+  --bucket "$S3_BUCKET_NAME" \
   --notification-configuration \
   '{
     "TopicConfiguration": {
       "Events": [ "s3:ObjectCreated:*" ],
-      "Topic": "'$sns_topic_arn'"
+      "Topic": "'$SNS_TOPIC_ARN'"
     }
   }'
 
-aws sns subscribe --topic-arn "$sns_topic_arn" --protocol http --notification-endpoint "$http_endpoint"
+aws sns subscribe --topic-arn "$SNS_TOPIC_ARN" --protocol https --notification-endpoint "$HTTPS_ENDPOINT"
