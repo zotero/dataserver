@@ -921,14 +921,12 @@ class ItemsController extends ApiController {
 					$this->end();
 				}
 				
-				Zotero_DB::commit();
-				
 				// Add request to upload queue
 				// Moved inside transaction to prevent queuing upload after
-				// S3 registartor just processed the current hash.
+				// S3 registrator just processed the current hash.
 				$uploadKey = Zotero_Storage::queueUpload($this->userID, $info, $item);
 				Zotero_DB::commit();
-
+				
 				// User over queue limit
 				if (!$uploadKey) {
 					header('Retry-After: ' . Zotero_Storage::$uploadQueueTimeout);
@@ -992,12 +990,11 @@ class ItemsController extends ApiController {
 				
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
-					if(Z_Core::$MC->get("successfulUploadKey_" . $uploadKey)) {
-						header("HTTP/1.1 204 No Content");
-						header("Last-Modified-Version: " . $item->version);
-						exit;
-					}
-					$this->e400("Upload key not found");
+					// We should refresh $item->version because we are not in transaction,
+					// and there is a probability that it was updated by S3 regsitrator
+					header("HTTP/1.1 204 No Content");
+					header("Last-Modified-Version: " . $item->version);
+					exit;
 				}
 				
 				// Partial upload
@@ -1026,17 +1023,7 @@ class ItemsController extends ApiController {
 				// two simultaneous transactions from adding a file
 				Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 				Zotero_DB::beginTransaction();
-
-				// Theoretically the row to which $uploadKey is pointing
-				// can be removed by S3 registrator at any time until this transaction.
-				// We have to stop and return successful upload response if so.
-
-				if(Z_Core::$MC->get("successfulUploadKey_" . $uploadKey)) {
-					header("HTTP/1.1 204 No Content");
-					header("Last-Modified-Version: " . $item->version);
-					exit;
-				}
-
+				
 				if (!isset($storageFileID)) {
 					// Check if file already exists, which can happen if two identical
 					// files are uploaded simultaneously
@@ -1075,7 +1062,8 @@ class ItemsController extends ApiController {
 				
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
-					$this->e400("Upload key not found");
+					header("HTTP/1.1 204 No Content");
+					exit;
 				}
 				
 				$remoteInfo = Zotero_Storage::getRemoteFileInfo($info);
@@ -1092,13 +1080,7 @@ class ItemsController extends ApiController {
 				// two simultaneous transactions from adding a file
 				Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 				Zotero_DB::beginTransaction();
-
-				if(Z_Core::$MC->get("successfulUploadKey_" . $uploadKey)) {
-					header("HTTP/1.1 204 No Content");
-					header("Last-Modified-Version: " . $item->version);
-					exit;
-				}
-
+				
 				// Check if file already exists, which can happen if two identical
 				// files are uploaded simultaneously
 				$fileInfo = Zotero_Storage::getLocalFileInfo($info);

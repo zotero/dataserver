@@ -25,78 +25,52 @@
     ***** END LICENSE BLOCK *****
 */
 
-class SnsController extends Controller
-{
-	// index.php is calling this function. Maybe we should add it to Controller class.
+class SnsController extends Controller {
+	// index.php is calling this function. Maybe we should add this to Controller class.
 	public function init() {
-
+		
 	}
-
-	protected function register($hash) {
-		// We don't need to check the file size, because it's
-		// included in file upload signature. We get the file we expected,
-		// or we don't get it at all.
-
-		// Everyting is in one transaction to prevent racing conditions with queueUpload
-		Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-		Zotero_DB::beginTransaction();
-
-		$results = Zotero_Storage::getUploadQueueItemsAndInfo($hash);
-
-		foreach ($results as $result) {
-			$info = $result['info'];
-			$item = $result['item'];
-
-			$fileInfo = Zotero_Storage::getLocalFileInfo($info);
-			if ($fileInfo) {
-				$storageFileID = $fileInfo['storageFileID'];
-			}
-			else {
-				$storageFileID = Zotero_Storage::addFile($info);
-			}
-
-			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
-			Zotero_Storage::logUpload($info->userID, $item, $info->uploadKey, IPAddress::getIP());
-
-			// logUpload removes the current storageUploadQueue row (from $info),
-			// therefore it will be missing in succeedUploadbyHash
-			Z_Core::$MC->set("successfulUploadKey_" . $info->uploadKey, 1, 60);
-		}
-
-		Zotero_Storage::succeedUploadsByHash($hash);
-		Zotero_DB::commit();
-	}
-
+	
 	public function sns() {
-
-		if(!Z_CONFIG::$SNS_USERNAME || !Z_CONFIG::$SNS_PASSWORD) {
+		if (!Z_CONFIG::$SNS_USERNAME || !Z_CONFIG::$SNS_PASSWORD) {
+			Z_Core::logError("SNS_USERNAME or SNS_PASSWORD not set in Z_CONFIG");
+			// We don't use $this->e500() because we don't extend ApiController
 			http_response_code(500);
 			exit;
 		}
-
-		if(!isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
+		
+		if (!isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
+			Z_Core::logError("Missing PHP_AUTH_USER or PHP_AUTH_PW in SNS request");
 			http_response_code(401);
 			exit;
-		};
-
-		$username = $_SERVER['PHP_AUTH_USER'];
-		$password = $_SERVER['PHP_AUTH_PW'];
-
-		if ($username != Z_CONFIG::$SNS_USERNAME || $password != Z_CONFIG::$SNS_PASSWORD) {
+		}
+		
+		if ($_SERVER['PHP_AUTH_USER'] != Z_CONFIG::$SNS_USERNAME ||
+			$_SERVER['PHP_AUTH_PW'] != Z_CONFIG::$SNS_PASSWORD
+		) {
+			Z_Core::logError("Wrong username or password in SNS request");
 			http_response_code(403);
 			exit;
 		}
-
+		
 		$json = json_decode(file_get_contents("php://input"));
-
+		if (!$json) {
+			Z_Core::logError("SNS sent invalid JSON: " . $json);
+			http_response_code(412);
+			exit;
+		}
+		
+		// TODO: add JSON schema validation
 		if ($json->Type == "Notification") {
 			Z_Core::debug("SNS notification: " . $json->Message);
 			$parts = explode(':', $json->TopicArn);
 			$topic = $parts[5];
-			if ($topic == 's3-object-created-'. Z_CONFIG::$S3_BUCKET) {
+			
+			if ($topic == 's3-object-created-' . Z_CONFIG::$S3_BUCKET) {
 				$json2 = json_decode($json->Message);
+				$ip = $json2->Records[0]->requestParameters->sourceIPAddress;
 				$hash = $json2->Records[0]->s3->object->key;
-				$this->register($hash);
+				$this->register($hash, $ip);
 			}
 		}
 		// This should happen only the first time when SNS is configured
@@ -109,7 +83,35 @@ class SnsController extends Controller
 			curl_close($curl_handle);
 		}
 		else {
-			Z_Core::logError("Unknown SNS type: ".$json->Type);
+			Z_Core::logError("Unknown SNS type: " . $json->Type);
 		}
+	}
+	
+	protected function register($hash, $ip) {
+		// We don't need to check the file size, because it's
+		// included in the file upload signature. We get the file we expected,
+		// or we don't get it at all.
+		// Everything is in one transaction to prevent racing conditions with queueUpload
+		Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+		Zotero_DB::beginTransaction();
+		$uploads = Zotero_Storage::getRecentUploads($hash);
+		
+		foreach ($uploads as $info) {
+			$item = Zotero_Items::getByLibraryAndKey($info->libraryID, $info->itemKey);
+			$fileInfo = Zotero_Storage::getLocalFileInfo($info);
+			
+			if ($fileInfo) {
+				$storageFileID = $fileInfo['storageFileID'];
+			}
+			else {
+				$storageFileID = Zotero_Storage::addFile($info);
+			}
+			
+			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
+			Zotero_Storage::logUpload($info->userID, $item, $info->uploadKey, $ip);
+		}
+		
+		Zotero_Storage::removeUploadsByHash($hash);
+		Zotero_DB::commit();
 	}
 }
