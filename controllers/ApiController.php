@@ -60,6 +60,7 @@ class ApiController extends Controller {
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
+	protected $requestLimiter = null;
 	protected $concurrentRequest = null;
 	
 	private $startTime = false;
@@ -71,6 +72,10 @@ class ApiController extends Controller {
 		
 		if (!Z_CONFIG::$API_ENABLED) {
 			$this->e503(Z_CONFIG::$MAINTENANCE_MESSAGE);
+		}
+		
+		if (Z_CONFIG::$BACKOFF > 0) {
+			header("Backoff: " . Z_CONFIG::$BACKOFF);
 		}
 		
 		set_exception_handler(array($this, 'handleException'));
@@ -278,57 +283,48 @@ class ApiController extends Controller {
 				$this->permissions->setAnonymous();
 			}
 		}
-
-		$requestLimits = Zotero_API::getRequestLimits([
-			'userID' => $this->userID,
-			'ip' => $_SERVER['REMOTE_ADDR']
-		]);
-
-		if($requestLimits) {
-
+		
+		$rateLimit = Zotero_API::getRateLimit($this->userID, $_SERVER['REMOTE_ADDR']);
+		$concurrencyLimit = Zotero_API::getConcurrencyLimit($this->userID);
+		
+		if ($rateLimit || $concurrencyLimit) {
 			$this->requestLimiter = new Z_RequestLimiter();
-
-			if ($requestLimits['rate']) {
-				$res = $this->requestLimiter->limitRate($requestLimits['rate']);
-				if ($res) {
-					if (!$res['allowed']) {
-						StatsD::increment("api.request.limit.rate.blocked", 1);
-						if (!$requestLimits['rate']['logOnly']) {
-							header("Retry-After: " . rand(1, 10)); //TODO: we should do random or incremental delays
-							$this->e429();
-						}
-					}
-
-					if ($res['low']) {
-						if (!$requestLimits['rate']['logOnly']) {
-							StatsD::increment("api.request.limit.rate.low", 1);
-							header("Backoff: 1"); //TODO: we should do random or incremental delays
-						}
-
-					}
-				}
-			}
-
-			if ($requestLimits['concurrent']) {
-				$res = $this->requestLimiter->beginConcurrent($requestLimits['concurrent']);
-
-				if ($res) {
-					if (!$res['allowed']) {
-						StatsD::increment("api.request.limit.concurrent.blocked", 1);
-						if (!$requestLimits['concurrent']['logOnly']) {
-							header("Retry-After: " . rand(1, 10)); //TODO: we should do random or incremental delays
-							$this->e429('Too many concurrent requests');
-						}
-					}
-
-					$this->concurrentRequest = [
-						'bucket' => $res['bucket'],
-						'id' => $res['id']
-					];
+		}
+		
+		if ($rateLimit) {
+			$requestsRemaining = $this->requestLimiter->limitRate($rateLimit);
+			if (!$requestsRemaining) {
+				StatsD::increment("api.request.limit.rate.rejected", 1);
+				Z_Core::logError('Request rate limit exceeded for' . $rateLimit['bucket']);
+				
+				if (!$rateLimit['logOnly']) {
+					// If client reaches this limit something is really wrong
+					// Next suggested retry is when the full capacity will be reached
+					header("Retry-After: " . intval($rateLimit['capacity']/$rateLimit['rate']));
+					$this->e429();
 				}
 			}
 		}
-
+		
+		if ($concurrencyLimit) {
+			$concurrentRequestId = $this->requestLimiter->beginConcurrent($concurrencyLimit);
+			if (!$concurrentRequestId) {
+				StatsD::increment("api.request.limit.concurrency.rejected", 1);
+				Z_Core::logError('Concurrent request limit exceeded for' . $concurrencyLimit['bucket']);
+				
+				if (!$concurrencyLimit['logOnly']) {
+					// Randomize next request time to reduce collision probability
+					header("Retry-After: " . rand(1, 30));
+					$this->e429('Too many concurrent requests');
+				}
+			}
+			
+			$this->concurrentRequest = [
+				'bucket' => $concurrencyLimit['bucket'],
+				'id' => $concurrentRequestId
+			];
+		}
+		
 		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		
 		// Get object user

@@ -1323,71 +1323,47 @@ class Zotero_API {
 		
 		return $sets;
 	}
-
-	public static function getRequestLimits($params) {
-		$rate = null;
-		$concurrent = null;
-
-		if(Z_CONFIG::$REDUCE_LOAD) {
-			if ($params['userID']) {
-				$rate = [
-					'logOnly' => false,
-					'bucket' => $params['userID'] . '_' . $params['ip'],
-					'limit' => 1, //request per second
-					'burst' => 3, //burst multiplier for 'limit'
-					'warn' => 1 //remaining requests threshold to warn client
-				];
-
-				$concurrent = [
-					'logOnly' => false,
-					'bucket' => $params['userID'],
-					'ttl' => 10,
-					'limit' => 2,
-					'warn' => 1
-				];
-			} else {
-				$rate = [
-					'logOnly' => false,
-					'bucket' => $params['ip'],
-					'limit' => 10,
-					'burst' => 1,
-					'warn' => 50
-				];
-			}
-		} else {
-			if ($params['userID']) {
-				$rate = [
-					'logOnly' => false,
-					'bucket' => $params['userID'] . '_' . $params['ip'],
-					'limit' => 1,
-					'burst' => 3,
-					'warn' => 1
-				];
-
-				$concurrent = [
-					'logOnly' => false,
-					'bucket' => $params['userID'],
-					'ttl' => 10,
-					'limit' => 2,
-					'warn' => 1
-				];
-			} else {
-				$rate = [
-					'logOnly' => false,
-					'bucket' => $params['ip'],
-					'limit' => 100,
-					'burst' => 3,
-					'warn' => 50
-				];
-			}
+	
+	public static function getRateLimit($userID, $ip) {
+		// For individual and authorized users. One user don't need too many requests
+		if ($userID) {
+			// 100 request burst with 10 request per second rate limit
+			return [
+				'logOnly' => false,
+				'bucket' => $userID . '_' . $ip,
+				'capacity' => 100,
+				'rate' => 10
+			];
 		}
-
-		if(!$rate && !$concurrent) return null;
-
-		return [
-			'rate' => $rate,
-			'concurrent' => $concurrent
-		];
+		// For anyone who isn't authorized.
+		// One ip can be shared by many people (i.e. university),
+		// therefore limits must be much higher
+		else {
+			// always 30 requests per second, no burst
+			return [
+				'logOnly' => false,
+				'bucket' => $ip,
+				'capacity' => 30,
+				'rate' => 30
+			];
+		}
+	}
+	
+	public static function getConcurrencyLimit($userID) {
+		// The current implementation is only targeted to individual users
+		if ($userID) {
+			// 5 concurrent request per userID,
+			// maximum time a task can take is 60 seconds
+			return [
+				'logOnly' => false,
+				'bucket' => $userID,
+				'ttl' => 60,
+				'capacity' => 5
+			];
+		}
+		else {
+			return null;
+		}
 	}
 }
 ?>

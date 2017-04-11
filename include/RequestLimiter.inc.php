@@ -1,119 +1,101 @@
 <?php
-
 /*
-    ***** BEGIN LICENSE BLOCK *****
-
-    This file is part of the Zotero Data Server.
-
-    Copyright © 2010 Center for History and New Media
-                     George Mason University, Fairfax, Virginia, USA
-                     http://zotero.org
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-    ***** END LICENSE BLOCK *****
+	This code is based on Stripe request limiter:
+	https://stripe.com/blog/rate-limiters
 */
 
-/**
- * Notice: we shouldn't use any PHP serializer for redis when using lua scripts
- */
+// Notice: If we are using lua scripts, we shouldn't use any PHP serializer
+// for this redis connection, because inside lua scripts they can't be deserialized,
+// therefore we can get unexpected behaviour
 
-class Z_RequestLimiter
-{
-
+class Z_RequestLimiter {
+	// Lua script is from https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
 	protected $request_rate_limiter_lua = '
-    local tokens_key = KEYS[1]
-    local timestamp_key = KEYS[2]
-    
-    local rate = tonumber(ARGV[1])
-    local capacity = tonumber(ARGV[2])
-    local now = tonumber(ARGV[3])
-    local requested = tonumber(ARGV[4])
-    
-    local fill_time = capacity/rate
-    local ttl = math.floor(fill_time*2)
-    
-    local last_tokens = tonumber(redis.call("get", tokens_key))
-    if last_tokens == nil then
-      last_tokens = capacity
-    end
-    
-    local last_refreshed = tonumber(redis.call("get", timestamp_key))
-    if last_refreshed == nil then
-      last_refreshed = 0
-    end
-    
-    local delta = math.max(0, now-last_refreshed)
-    local filled_tokens = math.min(capacity, last_tokens+(delta*rate))
-    local allowed = filled_tokens >= requested
-    local new_tokens = filled_tokens
-    if allowed then
-      new_tokens = filled_tokens - requested
-    end
-    
-    redis.call("setex", tokens_key, ttl, new_tokens)
-    redis.call("setex", timestamp_key, ttl, now)
-    
-    return { allowed, new_tokens }';
-
+	local tokens_key = KEYS[1]
+	local timestamp_key = KEYS[2]
+	
+	local rate = tonumber(ARGV[1])
+	local capacity = tonumber(ARGV[2])
+	local now = tonumber(ARGV[3])
+	local requested = tonumber(ARGV[4])
+	
+	local fill_time = capacity/rate
+	local ttl = math.floor(fill_time*2)
+	
+	local last_tokens = tonumber(redis.call("get", tokens_key))
+	if last_tokens == nil then
+		last_tokens = capacity
+	end
+	
+	local last_refreshed = tonumber(redis.call("get", timestamp_key))
+	if last_refreshed == nil then
+		last_refreshed = 0
+	end
+	
+	local delta = math.max(0, now-last_refreshed)
+	local filled_tokens = math.min(capacity, last_tokens+(delta*rate))
+	local allowed = filled_tokens >= requested
+	local new_tokens = filled_tokens
+	if allowed then
+		new_tokens = filled_tokens - requested
+	end
+	
+	redis.call("setex", tokens_key, ttl, new_tokens)
+	redis.call("setex", timestamp_key, ttl, now)
+	
+	return { allowed, new_tokens }';
+	
+	// Lua script is from https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
 	protected $concurrent_requests_limiter_lua = '
-    local key = KEYS[1]
-
-    local capacity = tonumber(ARGV[1])
-    local timestamp = tonumber(ARGV[2])
-    local id = ARGV[3]
-    
-    local count = redis.call("zcard", key)
-    local allowed = count < capacity
-    
-    if allowed then
-      redis.call("zadd", key, timestamp, id)
-    end
-    
-    return { allowed, count }';
-
+	local key = KEYS[1]
+	
+	local capacity = tonumber(ARGV[1])
+	local timestamp = tonumber(ARGV[2])
+	local id = ARGV[3]
+	
+	local count = redis.call("zcard", key)
+	local allowed = count < capacity
+	
+	if allowed then
+		redis.call("zadd", key, timestamp, id)
+	end
+	
+	return { allowed, count }';
+	
 	public function __construct() {
 		$this->redis = Z_Redis::get();
-		$this->request_rate_limiter_lua_sha1 = sha1($this->request_rate_limiter_lua); //we can hardcode sha1 to prevent calculating it every time
+		// SHA1 can be hardcoded to prevent calculating it every time
+		$this->request_rate_limiter_lua_sha1 = sha1($this->request_rate_limiter_lua);
 		$this->concurrent_requests_limiter_lua_sha1 = sha1($this->concurrent_requests_limiter_lua);
 	}
-
+	
 	/**
-	 * Limit request rate for a given bucket
-	 * @param $params - bucket (userid or key), limit (requests per second), burst (multiplier for 'limit'), warn (threshold for remaining requests warning)
-	 * @return array|null
+	 * Limit request rate for a given bucket.
+	 * Rate and capacity parameters allows to have flexible rate limits.
+	 *
+	 * rate - request accumulation rate per second (can be below 1)
+	 * capacity - how many requests it can accumulate
+	 *
+	 * capacity=10, rate=1 means 10 request burst with 1 request per second rate
+	 * capacity=100, rate=0.5 means 100 request burst with 1 request per two seconds rate
+	 *
+	 * @param $params - bucket, capacity, rate
+	 * @return bool|null - returns true if request is allowed
 	 */
 	public function limitRate($params) {
 		$bucket = $params['bucket'];
-		$rate = $params['limit'];
-		$burst = $params['burst'];
-
-		$capacity = $burst * $rate;
-
+		$capacity = $params['capacity'];
+		$rate = $params['rate'];
 		$prefix = 'rrl:' . $bucket;
-
-		$keys = [$prefix . '.tokens', $prefix . '.timestamp'];
-
+		$keys = [$prefix . '.tk', $prefix . '.ts'];
 		$args = [$rate, $capacity, time(), 1];
-
+		
 		try {
 			$res = $this->redis->evalSha($this->request_rate_limiter_lua_sha1, array_merge($keys, $args), count($keys));
 			if (!$res) {
 				Z_Core::logError('Executing evalSha failed in Z_RequestLimiter::limitRate, maybe sha1 is wrong');
-
+				
 				$res = $this->redis->eval($this->request_rate_limiter_lua, array_merge($keys, $args), count($keys));
-
 				if (!$res) {
 					Z_Core::logError('Executing eval failed in Z_RequestLimiter::limitRate');
 					return null;
@@ -123,62 +105,52 @@ class Z_RequestLimiter
 			Z_Core::logError('Redis exception in Z_RequestLimiter::limitRate: ' . $e->getMessage());
 			return null;
 		}
-
-		return [
-			'allowed' => $res[0],
-			'bucket' => $params['bucket'],
-			'remaining' => $res[1],
-			'low' => $params['warn'] >= $res[1]
-		];
+		
+		return !!$res[0];
 	}
-
+	
 	/**
-	 * Limit concurrent request for a bucket.
-	 * This function must be stared before actual API request logic.
-	 * finishConcurrent must be called every time after finishing the API request logic.
+	 * Limit concurrent requests per bucket.
+	 * This function must be started before the actual API request logic.
+	 * finishConcurrent must be called each time after finishing the API request logic.
+	 *
 	 * @param $params - bucket (userid or key), ttl (seconds), limit (requests per second)
-	 * @return array|null
+	 * @return string|null - return id if the request is allowed
 	 */
 	public function beginConcurrent($params) {
 		$ttl = $params['ttl']; //seconds how long the token will be kept (if not removed by finishConcurrent)
-		$capacity = $params['limit'];
+		$capacity = $params['capacity'];
 		$timestamp = time();
-		$id = Zotero_Utilities::randomString(10, 'mixed');
+		$id = Zotero_Utilities::randomString(5, 'mixed');
 		$key = 'crl:' . $params['bucket'];
-
+		
 		try {
-			//tokens with expired TTL are removed (but the same bucket must be hit again, otherwise old token will be kept forever)
+			// Tokens with expired TTL are removed if the same bucket is hit again,
+			// otherwise they will be kept forever. For something like userID it's not
+			// a problem, but randomly generated ids can fill whole memory
 			$this->redis->zRemRangeByScore($key, '-inf', $timestamp - $ttl);
-
 			$keys = [$key];
 			$args = [$capacity, $timestamp, $id];
-
 			$res = $this->redis->evalSha($this->concurrent_requests_limiter_lua_sha1, array_merge($keys, $args), count($keys));
-
 			if (!$res) {
 				Z_Core::logError('Executing evalSha failed in Z_RequestLimiter::beginConcurrent, maybe sha1 is wrong');
-
+				
 				$res = $this->redis->eval($this->concurrent_requests_limiter_lua, array_merge($keys, $args), count($keys));
-
 				if (!$res) {
 					Z_Core::logError('Executing eval failed in Z_RequestLimiter::beginConcurrent');
 					return null;
 				}
 			}
 		} catch (Exception $e) {
-			Z_Core::logError('Redis error in Z_RequestLimiter::beginConcurrent: '.$e->getMessage());
+			Z_Core::logError('Redis error in Z_RequestLimiter::beginConcurrent: ' . $e->getMessage());
 			return null;
 		}
-
-		return [
-			'allowed' => $res[0],
-			'bucket' => $params['bucket'],
-			'id' => $id,
-			'used' => $res[1],
-			'remaining' => $capacity - $res[1]
-		];
+		
+		if ($res[0]) return $id;
+		
+		return null;
 	}
-
+	
 	/**
 	 * Must be called every time when beginConcurrent is called
 	 * @param $bucket
@@ -188,11 +160,13 @@ class Z_RequestLimiter
 		$key = 'crl:' . $bucket;
 		try {
 			$removed = $this->redis->zRem($key, $id);
-			if(!$removed) {
+			if (!$removed) {
 				Z_Core::logError('Failed to remove key Z_RequestLimiter::finishConcurrent');
 			}
 		} catch (Exception $e) {
-			Z_Core::logError('Redis error in Z_RequestLimiter::finishConcurrent: '.$e->getMessage());
+			Z_Core::logError('Redis error in Z_RequestLimiter::finishConcurrent: ' . $e->getMessage());
 		}
 	}
 }
+
+?>
