@@ -26,7 +26,7 @@ class Z_CONFIG {
 	public static $S3_BUCKET_CACHE = '';
 
 	public static $SNS_USERNAME = '';
-    public static $SNS_PASSWORD = '';
+	public static $SNS_PASSWORD = '';
 
 	public static $REDIS_HOSTS = [
 		'default' => 'redis1.localdomain',

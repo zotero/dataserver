@@ -204,7 +204,7 @@ class Zotero_Storage {
 		return self::addFile($info);
 	}
 
-	public static function queueUpload($userID, Zotero_StorageFileInfo $info, $item) {
+	public static function queueUpload($userID, Zotero_StorageFileInfo $info, Zotero_Item $item) {
 		$uploadKey = md5(uniqid(rand(), true));
 
 		$sql = "SELECT COUNT(*) FROM storageUploadQueue WHERE userID=?
@@ -216,7 +216,7 @@ class Zotero_Storage {
 		}
 
 		$sql = "INSERT INTO storageUploadQueue "
-			. "(uploadKey, userID, libraryID, itemKey, hash, filename, zip, itemHash, itemFilename, "
+			. "(uploadKey, userID, libraryID, key, hash, filename, zip, itemHash, itemFilename, "
 			. "size, mtime, contentType, charset) "
 			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		Zotero_DB::query(
@@ -260,7 +260,7 @@ class Zotero_Storage {
 		$sql = "SELECT * FROM storageUploadQueue s1 JOIN ( 
 					SELECT uploadKey, MAX(time) AS time
 					FROM storageUploadQueue
-					GROUP BY userID, libraryID, itemKey) AS s2
+					GROUP BY userID, libraryID, key) AS s2
 					ON s1.uploadKey = s2.uploadKey WHERE hash=?";
 		$rows = Zotero_DB::query($sql, $hash);
 		$uploads = [];

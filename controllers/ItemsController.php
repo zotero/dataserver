@@ -991,10 +991,9 @@ class ItemsController extends ApiController {
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
 					// We should refresh $item->version because we are not in transaction,
-					// and there is a probability that it was updated by S3 regsitrator
-					header("HTTP/1.1 204 No Content");
-					header("Last-Modified-Version: " . $item->version);
-					exit;
+					// and there is a probability that it was updated by S3 registrator
+					$this->libraryVersion = $item->version;
+					$this->e204();
 				}
 				
 				// Partial upload
@@ -1042,6 +1041,8 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
+				StatsD::increment("storage.upload.registrator.normal", 1);
+				
 				header("HTTP/1.1 204 No Content");
 				header("Last-Modified-Version: " . $item->version);
 				exit;
@@ -1062,8 +1063,7 @@ class ItemsController extends ApiController {
 				
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
-					header("HTTP/1.1 204 No Content");
-					exit;
+					$this->e204();
 				}
 				
 				$remoteInfo = Zotero_Storage::getRemoteFileInfo($info);

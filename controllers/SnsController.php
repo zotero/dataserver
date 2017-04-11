@@ -40,7 +40,7 @@ class SnsController extends Controller {
 		}
 		
 		if (!isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])) {
-			Z_Core::logError("Missing PHP_AUTH_USER or PHP_AUTH_PW in SNS request");
+			header('WWW-Authenticate: Basic');
 			http_response_code(401);
 			exit;
 		}
@@ -56,7 +56,7 @@ class SnsController extends Controller {
 		$json = json_decode(file_get_contents("php://input"));
 		if (!$json) {
 			Z_Core::logError("SNS sent invalid JSON: " . $json);
-			http_response_code(412);
+			http_response_code(400);
 			exit;
 		}
 		
@@ -70,7 +70,7 @@ class SnsController extends Controller {
 				$json2 = json_decode($json->Message);
 				$ip = $json2->Records[0]->requestParameters->sourceIPAddress;
 				$hash = $json2->Records[0]->s3->object->key;
-				$this->register($hash, $ip);
+				$this->register($hash);
 			}
 		}
 		// This should happen only the first time when SNS is configured
@@ -87,7 +87,7 @@ class SnsController extends Controller {
 		}
 	}
 	
-	protected function register($hash, $ip) {
+	protected function register($hash) {
 		// We don't need to check the file size, because it's
 		// included in the file upload signature. We get the file we expected,
 		// or we don't get it at all.
@@ -108,7 +108,8 @@ class SnsController extends Controller {
 			}
 			
 			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
-			Zotero_Storage::logUpload($info->userID, $item, $info->uploadKey, $ip);
+			Zotero_Storage::logUpload($info->userID, $item, $info->uploadKey, 0);
+			StatsD::increment("storage.upload.registrator.s3", 1);
 		}
 		
 		Zotero_Storage::removeUploadsByHash($hash);

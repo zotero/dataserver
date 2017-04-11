@@ -1,3 +1,4 @@
+#!/bin/sh
 REGION=us-east-1
 S3_BUCKET_NAME=
 HTTPS_ENDPOINT=
