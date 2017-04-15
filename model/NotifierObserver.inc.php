@@ -92,7 +92,7 @@ class Zotero_NotifierObserver {
 					"topic" => $topic
 				];
 				
-				if(self::$continued) {
+				if (self::$continued) {
 					$message['continued'] = true;
 				}
 				
@@ -136,7 +136,7 @@ class Zotero_NotifierObserver {
 					"topic" => $topic
 				];
 				
-				if(self::$continued) {
+				if (self::$continued) {
 					$message['continued'] = true;
 				}
 				
