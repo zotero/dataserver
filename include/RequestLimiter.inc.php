@@ -70,7 +70,7 @@ class Z_RequestLimiter {
 	}
 	
 	/**
-	 * Limit request rate for a given bucket.
+	 * Check if the request is allowed depending on the current rate
 	 * Rate and capacity parameters allows to have flexible rate limits.
 	 *
 	 * rate - request accumulation rate per second (can be below 1)
@@ -82,7 +82,7 @@ class Z_RequestLimiter {
 	 * @param $params - bucket, capacity, rate
 	 * @return bool|null - returns true if request is allowed
 	 */
-	public function limitRate($params) {
+	public function checkBucketRate($params) {
 		$bucket = $params['bucket'];
 		$capacity = $params['capacity'];
 		$rate = $params['rate'];
@@ -146,9 +146,7 @@ class Z_RequestLimiter {
 			return null;
 		}
 		
-		if ($res[0]) return $id;
-		
-		return null;
+		return $res[0] ? $id : null;
 	}
 	
 	/**
@@ -168,5 +166,3 @@ class Z_RequestLimiter {
 		}
 	}
 }
-
-?>

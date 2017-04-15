@@ -1324,13 +1324,13 @@ class Zotero_API {
 		return $sets;
 	}
 	
-	public static function getRateLimit($userID, $ip) {
+	public static function getRateLimit($params) {
 		// For individual and authorized users. One user don't need too many requests
-		if ($userID) {
+		if ($params['userID']) {
 			// 100 request burst with 10 request per second rate limit
 			return [
 				'logOnly' => false,
-				'bucket' => $userID . '_' . $ip,
+				'bucket' => $params['userID'] . '_' . $params['IP'],
 				'capacity' => 100,
 				'rate' => 10
 			];
@@ -1342,21 +1342,21 @@ class Zotero_API {
 			// always 30 requests per second, no burst
 			return [
 				'logOnly' => false,
-				'bucket' => $ip,
+				'bucket' => $params['IP'],
 				'capacity' => 30,
 				'rate' => 30
 			];
 		}
 	}
 	
-	public static function getConcurrencyLimit($userID) {
+	public static function getConcurrencyLimit($params) {
 		// The current implementation is only targeted to individual users
-		if ($userID) {
+		if ($params['userID']) {
 			// 5 concurrent request per userID,
 			// maximum time a task can take is 60 seconds
 			return [
 				'logOnly' => false,
-				'bucket' => $userID,
+				'bucket' => $params['userID'],
 				'ttl' => 60,
 				'capacity' => 5
 			];
