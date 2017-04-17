@@ -286,7 +286,7 @@ class ApiController extends Controller {
 		
 		$rateLimit = Zotero_API::getRateLimit([
 			'userID' => $this->userID,
-			'IP' => $_SERVER['REMOTE_ADDR']
+			'ip' => $_SERVER['REMOTE_ADDR']
 		]);
 		
 		$concurrencyLimit = Zotero_API::getConcurrencyLimit(['userID' => $this->userID]);
