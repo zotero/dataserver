@@ -80,6 +80,7 @@ class Zotero_FullText {
 		$doc = new \Elastica\Document($id, $doc, self::$elasticsearchType);
 		$doc->setVersion($version);
 		$doc->setVersionType('external');
+		$doc->setRouting($libraryID);
 		try {
 			$response = $type->addDocument($doc);
 		}

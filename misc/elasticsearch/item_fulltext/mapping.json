@@ -14,8 +14,7 @@
 			"enabled": false
 		},
 		"_routing": {
-			"required": true,
-			"path": "libraryID"
+			"required": true
 		},
 		"dynamic" : false
 	}
