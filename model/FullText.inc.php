@@ -357,16 +357,25 @@ class Zotero_FullText {
 		
 		$type = self::getReadType();
 		
-		$libraryFilter = new \Elastica\Filter\Term();
-		$libraryFilter->setTerm("libraryID", $libraryID);
+		$query = new \Elastica\Query([
+			'query' => [
+				'bool' => [
+					'must' => [
+						'match_phrase' => [
+							'content' => $searchText
+						]
+					],
+					'filter' => [
+						'term' => [
+							'libraryID' => $libraryID
+						]
+					]
+				]
+			]
+		]);
 		
-		$matchQuery = new \Elastica\Query\Match();
-		$matchQuery->setFieldQuery('content', $searchText);
-		$matchQuery->setFieldType('content', 'phrase');
-		
-		$matchQuery = new \Elastica\Query\Filtered($matchQuery, $libraryFilter);
 		$start = microtime(true);
-		$resultSet = $type->search($matchQuery, [
+		$resultSet = $type->search($query, [
 			'routing' => $libraryID
 		]);
 		StatsD::timing("elasticsearch.client.item_fulltext.search", (microtime(true) - $start) * 1000);
