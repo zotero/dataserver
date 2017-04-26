@@ -1337,7 +1337,10 @@ class ItemTests extends APITests {
 		$this->assertEquals($charset, $json['charset']);
 	}
 	
-	
+	/**
+	 * @group attachment
+	 * @group api-sync
+	 */
 	public function testCreateLinkedFileAttachment() {
 		$key = API::createItem("book", false, $this, 'key');
 		$path = 'attachments:tést.txt';
@@ -1368,7 +1371,10 @@ class ItemTests extends APITests {
 		);
 	}
 	
-	
+	/**
+	 * @group attachment
+	 * @group api-sync
+	 */
 	public function testLinkedFileAttachmentPathViaSync() {
 		require_once 'include/sync.inc.php';
 		require_once '../../include/Unicode.inc.php';
@@ -1404,7 +1410,10 @@ class ItemTests extends APITests {
 		$this->assertEquals("attachments:" . $filename, $json['data']['path']);
 	}
 	
-	
+	/**
+	 * @group attachment
+	 * @group api-sync
+	 */
 	public function testStoredFileAttachmentPathViaSync() {
 		require_once 'include/sync.inc.php';
 		require_once '../../include/Unicode.inc.php';
