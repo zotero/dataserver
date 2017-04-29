@@ -53,6 +53,12 @@ CREATE TABLE IF NOT EXISTS `LUM_User` (
   KEY `user_role` (`RoleID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE IF NOT EXISTS `LUM_Role` (
+  `RoleID` int(2) NOT NULL AUTO_INCREMENT,
+  `Name` varchar(100) NOT NULL,
+  PRIMARY KEY (`RoleID`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS `storage_institutions` (
   `institutionID` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
   `domain` varchar(100) NOT NULL,
@@ -65,4 +71,14 @@ CREATE TABLE IF NOT EXISTS `storage_institution_email` (
   `email` varchar(255) COLLATE utf8_bin NOT NULL,
   PRIMARY KEY (`institutionID`,`email`),
   KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE IF NOT EXISTS `sessions` (
+  `id` char(32) COLLATE utf8_bin NOT NULL,
+  `userID` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  `data` text COLLATE utf8_bin NOT NULL,
+  `modified` int(10) unsigned NOT NULL,
+  `lifetime` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `modified` (`modified`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
