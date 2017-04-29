@@ -216,7 +216,7 @@ class Zotero_Storage {
 		}
 
 		$sql = "INSERT INTO storageUploadQueue "
-			. "(uploadKey, userID, libraryID, key, hash, filename, zip, itemHash, itemFilename, "
+			. "(uploadKey, userID, libraryID, `key`, hash, filename, zip, itemHash, itemFilename, "
 			. "size, mtime, contentType, charset) "
 			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		Zotero_DB::query(

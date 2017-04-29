@@ -323,7 +323,6 @@ CREATE TABLE `storageUploadQueue` (
   PRIMARY KEY (`uploadKey`),
   KEY `userID` (`userID`),
   KEY `libraryID` (`libraryID`),
-  KEY `key` (`key`),
   KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
