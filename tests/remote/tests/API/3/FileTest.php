@@ -295,7 +295,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileFormDataFullParams() {
 		$json = API::createAttachmentItem("imported_file", [], false, $this, 'jsonData');
@@ -471,7 +471,7 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testAddFileExisting
-	 * @group attachment
+	 * @group attachments
 	 */
 	public function testGetFile($addFileData) {
 		$key = $addFileData['key'];
@@ -516,7 +516,7 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testGetFile
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFilePartial($getFileData) {
 		// Get serverDateModified
@@ -818,7 +818,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClientV4() {
 		API::userClear(self::$config['userID']);
@@ -1046,7 +1046,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClientV4Zip() {
 		API::userClear(self::$config['userID']);
@@ -1238,7 +1238,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClientV5() {
 		API::userClear(self::$config['userID']);
@@ -1505,7 +1505,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClientV5Zip() {
 		API::userClear(self::$config['userID']);

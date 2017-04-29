@@ -1338,8 +1338,8 @@ class ItemTests extends APITests {
 	}
 	
 	/**
-	 * @group attachment
-	 * @group api-sync
+	 * @group attachments
+	 * @group classic-sync
 	 */
 	public function testCreateLinkedFileAttachment() {
 		$key = API::createItem("book", false, $this, 'key');
@@ -1372,8 +1372,8 @@ class ItemTests extends APITests {
 	}
 	
 	/**
-	 * @group attachment
-	 * @group api-sync
+	 * @group attachments
+	 * @group classic-sync
 	 */
 	public function testLinkedFileAttachmentPathViaSync() {
 		require_once 'include/sync.inc.php';
@@ -1411,8 +1411,8 @@ class ItemTests extends APITests {
 	}
 	
 	/**
-	 * @group attachment
-	 * @group api-sync
+	 * @group attachments
+	 * @group classic-sync
 	 */
 	public function testStoredFileAttachmentPathViaSync() {
 		require_once 'include/sync.inc.php';

@@ -285,7 +285,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileFullParams() {
 		$xml = API::createAttachmentItem("imported_file", [], false, $this);
@@ -466,7 +466,7 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testAddFileExisting
-	 * @group attachment
+	 * @group attachments
 	 */
 	public function testGetFile($addFileData) {
 		$key = $addFileData['key'];
@@ -511,7 +511,7 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testGetFile
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFilePartial($getFileData) {
 		// Get serverDateModified
@@ -819,7 +819,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClient() {
 		API::userClear(self::$config['userID']);
@@ -1051,7 +1051,7 @@ class FileTests extends APITests {
 	}
 	
 	/**
-	 * @group api-sync
+	 * @group classic-sync
 	 */
 	public function testAddFileClientZip() {
 		API::userClear(self::$config['userID']);
