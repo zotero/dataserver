@@ -260,7 +260,7 @@ class Zotero_Storage {
 		$sql = "SELECT * FROM storageUploadQueue s1 JOIN ( 
 					SELECT uploadKey, MAX(time) AS time
 					FROM storageUploadQueue
-					GROUP BY userID, libraryID, key) AS s2
+					GROUP BY userID, libraryID, `key`) AS s2
 					ON s1.uploadKey = s2.uploadKey WHERE hash=?";
 		$rows = Zotero_DB::query($sql, $hash);
 		$uploads = [];

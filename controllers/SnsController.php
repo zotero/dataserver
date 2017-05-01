@@ -97,7 +97,7 @@ class SnsController extends Controller {
 		$uploads = Zotero_Storage::getRecentUploads($hash);
 		
 		foreach ($uploads as $info) {
-			$item = Zotero_Items::getByLibraryAndKey($info->libraryID, $info->itemKey);
+			$item = Zotero_Items::getByLibraryAndKey($info->libraryID, $info->key);
 			$fileInfo = Zotero_Storage::getLocalFileInfo($info);
 			
 			if ($fileInfo) {
