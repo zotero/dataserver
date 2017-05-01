@@ -68,7 +68,6 @@ class SnsController extends Controller {
 			
 			if ($topic == 's3-object-created-' . Z_CONFIG::$S3_BUCKET) {
 				$json2 = json_decode($json->Message);
-				$ip = $json2->Records[0]->requestParameters->sourceIPAddress;
 				$hash = $json2->Records[0]->s3->object->key;
 				$this->register($hash);
 			}
