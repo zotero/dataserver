@@ -59,51 +59,33 @@ class Zotero_FullText {
 	}
 	
 	private static function indexItemInElasticsearch($libraryID, $key, $version, $timestamp, $data) {
-		$type = self::getWriteType();
-		
-		$id = $libraryID . "/" . $key;
-		$doc = [
-			'id' => $id,
-			'libraryID' => $libraryID,
-			'content' => (string) $data->content,
-			// We don't seem to be able to search on _version, so we duplicate it here
+		$params = [
+			'index' => self::$elasticsearchType . "_index_write",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			'id' => $libraryID . "/" . $key,
+			'version_type' => 'external_gte', // Greater or equal
 			'version' => $version,
-			// Add "T" between date and time for Elasticsearch
-			'timestamp' => str_replace(" ", "T", $timestamp)
+			'body' => [
+				'libraryID' => $libraryID,
+				'content' => (string) $data->content,
+				// We don't seem to be able to search on _version, so we duplicate it here
+				'version' => $version,
+				// Add "T" between date and time for Elasticsearch
+				'timestamp' => str_replace(" ", "T", $timestamp)
+			]
 		];
+
 		foreach (self::$metadata as $prop) {
 			if (isset($data->$prop)) {
-				$doc[$prop] = (int) $data->$prop;
+				$params['body'][$prop] = (int) $data->$prop;
 			}
 		}
+
 		$start = microtime(true);
-		$doc = new \Elastica\Document($id, $doc, self::$elasticsearchType);
-		$doc->setVersion($version);
-		$doc->setVersionType('external');
-		try {
-			$response = $type->addDocument($doc);
-		}
-		catch (Exception $e) {
-			$msg = $e->getMessage();
-			if (preg_match('/version conflict, current \[([0-9]+)\], provided \[([0-9]+)\]/', $msg, $matches)) {
-				if ($matches[1] == $matches[2]) {
-					error_log("WARNING: " . $msg);
-					return;
-				}
-			}
-			throw $e;
-		}
+		// Throws exception if version is lower. Overwrites if greater or equal
+		Z_Core::$ES->index($params);
 		StatsD::timing("elasticsearch.client.item_fulltext.add", (microtime(true) - $start) * 1000);
-		if ($response->hasError()) {
-			$msg = $response->getError();
-			if (preg_match('/version conflict, current \[([0-9]+)\], provided \[([0-9]+)\]/', $msg, $matches)) {
-				if ($matches[1] == $matches[2]) {
-					error_log("WARNING: " . $msg);
-					return;
-				}
-			}
-			throw new Exception($response->getError());
-		}
 	}
 	
 	
@@ -154,7 +136,7 @@ class Zotero_FullText {
 				Zotero_DB::rollback();
 				
 				// If item key given, include that
-				$resultKey = isset($jsonObject->key) ? $jsonObject->$key : '';
+				$resultKey = isset($jsonObject->key) ? $jsonObject->key : '';
 				$results->addFailure($i, $resultKey, $e);
 			}
 			$i++;
@@ -182,20 +164,20 @@ class Zotero_FullText {
 	 * hasn't yet been indexed
 	 */
 	public static function getItemData($libraryID, $key) {
-		$index = self::getReadIndex();
-		$type = self::getReadType();
-		$id = $libraryID . "/" . $key;
+		$params = [
+			'index' => self::$elasticsearchType . "_index_read",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			'id' => $libraryID . "/" . $key
+		];
 		
 		try {
-			$document = $type->getDocument($id, [
-				'routing' => $libraryID
-			]);
-		}
-		catch (\Elastica\Exception\NotFoundException $e) {
+			$resp = Z_Core::$ES->get($params);
+		} catch (Elasticsearch\Common\Exceptions\Missing404Exception $e) {
 			return false;
 		}
 		
-		$esData = $document->getData();
+		$esData = $resp['_source'];
 		$itemData = array(
 			"content" => $esData['content'],
 			"version" => $esData['version'],
@@ -254,34 +236,28 @@ class Zotero_FullText {
 		}
 		
 		$maxChars = 1000000;
-		
-		$index = self::getReadIndex();
-		$type = self::getReadType();
 		$first = true;
 		$stop = false;
 		$chars = 0;
 		$data = [];
 		
 		while (($chars < $maxChars) && ($batchRows = array_splice($rows, 0, 5)) && !$stop) {
-			// Make a raw query, since Elastica doesn't yet support mget
-			$json = [
-				"docs" => []
+			$params = [
+				'index' => self::$elasticsearchType . "_index_read",
+				'type' => self::$elasticsearchType,
+				'body' => [
+					"docs" => []
+				]
 			];
 			foreach ($batchRows as $row) {
-				$json['docs'][] = [
+				$params['body']['docs'][] = [
 					"_id" => $row['libraryID'] . "/" . $row['key'],
 					"_routing" => $row['libraryID']
 				];
 			}
-			$path = $index->getName() . '/' . $type->getName() . '/_mget';
-			$response = Z_Core::$Elastica->request($path, \Elastica\Request::GET, json_encode($json));
-			if ($response->hasError()) {
-				throw new Exception($response->getError());
-			}
-			$responseData = $response->getData();
-			if (!isset($responseData['docs'])) {
-				throw new Exception("Invalid response from mget");
-			}
+			
+			$responseData = Z_Core::$ES->mget($params);
+			
 			if (sizeOf($responseData['docs']) != sizeOf($batchRows)) {
 				throw new Exception("MySQL and Elasticsearch do not match "
 					. "(" . sizeOf($responseData['docs']) . ", " . sizeOf($batchRows) . ")");
@@ -290,7 +266,7 @@ class Zotero_FullText {
 			foreach ($responseData['docs'] as $doc) {
 				list($libraryID, $key) = explode("/", $doc['_id']);
 				// This shouldn't happen
-				if (empty($doc["found"])) {
+				if (!$doc["found"]) {
 					error_log("WARNING: Item {$doc['_id']} not found in Elasticsearch");
 					continue;
 				}
@@ -336,7 +312,6 @@ class Zotero_FullText {
 				"indexedChars" => 0,
 				"totalChars" => 0,
 				"indexedPages" => 0,
-				"indexedPages" => 0,
 				"empty" => true
 			];
 		}
@@ -354,28 +329,37 @@ class Zotero_FullText {
 		// TEMP: For now, strip double-quotes and make everything a phrase search
 		$searchText = str_replace('"', '', $searchText);
 		
-		$type = self::getReadType();
+		$params = [
+			'index' => self::$elasticsearchType . "_index_read",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			"body" => [
+				'query' => [
+					'bool' => [
+						'must' => [
+							'match_phrase' => [
+								'content' => $searchText
+							]
+						],
+						'filter' => [
+							'term' => [
+								'libraryID' => $libraryID
+							]
+						]
+					]
+				]
+			]
+		];
 		
-		$libraryFilter = new \Elastica\Filter\Term();
-		$libraryFilter->setTerm("libraryID", $libraryID);
-		
-		$matchQuery = new \Elastica\Query\Match();
-		$matchQuery->setFieldQuery('content', $searchText);
-		$matchQuery->setFieldType('content', 'phrase');
-		
-		$matchQuery = new \Elastica\Query\Filtered($matchQuery, $libraryFilter);
 		$start = microtime(true);
-		$resultSet = $type->search($matchQuery, [
-			'routing' => $libraryID
-		]);
+		$resp = Z_Core::$ES->search($params);
 		StatsD::timing("elasticsearch.client.item_fulltext.search", (microtime(true) - $start) * 1000);
-		if ($resultSet->getResponse()->hasError()) {
-			throw new Exception($resultSet->getResponse()->getError());
-		}
-		$results = $resultSet->getResults();
+		
+		$results = $resp['hits']['hits'];
+		
 		$keys = array();
 		foreach ($results as $result) {
-			$keys[] = explode("/", $result->getId())[1];
+			$keys[] = explode("/", $result['_id'])[1];
 		}
 		return $keys;
 	}
@@ -403,24 +387,21 @@ class Zotero_FullText {
 	
 	public static function deleteItemContentFromElasticsearch($libraryID, $key) {
 		// Delete from Elasticsearch
-		$type = self::getWriteType();
-		
+		$params = [
+			'index' => self::$elasticsearchType . "_index_write",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			'id' => $libraryID . "/" . $key
+		];
+
+		$start = microtime(true);
+
 		try {
-			$start = microtime(true);
-			$response = $type->deleteById($libraryID . "/" . $key, [
-				'routing' => $libraryID
-			]);
-			StatsD::timing("elasticsearch.client.item_fulltext.delete_item", (microtime(true) - $start) * 1000);
-		}
-		catch (Elastica\Exception\NotFoundException $e) {
+			Z_Core::$ES->delete($params);
+		} catch (Elasticsearch\Common\Exceptions\Missing404Exception $e) {
 			// Ignore if not found
 		}
-		catch (Exception $e) {
-			throw $e;
-		}
-		if (isset($response) && $response->hasError()) {
-			throw new Exception($response->getError());
-		}
+		StatsD::timing("elasticsearch.client.item_fulltext.delete_item", (microtime(true) - $start) * 1000);
 	}
 	
 	
@@ -431,17 +412,23 @@ class Zotero_FullText {
 		self::deleteByLibraryMySQL($libraryID);
 		
 		// Delete from Elasticsearch
-		$type = self::getWriteType();
-		
-		$libraryQuery = new \Elastica\Query\Term();
-		$libraryQuery->setTerm("libraryID", $libraryID);
-		$query = new \Elastica\Query($libraryQuery);
+		$params = [
+			'index' => self::$elasticsearchType . "_index_write",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			'conflicts'=>'proceed',
+			'body' => [
+				'query' => [
+					'term' => [
+						'libraryID' => $libraryID
+					]
+				]
+			]
+		];
+
 		$start = microtime(true);
-		$response = $type->deleteByQuery($query);
+		Z_Core::$ES->deleteByQuery($params);
 		StatsD::timing("elasticsearch.client.item_fulltext.delete_library", (microtime(true) - $start) * 1000);
-		if ($response->hasError()) {
-			throw new Exception($response->getError());
-		}
 		
 		Zotero_DB::commit();
 	}
@@ -500,25 +487,5 @@ class Zotero_FullText {
 			$xmlNode->appendChild($doc->createTextNode($data['content']));
 		}
 		return $xmlNode;
-	}
-	
-	
-	private static function getReadIndex() {
-		return Z_Core::$Elastica->getIndex(self::$elasticsearchType . "_index_read");
-	}
-	
-	
-	private static function getWriteIndex() {
-		return Z_Core::$Elastica->getIndex(self::$elasticsearchType . "_index_write");
-	}
-	
-	
-	private static function getReadType() {
-		return new \Elastica\Type(self::getReadIndex(), self::$elasticsearchType);
-	}
-	
-	
-	private static function getWriteType() {
-		return new \Elastica\Type(self::getWriteIndex(), self::$elasticsearchType);
 	}
 }

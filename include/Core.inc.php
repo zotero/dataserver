@@ -28,7 +28,7 @@ class Z_Core {
 	// Set in header.php
 	public static $AWS = null; // AWS-SDK
 	public static $MC = null; // Memcached
-	public static $Elastica = null; // ElasticSearch client
+	public static $ES = null; // Elasticsearch
 	
 	// Set in config.inc.php
 	public static $debug = false;

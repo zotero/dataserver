@@ -1,5 +1,5 @@
 {
 	"index": {
-		"refresh_interval": "5s"
+		"refresh_interval": "1s"
 	}
 }
