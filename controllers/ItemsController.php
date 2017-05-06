@@ -952,10 +952,12 @@ class ItemsController extends ApiController {
 					$this->end();
 				}
 				
+				// Add request to upload queue
+				// Moved inside transaction to prevent queuing upload after
+				// S3 registrator just processed the current hash.
+				$uploadKey = Zotero_Storage::queueUpload($this->userID, $info, $item);
 				Zotero_DB::commit();
 				
-				// Add request to upload queue
-				$uploadKey = Zotero_Storage::queueUpload($this->userID, $info);
 				// User over queue limit
 				if (!$uploadKey) {
 					header('Retry-After: ' . Zotero_Storage::$uploadQueueTimeout);
@@ -1019,7 +1021,10 @@ class ItemsController extends ApiController {
 				
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
-					$this->e400("Upload key not found");
+					// We should refresh $item->version because we are not in transaction,
+					// and there is a probability that it was updated by S3 registrator
+					$this->libraryVersion = $item->version;
+					$this->e204();
 				}
 				
 				// Partial upload
@@ -1067,6 +1072,8 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
+				StatsD::increment("storage.upload.registrator.normal", 1);
+				
 				header("HTTP/1.1 204 No Content");
 				header("Last-Modified-Version: " . $item->version);
 				exit;
@@ -1087,7 +1094,7 @@ class ItemsController extends ApiController {
 				
 				$info = Zotero_Storage::getUploadInfo($uploadKey);
 				if (!$info) {
-					$this->e400("Upload key not found");
+					$this->e204();
 				}
 				
 				$remoteInfo = Zotero_Storage::getRemoteFileInfo($info);

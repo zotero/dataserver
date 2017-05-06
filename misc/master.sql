@@ -308,6 +308,8 @@ CREATE TABLE `storageUploadLog` (
 CREATE TABLE `storageUploadQueue` (
   `uploadKey` char(32) NOT NULL,
   `userID` int(10) unsigned NOT NULL,
+  `libraryID` int(10) unsigned NOT NULL,
+  `key` char(8) NOT NULL,
   `hash` char(32) NOT NULL,
   `filename` varchar(1024) NOT NULL,
   `zip` tinyint(1) unsigned NOT NULL,
@@ -319,7 +321,9 @@ CREATE TABLE `storageUploadQueue` (
   `charset` varchar(25) DEFAULT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`uploadKey`),
-  KEY `userID` (`userID`)
+  KEY `userID` (`userID`),
+  KEY `libraryID` (`libraryID`),
+  KEY `hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -516,7 +520,8 @@ ALTER TABLE `storageLastSync`
   ADD CONSTRAINT `storageLastSync_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `storageUploadQueue`
-  ADD CONSTRAINT `storageUploadQueue_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `storageUploadQueue_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `storageUploadQueue_ibfk_2` FOREIGN KEY (`libraryID`) REFERENCES `libraries` (`libraryID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `syncDownloadQueue`
   ADD CONSTRAINT `syncDownloadQueue_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE,

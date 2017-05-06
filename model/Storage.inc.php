@@ -203,11 +203,10 @@ class Zotero_Storage {
 		
 		return self::addFile($info);
 	}
-	
-	
-	public static function queueUpload($userID, Zotero_StorageFileInfo $info) {
+
+	public static function queueUpload($userID, Zotero_StorageFileInfo $info, Zotero_Item $item) {
 		$uploadKey = md5(uniqid(rand(), true));
-		
+
 		$sql = "SELECT COUNT(*) FROM storageUploadQueue WHERE userID=?
 				AND time > (NOW() - INTERVAL " . self::$uploadQueueTimeout . " SECOND)";
 		$num = Zotero_DB::valueQuery($sql, $userID);
@@ -215,16 +214,18 @@ class Zotero_Storage {
 			Z_Core::logError("Too many queued uploads ($num) for user $userID");
 			return false;
 		}
-		
+
 		$sql = "INSERT INTO storageUploadQueue "
-			. "(uploadKey, userID, hash, filename, zip, itemHash, itemFilename, "
+			. "(uploadKey, userID, libraryID, `key`, hash, filename, zip, itemHash, itemFilename, "
 			. "size, mtime, contentType, charset) "
-			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		Zotero_DB::query(
 			$sql,
 			array(
 				$uploadKey,
 				$userID,
+				$item->libraryID,
+				$item->key,
 				$info->hash,
 				$info->filename,
 				$info->zip ? 1 : 0,
@@ -236,7 +237,7 @@ class Zotero_Storage {
 				$info->charset
 			)
 		);
-		
+
 		return $uploadKey;
 	}
 	
@@ -255,6 +256,23 @@ class Zotero_Storage {
 		return $info;
 	}
 	
+	public static function getRecentUploads($hash) {
+		$sql = "SELECT * FROM storageUploadQueue s1 JOIN ( 
+					SELECT uploadKey, MAX(time) AS time
+					FROM storageUploadQueue
+					GROUP BY userID, libraryID, `key`) AS s2
+					ON s1.uploadKey = s2.uploadKey WHERE hash=?";
+		$rows = Zotero_DB::query($sql, $hash);
+		$uploads = [];
+		foreach ($rows as $row) {
+			$info = new Zotero_StorageFileInfo;
+			foreach ($row as $key => $val) {
+				$info->$key = $val;
+			}
+			$uploads[] = $info;
+		}
+		return $uploads;
+	}
 	
 	public static function logUpload($uploadUserID, $item, $key, $ipAddress) {
 		$libraryID = $item->libraryID;
@@ -279,6 +297,10 @@ class Zotero_Storage {
 		Zotero_DB::query($sql, array($ownerUserID, $uploadUserID, $ipAddress, $storageFileID, $filename, $size));
 	}
 	
+	public static function removeUploadsByHash($hash) {
+		$sql = 'DELETE FROM storageUploadQueue WHERE hash=?';
+		Zotero_DB::query($sql, $hash);
+	}
 	
 	public static function getUploadBaseURL() {
 		return "https://" . Z_CONFIG::$S3_BUCKET . ".s3.amazonaws.com/";

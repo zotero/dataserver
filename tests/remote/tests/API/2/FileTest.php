@@ -221,53 +221,27 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		
-		// No If-None-Match
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?key=" . self::$config['apiKey'],
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			)
-		);
-		$this->assert428($response);
-		
-		// Invalid upload key
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?key=" . self::$config['apiKey'],
-			"upload=invalidUploadKey",
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert400($response);
-		
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?key=" . self::$config['apiKey'],
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert204($response);
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
+			);
+			
+			$xml = API::getXMLFromResponse($response);
+			$data = API::parseDataFromAtomEntry($xml);
+			$json = json_decode($data['content']);
+		} while (!$json->md5);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
-		);
-		$xml = API::getXMLFromResponse($response);
-		$data = API::parseDataFromAtomEntry($xml);
-		$json = json_decode($data['content']);
-		
 		$this->assertEquals($hash, $json->md5);
 		$this->assertEquals($filename, $json->filename);
 		$this->assertEquals($mtime, $json->mtime);
@@ -355,29 +329,26 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?key=" . self::$config['apiKey'],
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert204($response);
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
+			);
+			$xml = API::getXMLFromResponse($response);
+			$data = API::parseDataFromAtomEntry($xml);
+			$json = json_decode($data['content']);
+		} while (!$json->md5);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
-		);
-		$xml = API::getXMLFromResponse($response);
-		$data = API::parseDataFromAtomEntry($xml);
-		$json = json_decode($data['content']);
-		
 		$this->assertEquals($hash, $json->md5);
 		$this->assertEquals($filename, $json->filename);
 		$this->assertEquals($mtime, $json->mtime);
