@@ -233,51 +233,24 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		
-		// No If-None-Match
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$attachmentKey/file",
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			)
-		);
-		$this->assert428($response);
-		
-		// Invalid upload key
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$attachmentKey/file",
-			"upload=invalidUploadKey",
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert400($response);
-		
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$attachmentKey/file",
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert204($response);
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/$attachmentKey"
+			);
+			$json = API::getJSONFromResponse($response)['data'];
+		} while (!$json['md5']);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/$attachmentKey"
-		);
-		$json = API::getJSONFromResponse($response)['data'];
-		
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($filename, $json['filename']);
 		$this->assertEquals($mtime, $json['mtime']);
@@ -365,27 +338,24 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$attachmentKey/file",
-			"upload=" . $json->uploadKey,
-			array(
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			)
-		);
-		$this->assert204($response);
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/$attachmentKey"
+			);
+			$json = API::getJSONFromResponse($response)['data'];
+		} while (!$json['md5']);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/$attachmentKey"
-		);
-		$json = API::getJSONFromResponse($response)['data'];
-		
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($filename, $json['filename']);
 		$this->assertEquals($mtime, $json['mtime']);
@@ -1321,66 +1291,24 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		
-		// Require If-Match/If-None-Match
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded"
-			]
-		);
-		$this->assert428($response, "If-Match/If-None-Match header not provided");
-		
-		// Invalid upload key
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=invalidUploadKey",
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			]
-		);
-		$this->assert400($response);
-		
-		// If-Match shouldn't match unregistered file
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-Match: $hash"
-			]
-		);
-		$this->assert412($response);
-		$this->assertNull($response->getHeader("Last-Modified-Version"));
-		
-		// Successful registration
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			]
-		);
-		$this->assert204($response);
-		$newVersion = $response->getHeader('Last-Modified-Version');
-		$this->assertGreaterThan($originalVersion, $newVersion);
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/$key"
+			);
+			$json = API::getJSONFromResponse($response)['data'];
+		} while (!$json['md5']);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/$key"
-		);
-		$json = API::getJSONFromResponse($response)['data'];
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($mtime, $json['mtime']);
 		$this->assertEquals($filename, $json['filename']);
@@ -1576,52 +1504,24 @@ class FileTests extends APITests {
 		);
 		$this->assert201($response);
 		
-		//
-		// Register upload
-		//
-		
-		// If-Match with file hash shouldn't match unregistered file
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-Match: $hash"
-			]
-		);
-		$this->assert412($response);
-		
-		// If-Match with ZIP hash shouldn't match unregistered file
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-Match: $zipHash"
-			]
-		);
-		$this->assert412($response);
-		
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/$key/file",
-			"upload=" . $json['uploadKey'],
-			[
-				"Content-Type: application/x-www-form-urlencoded",
-				"If-None-Match: *"
-			]
-		);
-		$this->assert204($response);
-		$newVersion = $response->getHeader("Last-Modified-Version");
+		// Wait until the file is registered
+		$attempts = 0;
+		do {
+			if ($attempts == 2) {
+				throw new \Exception('File is not registered');
+			}
+			
+			$attempts++;
+			sleep(2 * $attempts);
+			
+			$response = API::userGet(
+				self::$config['userID'],
+				"items/$key"
+			);
+			$json = API::getJSONFromResponse($response)['data'];
+		} while (!$json['md5']);
 		
 		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/$key"
-		);
-		$json = API::getJSONFromResponse($response)['data'];
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($mtime, $json['mtime']);
 		$this->assertEquals($filename, $json['filename']);

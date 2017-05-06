@@ -106,7 +106,7 @@ class SnsController extends Controller {
 				$storageFileID = Zotero_Storage::addFile($info);
 			}
 			
-			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
+			Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info);
 			StatsD::increment("storage.upload.registrator.s3", 1);
 		}
 		
