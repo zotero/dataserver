@@ -25,7 +25,8 @@ class Z_CONFIG {
 	public static $AWS_SECRET_KEY = '';
 	public static $S3_BUCKET = '';
 	public static $S3_BUCKET_CACHE = '';
-	
+	public static $S3_BUCKET_FULLTEXT = '';
+
 	public static $REDIS_HOSTS = [
 		'default' => 'redis1.localdomain',
 		'request-limiter' => => 'redis-transient.localdomain',
