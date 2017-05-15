@@ -80,6 +80,12 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.put", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
+		
+		// Todo: Remove fall back code after migration
+		$redisClient = new Redis();
+		$redisClient->connect('localhost');
+		$redisClient->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY);
+		$redisClient->set('s3:' . $libraryID . "/" . $key, '1');
 	}
 	
 	
@@ -150,11 +156,43 @@ class Zotero_FullText {
 		}
 	}
 	
+	/*
+	 * TODO: Remove fall back code after migration
+	 */
+	public static function getItemDataES($libraryID, $key) {
+		$index = self::getReadIndex();
+		$type = self::getReadType();
+		$id = $libraryID . "/" . $key;
+		
+		try {
+			$document = $type->getDocument($id, [
+				'routing' => $libraryID
+			]);
+		}
+		catch (\Elastica\Exception\NotFoundException $e) {
+			return false;
+		}
+		
+		$esData = $document->getData();
+		$itemData = array(
+			"libraryID" => $libraryID,
+			"key" => $key,
+			"content" => $esData['content'],
+			"version" => $esData['version'],
+		);
+		if (isset($esData['language'])) {
+			$itemData['language'] = $esData['language'];
+		}
+		foreach (self::$metadata as $prop) {
+			$itemData[$prop] = isset($esData[$prop]) ? $esData[$prop] : 0;
+		}
+		return $itemData;
+	}
 	
 	/**
 	 * Get item full-text data from S3 by libraryID and key
 	 */
-	public static function getItemData($libraryID, $key) {
+	public static function getItemDataS3($libraryID, $key) {
 		$s3Client = Z_Core::$AWS->createS3();
 		
 		try {
@@ -176,6 +214,8 @@ class Zotero_FullText {
 		$json = json_decode($json);
 		
 		$itemData = array(
+			"libraryID" => $libraryID,
+			"key" => $key,
 			"content" => $json->content,
 			"version" => $json->version
 		);
@@ -186,6 +226,17 @@ class Zotero_FullText {
 			$itemData[$prop] = isset($json->$prop) ? $json->$prop : 0;
 		}
 		return $itemData;
+	}
+	
+	/*
+	 * TODO: Remove fall back code after migration
+	 */
+	public static function getItemData($libraryID, $key) {
+		$data = self::getItemDataS3($libraryID, $key);
+		if (!$data) {
+			$data = self::getItemDataES($libraryID, $key);
+		}
+		return $data;
 	}
 	
 	
@@ -239,56 +290,29 @@ class Zotero_FullText {
 		$chars = 0;
 		$data = [];
 		
-		$s3Client = Z_Core::$AWS->createS3();
-		
 		while (($chars < $maxChars) && ($row = array_shift($rows)) && !$stop) {
 			$libraryID = $row['libraryID'];
 			$key = $row['key'];
 			
-			try {
-				$start = microtime(true);
-				$result = $s3Client->getObject([
-					'Bucket' => Z_CONFIG::$S3_BUCKET_FULLTEXT,
-					'Key' => $row['libraryID'] . "/" . $row['key']
-				]);
-				StatsD::timing("s3.fulltext.get", (microtime(true) - $start) * 1000);
+			$data[$key] = self::getItemData($libraryID, $key);
+			if (!$data[$key]) {
+				error_log("WARNING: JSON " . $libraryID . "/" . $key . " not found in S3 bucket");
+				continue;
 			}
-			catch (Aws\S3\Exception\S3Exception $e) {
-				if ($e->getAwsErrorCode() == 'NoSuchKey') {
-					error_log("WARNING: JSON " . $libraryID . "/" . $key . " not found in S3 bucket");
-					continue;
-				}
-				throw $e;
-			}
-			
-			$json = (string)$result['Body'];
-			$json = json_decode($json);
-			
-			$data[$key] = [
-				"libraryID" => $libraryID,
-				"key" => $key,
-				"version" => $json->version
-			];
 			
 			// If the current item would put us over max characters,
 			// leave it empty, unless it's the first one
-			$currentChars = strlen($json->content);
+			$currentChars = strlen($data['content']);
 			if (!$first && (($chars + $currentChars) > $maxChars)) {
+				unset($data[$key]['content']);
 				$data[$key]['empty'] = true;
 				$stop = true;
 			}
 			else {
-				$data[$key]['content'] = $json->content;
 				$data[$key]['empty'] = false;
 				$chars += $currentChars;
 			}
 			$first = false;
-			
-			foreach (self::$metadata as $prop) {
-				if (isset($json->$prop)) {
-					$data[$key][$prop] = (int)$json->$prop;
-				}
-			}
 		}
 		
 		// Add unprocessed rows as empty
