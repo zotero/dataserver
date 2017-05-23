@@ -83,8 +83,7 @@ class Zotero_FullText {
 		
 		// Todo: Remove fall back code after migration
 		$redisClient = new Redis();
-		$redisClient->connect('localhost');
-		$redisClient->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY);
+		$redisClient->pconnect('localhost');
 		$redisClient->set('s3:' . $libraryID . "/" . $key, '1');
 	}
 	
