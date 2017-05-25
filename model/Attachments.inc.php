@@ -189,15 +189,15 @@ class Zotero_Attachments {
 			throw new Exception("Unable to create directory '$downloadDir'");
 		}
 		if ($zip) {
-			$response = Zotero_Storage::downloadFile($info, $downloadDir);
+			$response = Zotero_Storage::downloadFile($info, $downloadDir, '1.zip');
 		}
 		else {
 			$response = Zotero_Storage::downloadFile($info, $downloadDir, $realFilename);
 		}
 		if ($response) {
 			if ($zip) {
-				$success = self::extractZip($downloadDir . $info['filename'], $dir);
-				unlink($downloadDir . $info['filename']);
+				$success = self::extractZip($downloadDir . '1.zip', $dir);
+				unlink($downloadDir . '1.zip');
 				rmdir($downloadDir);
 				
 				// Make sure charset is just a string with no spaces or newlines

@@ -51,7 +51,6 @@ class Zotero_Storage {
 		else {
 			return array(
 				'url' => $url,
-				'filename' => $info['filename'],
 				'size' => $info['size']
 			);
 		}
@@ -88,18 +87,23 @@ class Zotero_Storage {
 			// http://docs.aws.amazon.com/aws-sdk-php/v3/api/api-s3-2006-03-01.html#headobject,
 			// but returning NotFound
 			if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
-				// Try legacy key format, with zip flag and filename
+				// Try legacy key format, with zip flag
 				try {
-					$key = self::getPathPrefix($info['hash'], $info['zip']) . $info['filename'];
-					$s3Client->headObject([
+					$key = self::getPathPrefix($info['hash'], $info['zip']);
+					$result = $s3Client->listObjects([
 						'Bucket' => Z_CONFIG::$S3_BUCKET,
-						'Key' => $key
+						'MaxKeys' => 1,
+						'Prefix' => $key,
 					]);
-				}
-				catch (\Aws\S3\Exception\S3Exception $e) {
-					if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
+					
+					$contents = $result->get('Contents');
+					if (!$contents || count($contents) < 1) {
 						return false;
 					}
+					
+					$key = $contents[0]['Key'];
+				}
+				catch (\Aws\S3\Exception\S3Exception $e) {
 					throw $e;
 				}
 			}
@@ -116,8 +120,7 @@ class Zotero_Storage {
 		return (string) $s3Client->createPresignedRequest($cmd, "+$ttl seconds")->getUri();
 	}
 	
-	
-	public static function downloadFile(array $localFileItemInfo, $savePath, $filename=false) {
+	public static function downloadFile(array $localFileItemInfo, $savePath, $filename) {
 		if (!file_exists($savePath)) {
 			throw new Exception("Path '$savePath' does not exist");
 		}
@@ -131,24 +134,42 @@ class Zotero_Storage {
 			return $s3Client->getObject([
 				'Bucket' => Z_CONFIG::$S3_BUCKET,
 				'Key' => $localFileItemInfo['hash'],
-				'SaveAs' => $savePath . "/" . ($filename ? $filename : $localFileItemInfo['filename'])
+				'SaveAs' => $savePath . "/" . $filename
 			]);
 		}
 		catch (\Aws\S3\Exception\S3Exception $e) {
 			if ($e->getAwsErrorCode() == 'NoSuchKey') {
 				// Try legacy key format, with zip flag and filename
 				try {
-					return $s3Client->getObject([
+					$key = self::getPathPrefix($localFileItemInfo['hash'], $localFileItemInfo['zip']);
+					$result = $s3Client->listObjects([
 						'Bucket' => Z_CONFIG::$S3_BUCKET,
-						'Key' => self::getPathPrefix($localFileItemInfo['hash'], $localFileItemInfo['zip'])
-							. $localFileItemInfo['filename'],
-						'SaveAs' => $savePath . "/" . ($filename ? $filename : $localFileItemInfo['filename'])
+						'MaxKeys' => 1,
+						'Prefix' => $key,
 					]);
-				}
-				catch (\Aws\S3\Exception\S3Exception $e) {
-					if ($e->getAwsErrorCode() == 'NoSuchKey') {
+					
+					$contents = $result->get('Contents');
+					if (!$contents || count($contents) < 1) {
 						return false;
 					}
+					$key = $contents[0]['Key'];
+					
+					try {
+						return $s3Client->getObject([
+							'Bucket' => Z_CONFIG::$S3_BUCKET,
+							'Key' => $key,
+							'SaveAs' => $savePath . "/" . $filename
+						]);
+					}
+					catch (\Aws\S3\Exception\S3Exception $e) {
+						if ($e->getAwsErrorCode() == 'NoSuchKey') {
+							return false;
+						}
+						throw $e;
+					}
+					
+				}
+				catch (\Aws\S3\Exception\S3Exception $e) {
 					throw $e;
 				}
 			}
@@ -164,12 +185,11 @@ class Zotero_Storage {
 		
 		$info = self::getLocalFileItemInfo($item);
 		$storageFileID = $info['storageFileID'];
-		$filename = $info['filename'];
 		$size = $info['size'];
 		
 		$sql = "INSERT INTO storageDownloadLog
-				(ownerUserID, downloadUserID, ipAddress, storageFileID, filename, size)
-				VALUES (?, ?, INET_ATON(?), ?, ?, ?)";
+				(ownerUserID, downloadUserID, ipAddress, storageFileID, size)
+				VALUES (?, ?, INET_ATON(?), ?, ?)";
 		Zotero_DB::query(
 			$sql,
 			[
@@ -177,7 +197,6 @@ class Zotero_Storage {
 				$downloadUserID,
 				$ipAddress,
 				$storageFileID,
-				$filename,
 				$size
 			],
 			0,
@@ -267,16 +286,15 @@ class Zotero_Storage {
 		
 		$info = self::getLocalFileItemInfo($item);
 		$storageFileID = $info['storageFileID'];
-		$filename = $info['filename'];
 		$size = $info['size'];
 		
 		$sql = "DELETE FROM storageUploadQueue WHERE uploadKey=?";
 		Zotero_DB::query($sql, $key);
 		
 		$sql = "INSERT INTO storageUploadLog
-				(ownerUserID, uploadUserID, ipAddress, storageFileID, filename, size)
-				VALUES (?, ?, INET_ATON(?), ?, ?, ?)";
-		Zotero_DB::query($sql, array($ownerUserID, $uploadUserID, $ipAddress, $storageFileID, $filename, $size));
+				(ownerUserID, uploadUserID, ipAddress, storageFileID, `size`)
+				VALUES (?, ?, INET_ATON(?), ?, ?)";
+		Zotero_DB::query($sql, array($ownerUserID, $uploadUserID, $ipAddress, $storageFileID, $size));
 	}
 	
 	
@@ -413,22 +431,40 @@ class Zotero_Storage {
 		catch (\Aws\S3\Exception\S3Exception $e) {
 			if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
 				try {
-					$s3Client->copyObject([
+					$key = self::getPathPrefix($localInfo['hash'], $localInfo['zip']);
+					$result = $s3Client->listObjects([
 						'Bucket' => Z_CONFIG::$S3_BUCKET,
-						'CopySource' => Z_CONFIG::$S3_BUCKET . '/'
-							. urlencode(self::getPathPrefix($localInfo['hash'], $localInfo['zip'])
-								. $localInfo['filename']),
-						'Key' => $localInfo['hash'],
-						'ACL' => 'private'
+						'MaxKeys' => 1,
+						'Prefix' => $key,
 					]);
-				}
-				catch (\Aws\S3\Exception\S3Exception $e) {
-					if ($e->getAwsErrorCode() == 'NoSuchKey') {
+					
+					$contents = $result->get('Contents');
+					if (!$contents || count($contents) < 1) {
 						return false;
 					}
-					else {
-						throw $e;
+					
+					$key = $contents[0]['Key'];
+					
+					try {
+						$s3Client->copyObject([
+							'Bucket' => Z_CONFIG::$S3_BUCKET,
+							'CopySource' => Z_CONFIG::$S3_BUCKET . '/'
+								. urlencode($key),
+							'Key' => $localInfo['hash'],
+							'ACL' => 'private'
+						]);
 					}
+					catch (\Aws\S3\Exception\S3Exception $e) {
+						if ($e->getAwsErrorCode() == 'NoSuchKey') {
+							return false;
+						}
+						else {
+							throw $e;
+						}
+					}
+				}
+				catch (\Aws\S3\Exception\S3Exception $e) {
+					throw $e;
 				}
 			}
 			else {
@@ -440,7 +476,7 @@ class Zotero_Storage {
 		foreach ($localInfo as $key => $val) {
 			$info->$key = $val;
 		}
-		$info->filename = $newName;
+		
 		return self::addFile($info);
 	}
 	
@@ -456,8 +492,8 @@ class Zotero_Storage {
 	}
 	
 	public static function getLocalFileInfo(Zotero_StorageFileInfo $info) {
-		$sql = "SELECT * FROM storageFiles WHERE hash=? AND filename=? AND zip=?";
-		return Zotero_DB::rowQuery($sql, array($info->hash, $info->filename, (int) $info->zip));
+		$sql = "SELECT * FROM storageFiles WHERE hash=? AND zip=? ORDER BY storageFileID LIMIT 1";
+		return Zotero_DB::rowQuery($sql, array($info->hash, (int)$info->zip));
 	}
 	
 	public static function getRemoteFileInfo(Zotero_StorageFileInfo $info) {
@@ -467,20 +503,27 @@ class Zotero_Storage {
 				'Bucket' => Z_CONFIG::$S3_BUCKET,
 				'Key' => $info->hash
 			]);
+			$size = $result['ContentLength'];
 		}
 		catch (\Aws\S3\Exception\S3Exception $e) {
 			if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
-				// Try legacy key format, with zip flag and filename
+				// Try legacy key format, with zip flag
 				try {
-					$result = $s3Client->headObject([
+					$key = self::getPathPrefix($info->hash, $info->zip);
+					$result = $s3Client->listObjects([
 						'Bucket' => Z_CONFIG::$S3_BUCKET,
-						'Key' => self::getPathPrefix($info->hash, $info->zip) . $info->filename
+						'MaxKeys' => 1,
+						'Prefix' => $key,
 					]);
-				}
-				catch (\Aws\S3\Exception\S3Exception $e) {
-					if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
+					
+					$contents = $result->get('Contents');
+					if (!$contents || count($contents) < 1) {
 						return false;
 					}
+					
+					$size = $contents[0]['Size'];
+				}
+				catch (\Aws\S3\Exception\S3Exception $e) {
 					throw $e;
 				}
 			}
@@ -490,7 +533,7 @@ class Zotero_Storage {
 		}
 		
 		$storageFileInfo = new Zotero_StorageFileInfo;
-		$storageFileInfo->size = $result['ContentLength'];
+		$storageFileInfo->size = $size;
 		
 		return $storageFileInfo;
 	}
@@ -531,8 +574,8 @@ class Zotero_Storage {
 	
 	
 	public static function addFile(Zotero_StorageFileInfo $info) {
-		$sql = "INSERT INTO storageFiles (hash, filename, size, zip) VALUES (?,?,?,?)";
-		return Zotero_DB::query($sql, array($info->hash, $info->filename, $info->size, (int) $info->zip));
+		$sql = "INSERT INTO storageFiles (hash, `size`, zip) VALUES (?,?,?)";
+		return Zotero_DB::query($sql, array($info->hash, $info->size, (int)$info->zip));
 	}
 	
 	

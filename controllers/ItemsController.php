@@ -961,7 +961,7 @@ class ItemsController extends ApiController {
 				Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 				Zotero_DB::beginTransaction();
 				
-				// See if file exists with this filename
+				// See if file exists with this hash and zip flag
 				$localInfo = Zotero_Storage::getLocalFileInfo($info);
 				if ($localInfo) {
 					$storageFileID = $localInfo['storageFileID'];
@@ -970,31 +970,8 @@ class ItemsController extends ApiController {
 					if ($localInfo['size'] != $info->size) {
 						throw new Exception(
 							"Specified file size incorrect for existing file "
-								. $info->hash . "/" . $info->filename
+							. $info->hash
 								. " ({$localInfo['size']} != {$info->size})"
-						);
-					}
-				}
-				// If not found, see if there's a copy with a different name
-				else {
-					$oldStorageFileID = Zotero_Storage::getFileByHash($info->hash, $info->zip);
-					if ($oldStorageFileID) {
-						// Verify file size
-						$localInfo = Zotero_Storage::getFileInfoByID($oldStorageFileID);
-						if ($localInfo['size'] != $info->size) {
-							throw new Exception(
-								"Specified file size incorrect for duplicated file "
-								. $info->hash . "/" . $info->filename
-								. " ({$localInfo['size']} != {$info->size})"
-							);
-						}
-						
-						// Create new file on S3 with new name
-						$storageFileID = Zotero_Storage::duplicateFile(
-							$oldStorageFileID,
-							$info->filename,
-							$info->zip,
-							$contentTypeHeader
 						);
 					}
 				}
@@ -1102,13 +1079,13 @@ class ItemsController extends ApiController {
 				else {
 					$remoteInfo = Zotero_Storage::getRemoteFileInfo($info);
 					if (!$remoteInfo) {
-						error_log("Remote file {$info->hash}/{$info->filename} not found");
+						error_log("Remote file {$info->hash} not found");
 						$this->e400("Remote file not found");
 					}
 					if ($remoteInfo->size != $info->size) {
 						error_log("Uploaded file size does not match "
 							. "({$remoteInfo->size} != {$info->size}) "
-							. "for file {$info->hash}/{$info->filename}");
+							. "for file {$info->hash}");
 					}
 				}
 				
