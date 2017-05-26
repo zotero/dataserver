@@ -628,6 +628,13 @@ trait Zotero_DataObjects {
 			Zotero_FullText::deleteItemContent($obj);
 		}
 		
+		$storageFileID = null;
+		if ($type == 'item' && $obj->isImportedAttachment()) {
+			// Get storageFileID while it still exists in storageFileItems table
+			$info = Zotero_Storage::getLocalFileItemInfo($obj);
+			$storageFileID = $info['storageFileID'];
+		}
+		
 		try {
 			$sql = "DELETE FROM $table WHERE libraryID=? AND `key`=?";
 			$deleted = Zotero_DB::query($sql, array($libraryID, $key), $shardID);
@@ -648,6 +655,14 @@ trait Zotero_DataObjects {
 		self::unload($obj->id);
 		
 		if ($deleted) {
+			// If the attachment item was successfully deleted, check
+			// if other items are using this storageFileID,
+			// and if not, delete the row with storageFileID and libraryID from
+			// storageFileLibraries table
+			if ($type == 'item' && $obj->isImportedAttachment()) {
+				Zotero_Storage::deleteFileLibraryReference($storageFileID, $libraryID);
+			}
+			
 			$sql = "INSERT INTO syncDeleteLogKeys
 						(libraryID, objectType, `key`, timestamp, version)
 						VALUES (?, '$type', ?, ?, ?)
