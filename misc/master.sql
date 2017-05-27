@@ -521,7 +521,8 @@ ALTER TABLE `storageAccounts`
   ADD CONSTRAINT `storageAccounts_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `storageFileLibraries`
-  ADD CONSTRAINT `storageFileLibraries_ibfk_1` FOREIGN KEY (`libraryID`) REFERENCES `libraries` (`libraryID`) ON DELETE CASCADE;
+  ADD CONSTRAINT `storageFileLibraries_ibfk_1` FOREIGN KEY (`storageFileID`) REFERENCES `storageFiles` (`storageFileID`),
+  ADD CONSTRAINT `storageFileLibraries_ibfk_2` FOREIGN KEY (`libraryID`) REFERENCES `libraries` (`libraryID`) ON DELETE CASCADE;
 
 ALTER TABLE `storageLastSync`
   ADD CONSTRAINT `storageLastSync_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE;
