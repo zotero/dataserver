@@ -624,15 +624,15 @@ trait Zotero_DataObjects {
 			$tagName = $obj->name;
 		}
 		
+		$storageFileID = null;
 		if ($type == 'item' && $obj->isAttachment()) {
 			Zotero_FullText::deleteItemContent($obj);
-		}
-		
-		$storageFileID = null;
-		if ($type == 'item' && $obj->isImportedAttachment()) {
-			// Get storageFileID while it still exists in storageFileItems table
-			$info = Zotero_Storage::getLocalFileItemInfo($obj);
-			$storageFileID = $info['storageFileID'];
+			
+			if ($obj->isImportedAttachment()) {
+				// Get storageFileID while it still exists in storageFileItems table
+				$info = Zotero_Storage::getLocalFileItemInfo($obj);
+				$storageFileID = $info['storageFileID'];
+			}
 		}
 		
 		try {
@@ -659,7 +659,7 @@ trait Zotero_DataObjects {
 			// if other items are using this storageFileID,
 			// and if not, delete the row with storageFileID and libraryID from
 			// storageFileLibraries table
-			if ($type == 'item' && $obj->isImportedAttachment()) {
+			if ($storageFileID) {
 				Zotero_Storage::deleteFileLibraryReference($storageFileID, $libraryID);
 			}
 			

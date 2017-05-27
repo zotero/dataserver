@@ -582,22 +582,16 @@ class Zotero_Storage {
 	
 	public static function addFileLibraryReference($storageFileID, $libraryID) {
 		$sql = "INSERT IGNORE INTO storageFileLibraries (storageFileID, libraryID) VALUES (?,?)";
-		return Zotero_DB::query($sql, array($storageFileID, $libraryID));
+		return Zotero_DB::query($sql, [$storageFileID, $libraryID]);
 	}
 	
 	public static function deleteFileLibraryReference($storageFileID, $libraryID) {
-		Zotero_DB::beginTransaction();
-		
-		$sql = "SELECT COUNT(*) FROM storageFileItems WHERE storageFileID = ?";
-		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
-		$count = Zotero_DB::valueQueryFromStatement($stmt, $storageFileID);
-		
-		if ($count == 0) {
+		$sql = "SELECT 1 FROM storageFileItems WHERE storageFileID = ? LIMIT 1";
+		$exists = Zotero_DB::valueQuery($sql, $storageFileID, Zotero_Shards::getByLibraryID($libraryID));
+		if (!$exists) {
 			$sql = "DELETE FROM storageFileLibraries WHERE storageFileID = ? AND libraryID = ?";
-			Zotero_DB::query($sql, array($storageFileID, $libraryID));
+			Zotero_DB::query($sql, [$storageFileID, $libraryID]);
 		}
-		
-		Zotero_DB::commit();
 	}
 	
 	
