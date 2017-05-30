@@ -904,6 +904,30 @@ class Zotero_Storage {
 		return $usage;
 	}
 	
+	public static function getHashLibraries($hash) {
+		$sql = "SELECT libraryID FROM storageFiles JOIN storageFileLibraries USING (storageFileID) WHERE hash = ?";
+		return Zotero_DB::columnQuery($sql, $hash);
+	}
+	
+	public static function getFileSourceFields($libraryID, $hash, $fieldTypes) {
+		// Limit sourceItem metadata fields per library, to give a chance
+		// for other libraries to impact result in case if
+		// one library has incorrect metadata.
+		// Only non-empty fields exist in itemData
+		$sql = "SELECT fieldID, `value` FROM itemData WHERE itemID IN 
+				(SELECT MAX(sourceItemID) FROM itemAttachments
+				JOIN items USING (itemID) WHERE libraryID = ? AND storageHash = ?)
+				AND fieldID IN (" . implode(',', $fieldTypes) . ") LIMIT 2";
+		$rows = Zotero_DB::query($sql, array($libraryID, $hash), Zotero_Shards::getByLibraryID($libraryID));
+		$fields = [];
+		foreach ($rows as $row) {
+			if (!isset($fields[$row['fieldID']])) {
+				$fields[$row['fieldID']] = [];
+			}
+			$fields[$row['fieldID']][] = $row['value'];
+		}
+		return $fields;
+	}
 	
 	private static function updateLastAdded($storageFileID) {
 		$sql = "UPDATE storageFiles SET lastAdded=NOW() WHERE storageFileID=?";

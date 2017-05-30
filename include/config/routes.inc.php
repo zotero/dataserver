@@ -34,6 +34,7 @@ else {
 	$router->map('/users/i:objectUserID/publications/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'view' => true, 'publications' => true]]);
 	$router->map('/groups/i:objectGroupID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
 	$router->map('/groups/i:objectGroupID/items/:objectKey/file/view', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true, 'view' => true)));
+	$router->map('/identify', array('controller' => 'Storage', 'action' => 'identify'));
 	
 	// Full-text content
 	$router->map('/users/i:objectUserID/items/:objectKey/fulltext', array('controller' => 'FullText', 'action' => 'itemContent'));
