@@ -915,7 +915,7 @@ class Zotero_Storage {
 		// one library has incorrect metadata.
 		// Only non-empty fields exist in itemData
 		$sql = "SELECT fieldID, `value` FROM itemData WHERE itemID IN 
-				(SELECT MAX(sourceItemID) FROM itemAttachments
+				(SELECT sourceItemID FROM itemAttachments
 				JOIN items USING (itemID) WHERE libraryID = ? AND storageHash = ?)
 				AND fieldID IN (" . implode(',', $fieldTypes) . ") LIMIT 2";
 		$rows = Zotero_DB::query($sql, array($libraryID, $hash), Zotero_Shards::getByLibraryID($libraryID));
