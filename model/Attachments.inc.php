@@ -66,7 +66,6 @@ class Zotero_Attachments {
 		
 		$info = Zotero_Storage::getLocalFileItemInfo($item);
 		$storageFileID = $info['storageFileID'];
-		$filename = $info['filename'];
 		$mtime = $info['mtime'];
 		$zip = $info['zip'];
 		$realFilename = preg_replace("/^storage:/", "", $item->attachmentPath);
@@ -188,16 +187,17 @@ class Zotero_Attachments {
 		if (!mkdir($downloadDir, 0777, true)) {
 			throw new Exception("Unable to create directory '$downloadDir'");
 		}
+		$archiveFilename = 'archive.zip';
 		if ($zip) {
-			$response = Zotero_Storage::downloadFile($info, $downloadDir, '1.zip');
+			$response = Zotero_Storage::downloadFile($info, $downloadDir, $archiveFilename);
 		}
 		else {
 			$response = Zotero_Storage::downloadFile($info, $downloadDir, $realFilename);
 		}
 		if ($response) {
 			if ($zip) {
-				$success = self::extractZip($downloadDir . '1.zip', $dir);
-				unlink($downloadDir . '1.zip');
+				$success = self::extractZip($downloadDir . $archiveFilename, $dir);
+				unlink($downloadDir . $archiveFilename);
 				rmdir($downloadDir);
 				
 				// Make sure charset is just a string with no spaces or newlines

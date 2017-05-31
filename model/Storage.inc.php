@@ -188,7 +188,7 @@ class Zotero_Storage {
 		$size = $info['size'];
 		
 		$sql = "INSERT INTO storageDownloadLog
-				(ownerUserID, downloadUserID, ipAddress, storageFileID, size)
+				(ownerUserID, downloadUserID, ipAddress, storageFileID, `size`)
 				VALUES (?, ?, INET_ATON(?), ?, ?)";
 		Zotero_DB::query(
 			$sql,
@@ -480,7 +480,9 @@ class Zotero_Storage {
 		return self::addFile($info);
 	}
 	
-	
+	// TODO: Remove
+	// Was previously used in ItemController to find a file with a different name,
+	// if not found with the given filename. Now getLocalFileInfo does the same.
 	public static function getFileByHash($hash, $zip) {
 		$sql = "SELECT storageFileID FROM storageFiles WHERE hash=? AND zip=? LIMIT 1";
 		return Zotero_DB::valueQuery($sql, array($hash, (int) $zip));
@@ -493,7 +495,7 @@ class Zotero_Storage {
 	
 	public static function getLocalFileInfo(Zotero_StorageFileInfo $info) {
 		$sql = "SELECT * FROM storageFiles WHERE hash=? AND zip=? ORDER BY storageFileID LIMIT 1";
-		return Zotero_DB::rowQuery($sql, array($info->hash, (int)$info->zip));
+		return Zotero_DB::rowQuery($sql, array($info->hash, (int) $info->zip));
 	}
 	
 	public static function getRemoteFileInfo(Zotero_StorageFileInfo $info) {
@@ -575,7 +577,7 @@ class Zotero_Storage {
 	
 	public static function addFile(Zotero_StorageFileInfo $info) {
 		$sql = "INSERT INTO storageFiles (hash, `size`, zip) VALUES (?,?,?)";
-		return Zotero_DB::query($sql, array($info->hash, $info->size, (int)$info->zip));
+		return Zotero_DB::query($sql, array($info->hash, $info->size, (int) $info->zip));
 	}
 	
 	
