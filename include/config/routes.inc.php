@@ -13,6 +13,8 @@ if ($_SERVER['HTTP_HOST'] == Z_CONFIG::$SYNC_DOMAIN) {
 else {
 	$router->map('/', array('controller' => 'Api', 'action' => 'noop', 'extra' => array('allowHTTP' => true)));
 	
+	$router->map('/items', array('controller' => 'GlobalItems'));
+	
 	// Groups
 	$router->map('/groups/i:objectGroupID', array('controller' => 'Groups'));
 	$router->map('/groups/i:scopeObjectID/users/i:objectID', array('controller' => 'Groups', 'action' => 'groupUsers'));
