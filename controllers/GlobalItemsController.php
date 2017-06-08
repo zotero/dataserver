@@ -35,18 +35,8 @@ class GlobalItemsController extends ApiController {
 	public function globalItems() {
 		$this->allowMethods(array('GET'));
 		
-		if (empty($this->queryParams['q'])) {
-			$this->e400("Query parameter must be set");
-		}
-		$query = $this->queryParams['q'];
-		
-		if (strlen($query) < 3) {
-			$this->e400("Query string must be at least 3 character length");
-		}
-		
 		$start = $this->queryParams['start'];
 		$limit = $this->queryParams['limit'];
-		
 		if ($start + $limit > self::maxResultWindow) {
 			$this->e400("Maximum result window exceeded");
 		}
@@ -55,9 +45,33 @@ class GlobalItemsController extends ApiController {
 		if ($requestURL[strlen($requestURL) - 1] != "/") {
 			$requestURL .= "/";
 		}
-		$requestURL .= 'global/items?q=' . urlencode($query)
-			. '&start=' . $start . '&limit=' . $limit;
+		$requestURL .= 'global/items';
 		
+		if (!empty($_GET['q'])) {
+			$q = $_GET['q'];
+			if (strlen($q) < 3) {
+				$this->e400("Query string must be at least 3 characters length");
+			}
+			$requestURL .= '?q=' . rawurlencode($q);
+		}
+		else if (!empty($_GET['doi'])) {
+			$doi = $_GET['doi'];
+			$requestURL .= '?doi=' . rawurlencode($doi);
+		}
+		else if (!empty($_GET['isbn'])) {
+			$isbn = $_GET['isbn'];
+			$requestURL .= '?isbn=' . rawurlencode($isbn);
+		}
+		else if (!empty($_GET['url'])) {
+			$url = $_GET['url'];
+			$requestURL .= '?url=' . rawurlencode($url);
+		}
+		else {
+			$this->e400("One of these prameters must be set: q, doi, isbn, url");
+		}
+		
+		$requestURL .= '&start=' . $start . '&limit=' . $limit;
+
 		$start = microtime(true);
 		
 		$ch = curl_init($requestURL);
