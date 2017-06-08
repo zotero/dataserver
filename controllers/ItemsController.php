@@ -52,6 +52,45 @@ class ItemsController extends ApiController {
 		$results = array();
 		$title = "";
 		
+		if ($this->globalItems) {
+			$id = $_GET['id'];
+			$start = $this->queryParams['start'];
+			$limit = $this->queryParams['limit'];
+			$libraryItems = Zotero_GlobalItems::getGlobalItemLibraryItems($id);
+			$allResults = [];
+			$n = 0;
+			foreach ($libraryItems as $libraryID => $keys) {
+				if ($limit < $n) {
+					break;
+				}
+				
+				if ($start >= $n) {
+					if ($start + $limit < $n + sizeOf($keys)) {
+						$keys = array_slice($keys, 0, $start + $limit - $n);
+					}
+					// Do not pass $this->queryParams directly to prevent
+					// other query parameters influencing Zotero_Items::search
+					$params = [
+						'format' => $this->queryParams['format'],
+						'publications' => false,
+						'itemKey' => $keys
+					];
+					
+					$results = Zotero_Items::search(
+						$libraryID,
+						false,
+						$params,
+						false,
+						$this->permissions
+					);
+					$n += sizeOf($results);
+					$allResults = array_merge($allResults, $results);
+				}
+			}
+			$this->generateMultiResponse($allResults, $title);
+			$this->end();
+		}
+		
 		//
 		// Single item
 		//

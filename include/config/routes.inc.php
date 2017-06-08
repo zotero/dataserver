@@ -15,6 +15,8 @@ else {
 	
 	$router->map('/items', array('controller' => 'GlobalItems'));
 	
+	$router->map('/items/libraryitems', ['controller' => 'Items', 'extra' => ['globalItems' => true]]);
+	
 	// Groups
 	$router->map('/groups/i:objectGroupID', array('controller' => 'Groups'));
 	$router->map('/groups/i:scopeObjectID/users/i:objectID', array('controller' => 'Groups', 'action' => 'groupUsers'));
