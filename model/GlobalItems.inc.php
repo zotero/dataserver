@@ -28,39 +28,41 @@ class Zotero_GlobalItems {
 	const endpointTimeout = 3;
 	
 	public static function getGlobalItems($params) {
-		
 		$requestURL = Z_CONFIG::$GLOBAL_ITEMS_ENDPOINT;
 		if ($requestURL[strlen($requestURL) - 1] != "/") {
 			$requestURL .= "/";
 		}
 		$requestURL .= 'global/items';
 		
-		if (!empty($params['q'])) {
-			$q = $params['q'];
-			$requestURL .= '?q=' . rawurlencode($q);
+		// If a single-object query
+		if (!empty($params['id'])) {
+			$requestURL .= '/' . rawurlencode($params['id']);
 		}
-		else if (!empty($params['doi'])) {
-			$doi = $params['doi'];
-			$requestURL .= '?doi=' . rawurlencode($doi);
-		}
-		else if (!empty($params['isbn'])) {
-			$isbn = $params['isbn'];
-			$requestURL .= '?isbn=' . rawurlencode($isbn);
-		}
-		else if (!empty($params['url'])) {
-			$url = $params['url'];
-			$requestURL .= '?url=' . rawurlencode($url);
-		}
+		// If a multi-object query
 		else {
-			return false;
-		}
-		
-		if (!empty($params['start'])) {
-			$requestURL .= '&start=' . $params['start'];
-		}
-		
-		if (!empty($params['limit'])) {
-			$requestURL .= '&limit=' . $params['limit'];
+			if (!empty($params['q'])) {
+				$requestURL .= '?q=' . rawurlencode($params['q']);
+			}
+			else if (!empty($params['doi'])) {
+				$requestURL .= '?doi=' . rawurlencode($params['doi']);
+			}
+			else if (!empty($params['isbn'])) {
+				$requestURL .= '?isbn=' . rawurlencode($params['isbn']);
+			}
+			else if (!empty($params['url'])) {
+				$requestURL .= '?url=' . rawurlencode($params['url']);
+			}
+			else {
+				throw new Exception("Missing query parameter");
+			}
+			
+			if (!empty($params['start'])) {
+				$requestURL .= '&start=' . $params['start'];
+			}
+			
+			if (!empty($params['limit'])) {
+				$requestURL .= '&limit=' . $params['limit'];
+			}
 		}
 		
 		$start = microtime(true);
@@ -81,46 +83,19 @@ class Zotero_GlobalItems {
 		$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		
 		if ($code != 200) {
-			$response = null;
-			Z_Core::logError("HTTP $code from Global Items API $requestURL");
-			Z_Core::logError($response);
-			return false;
+			throw new Exception($code . " from Global Items server "
+				. "[requestURL: '$requestURL'] [RESPONSE: '$response']");
 		}
-		
 		return $response;
 	}
 	
 	public static function getGlobalItemLibraryItems($id) {
-		$params = [];
-		
-		if (strpos($id, 'doi') === 0) {
-			$params['doi'] = $id;
-		}
-		else if (strpos($id, 'isbn') === 0) {
-			$params['isbn'] = $id;
-		}
-		else {
-			return [];
-		}
-		
+		$params = [
+			'id' => $id
+		];
 		$json = self::getGlobalItems($params);
 		$json = json_decode($json);
-		$libraryItems = $json[0]->libraryItems;
-		$groupedLibraryItems = [];
-		for ($i = 0, $len = sizeOf($libraryItems); $i < $len; $i++) {
-			$url = $libraryItems[$i];
-			$parts = explode('/', $url);
-			
-			$libraryID = null;
-			if ($parts[3] == 'users') {
-				$libraryID = Zotero_Users::getLibraryIDFromUserID($parts[4]);
-			}
-			else if ($parts[3] == 'groups') {
-				$libraryID = Zotero_Groups::getLibraryIDFromGroupID($parts[4]);
-			}
-			
-			$groupedLibraryItems[$libraryID][] = $parts[6];
-		}
-		return $groupedLibraryItems;
+		$libraryItems = $json->libraryItems;
+		return $libraryItems;
 	}
 }

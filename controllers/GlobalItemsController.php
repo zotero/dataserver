@@ -30,7 +30,6 @@ class GlobalItemsController extends ApiController {
 	
 	public function globalItems() {
 		$this->allowMethods(array('GET'));
-		
 		$params = [];
 		if (!empty($_GET['q'])) {
 			if (strlen($_GET['q']) < 3) {
@@ -48,18 +47,13 @@ class GlobalItemsController extends ApiController {
 			$params['url'] = $_GET['url'];
 		}
 		else {
-			$this->e400("One of these parameters must be set: q, doi, isbn, url");
+			$this->e400("One of the query parameters must be used: q, doi, isbn, url");
 		}
 		
 		$params['start'] = $this->queryParams['start'];
 		$params['limit'] = $this->queryParams['limit'];
 		
 		$response = Zotero_GlobalItems::getGlobalItems($params);
-		
-		if (!$response) {
-			$this->e500("Endpoint error");
-		}
-		
 		header("Content-Type: application/json");
 		echo $response;
 	}

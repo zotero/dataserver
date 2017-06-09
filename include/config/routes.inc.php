@@ -14,8 +14,7 @@ else {
 	$router->map('/', array('controller' => 'Api', 'action' => 'noop', 'extra' => array('allowHTTP' => true)));
 	
 	$router->map('/items', array('controller' => 'GlobalItems'));
-	
-	$router->map('/items/libraryitems', ['controller' => 'Items', 'extra' => ['globalItems' => true]]);
+	$router->map('/items/:objectGlobalItemID/libraryitems', ['controller' => 'Items', 'extra' => ['globalItems' => true]]);
 	
 	// Groups
 	$router->map('/groups/i:objectGroupID', array('controller' => 'Groups'));

@@ -53,39 +53,44 @@ class ItemsController extends ApiController {
 		$title = "";
 		
 		if ($this->globalItems) {
-			$id = $_GET['id'];
+			$id = $this->objectGlobalItemID;
+			$libraryItems = Zotero_GlobalItems::getGlobalItemLibraryItems($id);
+			// TODO: Improve pagination
+			// Pagination isn't reliable here, because we
+			// don't know if library and key exist and if we have permissions
+			// to access it, until we actually query specific library and key.
+			// Empty object placeholders should be returned where item
+			// retrieval fails, or otherwise all items before 'start' must be fetched
 			$start = $this->queryParams['start'];
 			$limit = $this->queryParams['limit'];
-			$libraryItems = Zotero_GlobalItems::getGlobalItemLibraryItems($id);
+			$libraryItems = array_slice($libraryItems, $start, $limit);
+			
+			// Group items by libraryID to later query all library's items at once
+			$groupedLibraryItems = [];
+			for ($i = 0, $len = sizeOf($libraryItems); $i < $len; $i++) {
+				list($libraryID, $key) = explode('/', $libraryItems[$i]);
+				$groupedLibraryItems[$libraryID][] = $key;
+			}
+			
 			$allResults = [];
-			$n = 0;
-			foreach ($libraryItems as $libraryID => $keys) {
-				if ($limit < $n) {
-					break;
+			foreach ($groupedLibraryItems as $libraryID => $keys) {
+				if (!$this->permissions->canAccess($libraryID)) {
+					continue;
 				}
-				
-				if ($start >= $n) {
-					if ($start + $limit < $n + sizeOf($keys)) {
-						$keys = array_slice($keys, 0, $start + $limit - $n);
-					}
-					// Do not pass $this->queryParams directly to prevent
-					// other query parameters influencing Zotero_Items::search
-					$params = [
-						'format' => $this->queryParams['format'],
-						'publications' => false,
-						'itemKey' => $keys
-					];
-					
-					$results = Zotero_Items::search(
-						$libraryID,
-						false,
-						$params,
-						false,
-						$this->permissions
-					);
-					$n += sizeOf($results);
-					$allResults = array_merge($allResults, $results);
-				}
+				// Do not pass $this->queryParams directly to prevent
+				// other query parameters influencing Zotero_Items::search
+				$params = [
+					'format' => $this->queryParams['format'],
+					// Throws exception if 'publications' parameter isn't set
+					'publications' => false,
+					'itemKey' => $keys
+				];
+				$results = Zotero_Items::search(
+					$libraryID,
+					false,
+					$params
+				);
+				$allResults = array_merge($allResults, $results);
 			}
 			$this->generateMultiResponse($allResults, $title);
 			$this->end();
