@@ -54,7 +54,6 @@ class ApiController extends Controller {
 	protected $objectName;
 	protected $subset;
 	protected $singleObject;
-	protected $globalItems = false;
 	protected $publications = false;
 	protected $legacyPublications = false;
 	protected $fileMode;
@@ -346,10 +345,6 @@ class ApiController extends Controller {
 		if (!$apiVersion && !empty($_SERVER['HTTP_USER_AGENT'])
 				&& strpos($_SERVER['HTTP_USER_AGENT'], 'ZotPad 1') === 0) {
 			$apiVersion = 1;
-		}
-		
-		if (!empty($extra['globalItems'])) {
-			$this->globalItems = true;
 		}
 		
 		if (!empty($extra['publications'])) {

@@ -52,7 +52,7 @@ class ItemsController extends ApiController {
 		$results = array();
 		$title = "";
 		
-		if ($this->globalItems) {
+		if ($this->objectGlobalItemID) {
 			$id = $this->objectGlobalItemID;
 			$libraryItems = Zotero_GlobalItems::getGlobalItemLibraryItems($id);
 			// TODO: Improve pagination
@@ -68,7 +68,7 @@ class ItemsController extends ApiController {
 			// Group items by libraryID to later query all library's items at once
 			$groupedLibraryItems = [];
 			for ($i = 0, $len = sizeOf($libraryItems); $i < $len; $i++) {
-				list($libraryID, $key) = explode('/', $libraryItems[$i]);
+				list($libraryID, $key) = $libraryItems[$i];
 				$groupedLibraryItems[$libraryID][] = $key;
 			}
 			
@@ -78,11 +78,9 @@ class ItemsController extends ApiController {
 					continue;
 				}
 				// Do not pass $this->queryParams directly to prevent
-				// other query parameters influencing Zotero_Items::search
+				// other query parameters from influencing Zotero_Items::search
 				$params = [
 					'format' => $this->queryParams['format'],
-					// Throws exception if 'publications' parameter isn't set
-					'publications' => false,
 					'itemKey' => $keys
 				];
 				$results = Zotero_Items::search(
@@ -92,7 +90,7 @@ class ItemsController extends ApiController {
 				);
 				$allResults = array_merge($allResults, $results);
 			}
-			$this->generateMultiResponse($allResults, $title);
+			$this->generateMultiResponse($allResults);
 			$this->end();
 		}
 		

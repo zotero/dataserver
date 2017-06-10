@@ -13,8 +13,9 @@ if ($_SERVER['HTTP_HOST'] == Z_CONFIG::$SYNC_DOMAIN) {
 else {
 	$router->map('/', array('controller' => 'Api', 'action' => 'noop', 'extra' => array('allowHTTP' => true)));
 	
-	$router->map('/items', array('controller' => 'GlobalItems'));
-	$router->map('/items/:objectGlobalItemID/libraryitems', ['controller' => 'Items', 'extra' => ['globalItems' => true]]);
+	$router->map('/items', ['controller' => 'GlobalItems']);
+	$router->map('/items/:objectGlobalItemID/added', ['controller' => 'GlobalItems', 'action' => 'added']);
+	$router->map('/items/:objectGlobalItemID/libraryitems', ['controller' => 'Items']);
 	
 	// Groups
 	$router->map('/groups/i:objectGroupID', array('controller' => 'Groups'));

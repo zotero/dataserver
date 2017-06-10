@@ -29,7 +29,7 @@ require('ApiController.php');
 class GlobalItemsController extends ApiController {
 	
 	public function globalItems() {
-		$this->allowMethods(array('GET'));
+		$this->allowMethods(['GET']);
 		$params = [];
 		if (!empty($_GET['q'])) {
 			if (strlen($_GET['q']) < 3) {
@@ -47,14 +47,39 @@ class GlobalItemsController extends ApiController {
 			$params['url'] = $_GET['url'];
 		}
 		else {
-			$this->e400("One of the query parameters must be used: q, doi, isbn, url");
+			$this->e400("One of the following query parameters must be used: q, doi, isbn, url");
 		}
 		
 		$params['start'] = $this->queryParams['start'];
 		$params['limit'] = $this->queryParams['limit'];
 		
-		$response = Zotero_GlobalItems::getGlobalItems($params);
-		header("Content-Type: application/json");
-		echo $response;
+		$result = Zotero_GlobalItems::getGlobalItems($params);
+		
+		$thresholdMonthTime = mktime(0, 0, 0, date('m') - 12, 1, date('Y'));
+		for ($i = 0, $len = sizeOf($result['data']); $i < $len; $i++) {
+			unset($result['data'][$i]['libraryItems']);
+			unset($result['data'][$i]['meta']['instanceCount']);
+			$len2 = sizeOf($result['data'][$i]['meta']['datesAdded']);
+			for ($j = 0; $j < $len2; $j++) {
+				$dateAdded = $result['data'][$i]['meta']['datesAdded'][$j];
+				$addedMonthTime = strtotime($dateAdded['month']);
+				if ($addedMonthTime < $thresholdMonthTime) {
+					unset($result['data'][$i]['meta']['datesAdded'][$j]);
+				}
+			}
+		}
+		
+		header('Content-Type: application/json');
+		header('Total-Results:' . $result['totalResults']);
+		echo Zotero_Utilities::formatJSON($result['data']);
+		$this->end();
+	}
+	
+	public function added() {
+		$this->allowMethods(['GET']);
+		$id = $this->objectGlobalItemID;
+		$datesAdded = Zotero_GlobalItems::getGlobalItemDatesAdded($id);
+		echo Zotero_Utilities::formatJSON($datesAdded);
+		$this->end();
 	}
 }

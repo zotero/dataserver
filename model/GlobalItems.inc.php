@@ -28,7 +28,7 @@ class Zotero_GlobalItems {
 	const endpointTimeout = 3;
 	
 	public static function getGlobalItems($params) {
-		$requestURL = Z_CONFIG::$GLOBAL_ITEMS_ENDPOINT;
+		$requestURL = Z_CONFIG::$GLOBAL_ITEMS_URL;
 		if ($requestURL[strlen($requestURL) - 1] != "/") {
 			$requestURL .= "/";
 		}
@@ -70,7 +70,7 @@ class Zotero_GlobalItems {
 		$ch = curl_init($requestURL);
 		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
 		curl_setopt($ch, CURLOPT_TIMEOUT, self::endpointTimeout);
-		curl_setopt($ch, CURLOPT_HEADER, 0); // do not return HTTP headers
+		curl_setopt($ch, CURLOPT_HEADER, 1);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		// Allow an invalid ssl certificate (Todo: remove)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -81,21 +81,48 @@ class Zotero_GlobalItems {
 		StatsD::timing("api.globalitems", $time * 1000);
 		
 		$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		
 		if ($code != 200) {
-			throw new Exception($code . " from Global Items server "
-				. "[requestURL: '$requestURL'] [RESPONSE: '$response']");
+			throw new Exception($code . " from global items server "
+				. "[URL: '$requestURL'] [RESPONSE: '$response']");
 		}
-		return $response;
+		
+		$info = curl_getinfo($ch);
+		$headerSize = $info['header_size'];
+		$body = trim(mb_substr($response, $headerSize));
+		$rawHeaders = explode("\n", trim(mb_substr($response, 0, $headerSize)));
+		unset($rawHeaders[0]);
+		$headers = [];
+		foreach ($rawHeaders as $line) {
+			list($key, $val) = explode(':', $line, 2);
+			$headers[strtolower($key)] = trim($val);
+		}
+		
+		$json = json_decode($body, true);
+		return [
+			'totalResults' => $headers['total-results'],
+			'data' => $json
+		];
 	}
 	
 	public static function getGlobalItemLibraryItems($id) {
 		$params = [
 			'id' => $id
 		];
-		$json = self::getGlobalItems($params);
-		$json = json_decode($json);
-		$libraryItems = $json->libraryItems;
-		return $libraryItems;
+		$result = self::getGlobalItems($params);
+		$libraryItems = $result['data']['libraryItems'];
+		$parsedLibraryItems = [];
+		for ($i = 0, $len = sizeOf($libraryItems); $i < $len; $i++) {
+			list($libraryID, $key) = explode('/', $libraryItems[$i]);
+			$parsedLibraryItems[] = [$libraryID, $key];
+		}
+		return $parsedLibraryItems;
+	}
+	
+	public static function getGlobalItemDatesAdded($id) {
+		$params = [
+			'id' => $id
+		];
+		$result = self::getGlobalItems($params);
+		return $result['data']['meta']['datesAdded'];
 	}
 }
