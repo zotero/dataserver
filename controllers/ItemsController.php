@@ -55,6 +55,9 @@ class ItemsController extends ApiController {
 		if ($this->objectGlobalItemID) {
 			$id = $this->objectGlobalItemID;
 			$libraryItems = Zotero_GlobalItems::getGlobalItemLibraryItems($id);
+			if (!$libraryItems) {
+				$this->e404();
+			}
 			// TODO: Improve pagination
 			// Pagination isn't reliable here, because we
 			// don't know if library and key exist and if we have permissions

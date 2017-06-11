@@ -81,19 +81,24 @@ class Zotero_GlobalItems {
 		StatsD::timing("api.globalitems", $time * 1000);
 		
 		$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		
+		// If a single item request
+		if ($code == 404 && !empty($params['id'])) {
+			return false;
+		}
+		
 		if ($code != 200) {
 			throw new Exception($code . " from global items server "
 				. "[URL: '$requestURL'] [RESPONSE: '$response']");
 		}
 		
-		$info = curl_getinfo($ch);
-		$headerSize = $info['header_size'];
-		$body = trim(mb_substr($response, $headerSize));
-		$rawHeaders = explode("\n", trim(mb_substr($response, 0, $headerSize)));
-		unset($rawHeaders[0]);
+		$headerSize = strpos($response, "\r\n\r\n") + 4;
+		$body = substr($response, $headerSize);
+		$headerLines = explode("\r\n", trim(substr($response, 0, $headerSize)));
+		unset($headerLines[0]);
 		$headers = [];
-		foreach ($rawHeaders as $line) {
-			list($key, $val) = explode(':', $line, 2);
+		foreach ($headerLines as $headerLine) {
+			list($key, $val) = explode(':', $headerLine, 2);
 			$headers[strtolower($key)] = trim($val);
 		}
 		
@@ -109,6 +114,7 @@ class Zotero_GlobalItems {
 			'id' => $id
 		];
 		$result = self::getGlobalItems($params);
+		if (!$result) return false;
 		$libraryItems = $result['data']['libraryItems'];
 		$parsedLibraryItems = [];
 		for ($i = 0, $len = sizeOf($libraryItems); $i < $len; $i++) {
@@ -123,6 +129,7 @@ class Zotero_GlobalItems {
 			'id' => $id
 		];
 		$result = self::getGlobalItems($params);
+		if (!$result) return false;
 		return $result['data']['meta']['datesAdded'];
 	}
 }

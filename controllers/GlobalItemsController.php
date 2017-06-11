@@ -70,7 +70,7 @@ class GlobalItemsController extends ApiController {
 		}
 		
 		header('Content-Type: application/json');
-		header('Total-Results:' . $result['totalResults']);
+		header('Total-Results: ' . $result['totalResults']);
 		echo Zotero_Utilities::formatJSON($result['data']);
 		$this->end();
 	}
@@ -79,6 +79,10 @@ class GlobalItemsController extends ApiController {
 		$this->allowMethods(['GET']);
 		$id = $this->objectGlobalItemID;
 		$datesAdded = Zotero_GlobalItems::getGlobalItemDatesAdded($id);
+		if (!$datesAdded) {
+			$this->e404();
+		}
+		header('Content-Type: application/json');
 		echo Zotero_Utilities::formatJSON($datesAdded);
 		$this->end();
 	}
