@@ -57,16 +57,18 @@ class GlobalItemsController extends ApiController {
 		
 		$thresholdMonthTime = mktime(0, 0, 0, date('m') - 12, 1, date('Y'));
 		for ($i = 0, $len = sizeOf($result['data']); $i < $len; $i++) {
+			$datesAdded = [];
 			unset($result['data'][$i]['libraryItems']);
 			unset($result['data'][$i]['meta']['instanceCount']);
 			$len2 = sizeOf($result['data'][$i]['meta']['datesAdded']);
 			for ($j = 0; $j < $len2; $j++) {
 				$dateAdded = $result['data'][$i]['meta']['datesAdded'][$j];
 				$addedMonthTime = strtotime($dateAdded['month']);
-				if ($addedMonthTime < $thresholdMonthTime) {
-					unset($result['data'][$i]['meta']['datesAdded'][$j]);
+				if ($addedMonthTime >= $thresholdMonthTime) {
+					$datesAdded[] = $result['data'][$i]['meta']['datesAdded'][$j];
 				}
 			}
+			$result['data'][$i]['meta']['datesAdded'] = $datesAdded;
 		}
 		
 		header('Content-Type: application/json');
