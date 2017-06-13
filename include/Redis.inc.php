@@ -4,8 +4,13 @@ class Z_Redis {
 	
 	public static function get($name='default') {
 		if (!isset(self::$links[$name])) {
+			if (!isset(Z_CONFIG::$REDIS_HOSTS)) {
+				Z_Core::logError('Warning: $REDIS_HOSTS is not set');
+				return false;
+			}
+			
 			if (!isset(Z_CONFIG::$REDIS_HOSTS[$name])) {
-				throw new Exception("Redis host '$name' not defined");
+				return false;
 			}
 			
 			// Host format can be "host" or "host:port"

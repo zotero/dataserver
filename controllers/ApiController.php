@@ -292,41 +292,41 @@ class ApiController extends Controller {
 		$concurrencyLimit = Zotero_API::getConcurrencyLimit(['userID' => $this->userID]);
 		
 		if ($rateLimit || $concurrencyLimit) {
-			$this->requestLimiter = new Z_RequestLimiter();
-		}
-		
-		if ($rateLimit) {
-			$requestsRemaining = $this->requestLimiter->checkBucketRate($rateLimit);
-			if (!$requestsRemaining) {
-				StatsD::increment("api.request.limit.rate.rejected", 1);
-				Z_Core::logError('Request rate limit exceeded for' . $rateLimit['bucket']);
+			if (Z_RequestLimiter::init()) {
+				if ($rateLimit) {
+					$requestsRemaining = Z_RequestLimiter::checkBucketRate($rateLimit);
+					if (!$requestsRemaining) {
+						StatsD::increment("api.request.limit.rate.rejected", 1);
+						Z_Core::logError('Request rate limit exceeded for' . $rateLimit['bucket']);
+						
+						if (!$rateLimit['logOnly']) {
+							// If client reaches this limit something is really wrong
+							// Next suggested retry is when the full capacity will be reached
+							header("Retry-After: " . (int)$rateLimit['capacity'] / $rateLimit['rate']);
+							$this->e429();
+						}
+					}
+				}
 				
-				if (!$rateLimit['logOnly']) {
-					// If client reaches this limit something is really wrong
-					// Next suggested retry is when the full capacity will be reached
-					header("Retry-After: " . (int) $rateLimit['capacity']/$rateLimit['rate']);
-					$this->e429();
+				if ($concurrencyLimit) {
+					$concurrentRequestID = Z_RequestLimiter::beginConcurrent($concurrencyLimit);
+					if (!$concurrentRequestID) {
+						StatsD::increment("api.request.limit.concurrency.rejected", 1);
+						Z_Core::logError('Concurrent request limit exceeded for ' . $concurrencyLimit['bucket']);
+						
+						if (!$concurrencyLimit['logOnly']) {
+							// Randomize next request time to reduce collision probability
+							header("Retry-After: " . rand(1, 30));
+							$this->e429('Too many concurrent requests');
+						}
+					}
+					
+					$this->concurrentRequest = [
+						'bucket' => $concurrencyLimit['bucket'],
+						'id' => $concurrentRequestID
+					];
 				}
 			}
-		}
-		
-		if ($concurrencyLimit) {
-			$concurrentRequestID = $this->requestLimiter->beginConcurrent($concurrencyLimit);
-			if (!$concurrentRequestID) {
-				StatsD::increment("api.request.limit.concurrency.rejected", 1);
-				Z_Core::logError('Concurrent request limit exceeded for ' . $concurrencyLimit['bucket']);
-				
-				if (!$concurrencyLimit['logOnly']) {
-					// Randomize next request time to reduce collision probability
-					header("Retry-After: " . rand(1, 30));
-					$this->e429('Too many concurrent requests');
-				}
-			}
-			
-			$this->concurrentRequest = [
-				'bucket' => $concurrencyLimit['bucket'],
-				'id' => $concurrentRequestID
-			];
 		}
 		
 		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
