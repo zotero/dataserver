@@ -60,7 +60,6 @@ class ApiController extends Controller {
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
-	protected $requestLimiter = null;
 	protected $concurrentRequest = null;
 	
 	private $startTime = false;
@@ -284,43 +283,38 @@ class ApiController extends Controller {
 			}
 		}
 		
-		$rateLimit = Zotero_API::getRateLimit([
-			'userID' => $this->userID,
-			'ip' => $_SERVER['REMOTE_ADDR']
-		]);
-		
-		$concurrencyLimit = Zotero_API::getConcurrencyLimit(['userID' => $this->userID]);
-		
+		list($rateLimit, $concurrencyLimit) = $this->limits();
 		if ($rateLimit || $concurrencyLimit) {
+			// Initializes request limiter and prepares redis connection
 			if (Z_RequestLimiter::init()) {
+				// Initialize rate limiter
 				if ($rateLimit) {
 					$requestsRemaining = Z_RequestLimiter::checkBucketRate($rateLimit);
 					if (!$requestsRemaining) {
 						StatsD::increment("api.request.limit.rate.rejected", 1);
 						Z_Core::logError('Request rate limit exceeded for' . $rateLimit['bucket']);
-						
 						if (!$rateLimit['logOnly']) {
 							// If client reaches this limit something is really wrong
 							// Next suggested retry is when the full capacity will be reached
-							header("Retry-After: " . (int)$rateLimit['capacity'] / $rateLimit['rate']);
+							header("Retry-After: " . (int) $rateLimit['capacity'] / $rateLimit['rate']);
 							$this->e429();
 						}
 					}
 				}
-				
+				// Initialize concurrency limiter
 				if ($concurrencyLimit) {
 					$concurrentRequestID = Z_RequestLimiter::beginConcurrent($concurrencyLimit);
 					if (!$concurrentRequestID) {
 						StatsD::increment("api.request.limit.concurrency.rejected", 1);
 						Z_Core::logError('Concurrent request limit exceeded for ' . $concurrencyLimit['bucket']);
-						
 						if (!$concurrencyLimit['logOnly']) {
 							// Randomize next request time to reduce collision probability
 							header("Retry-After: " . rand(1, 30));
 							$this->e429('Too many concurrent requests');
 						}
 					}
-					
+					// Sets a concurrent request that must be properly cleaned up
+					// at the end of script execution
 					$this->concurrentRequest = [
 						'bucket' => $concurrencyLimit['bucket'],
 						'id' => $concurrentRequestID
@@ -585,6 +579,58 @@ class ApiController extends Controller {
 	//
 	// Protected methods
 	//
+	
+	/**
+	 * Override this function on other controllers
+	 * to set different request limits
+	 * @return array [rateLimit, concurrencyLimit]
+	 */
+	protected function limits() {
+		$rateLimit = null;
+		$concurrencyLimit = null;
+		
+		// Rate limit
+		// For logged in users
+		if (!empty($this->userID)) {
+			// 10 requests per second with 100 requests burst
+			$rateLimit = [
+				'logOnly' => false,
+				'bucket' => $this->userID . '_' . $_SERVER['REMOTE_ADDR'],
+				'capacity' => 100,
+				'rate' => 10
+			];
+		}
+		// For anonymous users
+		else {
+			// 30 requests per second without burst
+			$rateLimit = [
+				'logOnly' => false,
+				'bucket' => $_SERVER['REMOTE_ADDR'],
+				'capacity' => 30,
+				'rate' => 30
+			];
+		}
+		
+		// Concurrency limit
+		// For logged in users
+		if (!empty($this->userID)) {
+			$concurrencyLimit = [
+				'logOnly' => false,
+				'bucket' => $this->userID,
+				// Maximum time possible time the request can take
+				'ttl' => 60,
+				// Maximum allowed concurrent request
+				'capacity' => 5
+			];
+		}
+		// For anonymous users
+		else {
+			// Do not limit
+		}
+		
+		return [$rateLimit, $concurrencyLimit];
+	}
+	
 	protected function getFeedNamePrefix($libraryID=false) {
 		$prefix = "Zotero / ";
 		if ($libraryID) {

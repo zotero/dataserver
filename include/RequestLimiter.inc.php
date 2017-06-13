@@ -105,7 +105,8 @@ class Z_RequestLimiter {
 					return null;
 				}
 			}
-		} catch (Exception $e) {
+		}
+		catch (Exception $e) {
 			Z_Core::logError('Redis exception in Z_RequestLimiter::limitRate: ' . $e->getMessage());
 			return null;
 		}
@@ -145,7 +146,8 @@ class Z_RequestLimiter {
 					return null;
 				}
 			}
-		} catch (Exception $e) {
+		}
+		catch (Exception $e) {
 			Z_Core::logError('Redis error in Z_RequestLimiter::beginConcurrent: ' . $e->getMessage());
 			return null;
 		}
@@ -155,7 +157,7 @@ class Z_RequestLimiter {
 	
 	/**
 	 * Must be called every time when the script finishes concurrent
-	 * request, otherwise element in Redis sorted set can stay forever
+	 * request, otherwise element in the Redis sorted set can stay forever
 	 * @param $bucket
 	 * @param $id
 	 */
@@ -166,7 +168,8 @@ class Z_RequestLimiter {
 			if (!$removed) {
 				Z_Core::logError('Failed to remove key Z_RequestLimiter::finishConcurrent');
 			}
-		} catch (Exception $e) {
+		}
+		catch (Exception $e) {
 			Z_Core::logError('Redis error in Z_RequestLimiter::finishConcurrent: ' . $e->getMessage());
 		}
 	}
