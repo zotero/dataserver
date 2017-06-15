@@ -4,7 +4,7 @@
 	https://stripe.com/blog/rate-limiters
 
 	Rate limiter is the primary safeguard that rejects
-	requests that are called too often. Supports burst.
+	requests that are called too often. Supports bursts.
 
 	Concurrent request limiter is the secondary safeguard,
 	targeted to slow requests.
@@ -52,7 +52,7 @@ class Z_RequestLimiter {
 		
 		return { allowed, new_tokens }';
 	
-	// Lua script is from https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
+	// Lua script is based on https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
 	const CONCURRENCY_LIMITER_LUA = '
 		local key = KEYS[1]
 		
@@ -127,7 +127,7 @@ class Z_RequestLimiter {
 		$key = self::REDIS_PREFIX . 'crl:' . $params['bucket'];
 		$args = [$params['capacity'], $id, $timestamp, $params['ttl']];
 		try {
-			// Clear out old requests that got lost (or the request took longer than TTL)
+			// Clear out old requests that got lost (or taking longer than TTL)
 			$numRemoved = self::$redis->zRemRangeByScore($key, '-inf', $timestamp - $params['ttl']);
 			if ($numRemoved > 0) {
 				Z_Core::logError("Warning: Timed out concurrent requests found: {$numRemoved}");
@@ -152,7 +152,7 @@ class Z_RequestLimiter {
 	 */
 	public static function finishConcurrentRequest() {
 		if (!self::$concurrentRequest) return false;
-		$key = 'crl:' . self::$concurrentRequest['bucket'];
+		$key = self::REDIS_PREFIX . 'crl:' . self::$concurrentRequest['bucket'];
 		try {
 			if (!self::$redis->zRem($key, self::$concurrentRequest['id'])) {
 				throw new Exception('Failed to remove an element from a sorted set');
