@@ -16,7 +16,7 @@
 */
 
 class Z_RequestLimiter {
-	// If using Redis in cluster mode, '{the_same_value_to_hash}' must
+	// If using Redis in cluster mode, '{hash_key}' must
 	// be added to all keys to always hash to the same slot.
 	// The value can be anywhere in the key.
 	// More information: https://redis.io/topics/cluster-spec#keys-hash-tags
