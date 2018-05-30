@@ -961,7 +961,7 @@ class ItemsController extends ApiController {
 				Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 				Zotero_DB::beginTransaction();
 				
-				// See if file exists with this hash and zip flag
+				// See if file exists with this hash
 				$localInfo = Zotero_Storage::getLocalFileInfo($info);
 				if ($localInfo) {
 					$storageFileID = $localInfo['storageFileID'];
