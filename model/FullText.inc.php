@@ -58,7 +58,7 @@ class Zotero_FullText {
 			'libraryID' => $libraryID,
 			'key' => $key,
 			'version' => $version,
-			'content' => (string)$data->content,
+			'content' => (string) $data->content,
 			'timestamp' => str_replace(" ", "T", $timestamp)
 		];
 		
@@ -82,9 +82,8 @@ class Zotero_FullText {
 		Zotero_DB::commit();
 		
 		// Todo: Remove fall back code after migration
-		$redisClient = new Redis();
-		$redisClient->pconnect('localhost');
-		$redisClient->set('s3:' . $libraryID . "/" . $key, '1');
+		$redis = Z_Redis::get('fulltext-migration');
+		$redis->set('s3:' . $libraryID . "/" . $key, '1');
 	}
 	
 	
@@ -209,7 +208,7 @@ class Zotero_FullText {
 			throw $e;
 		}
 		
-		$json = (string)$result['Body'];
+		$json = (string) $result['Body'];
 		$json = json_decode($json);
 		
 		$itemData = array(
@@ -391,6 +390,11 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.delete", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
+		
+		// Todo: Remove after migration
+		// Make sure the full-text won't be recreated when doing migration
+		$redis = Z_Redis::get('fulltext-migration');
+		$redis->set('s3:' . $libraryID . "/" . $key, '1');
 	}
 	
 	public static function deleteByLibrary($libraryID) {
@@ -407,6 +411,11 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.bulk_delete", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
+		
+		// Todo: Remove after migration
+		// Make sure the library full-texts won't be recreated when doing migration
+		$redis = Z_Redis::get('fulltext-migration');
+		$redis->set('s3:' . $libraryID, '1');
 	}
 	
 	

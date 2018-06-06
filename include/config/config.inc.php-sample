@@ -31,6 +31,7 @@ class Z_CONFIG {
 		'default' => 'redis1.localdomain',
 		'request-limiter' => => 'redis-transient.localdomain',
 		'notifications' => 'redis-transient.localdomain'
+		'fulltext-migration' => 'redis-transient.localdomain'
 	];
 	public static $REDIS_PREFIX = '';
 	
