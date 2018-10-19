@@ -661,6 +661,19 @@ trait Zotero_DataObjects {
 			}
 		}
 		
+		if ($deleted && $type == 'item') {
+			Zotero_Notifier::trigger(
+				'delete',
+				'item',
+				$libraryID . "/" . $key,
+				[
+					$libraryID . "/" . $key => [
+						'version' => $obj->version
+					]
+				]
+			);
+		}
+		
 		self::unload($obj->id);
 		
 		if ($deleted) {

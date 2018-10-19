@@ -102,7 +102,7 @@ class Z_SQS {
 	
 	private static function load() {
 		if (!self::$sqs) {
-			self::$sqs = Z_Core::$AWS->get('sqs');
+			self::$sqs = Z_Core::$AWS->createSqs();
 		}
 	}
 }
