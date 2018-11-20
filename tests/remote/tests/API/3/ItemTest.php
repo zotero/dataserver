@@ -2358,9 +2358,46 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function test_patch_of_item_in_trash_should_not_remove_it_from_trash() {
+	public function test_patch_of_item_should_set_trash_state() {
+		$json = API::createItem("book", [], $this, 'json');
+		
+		$data = [
+			[
+				'key' => $json['key'],
+				'version' => $json['version'],
+				'deleted' => true
+			]
+		];
+		$response = API::postItems($data);
+		$json = API::getJSONFromResponse($response);
+		
+		$this->assertArrayHasKey('deleted', $json['successful'][0]['data']);
+		$this->assertEquals(1, $json['successful'][0]['data']['deleted']);
+	}
+	
+	
+	public function test_patch_of_item_should_clear_trash_state() {
 		$json = API::createItem("book", [
-			"deleted" => 1
+			"deleted" => true
+		], $this, 'json');
+		
+		$data = [
+			[
+				'key' => $json['key'],
+				'version' => $json['version'],
+				'deleted' => false
+			]
+		];
+		$response = API::postItems($data);
+		$json = API::getJSONFromResponse($response);
+		
+		$this->assertArrayNotHasKey('deleted', $json['successful'][0]['data']);
+	}
+	
+	
+	public function test_patch_of_item_in_trash_without_deleted_should_not_remove_it_from_trash() {
+		$json = API::createItem("book", [
+			"deleted" => true
 		], $this, 'json');
 		
 		$data = [
@@ -2374,7 +2411,7 @@ class ItemTests extends APITests {
 		$json = API::getJSONFromResponse($response);
 		
 		$this->assertArrayHasKey('deleted', $json['successful'][0]['data']);
-		$this->assertEquals(1, !$json['successful'][0]['data']['deleted']);
+		$this->assertEquals(1, $json['successful'][0]['data']['deleted']);
 	}
 	
 	
