@@ -2003,7 +2003,9 @@ class Zotero_Items {
 			$item->setSourceKey(false);
 		}
 		
-		$item->deleted = !empty($json->deleted);
+		if (isset($json->deleted) || !$partialUpdate) {
+			$item->deleted = !empty($json->deleted);
+		}
 		
 		if (isset($json->inPublications) || !$partialUpdate) {
 			$item->inPublications = !empty($json->inPublications);

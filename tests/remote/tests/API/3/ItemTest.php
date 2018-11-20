@@ -2358,6 +2358,26 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_patch_of_item_in_trash_should_not_remove_it_from_trash() {
+		$json = API::createItem("book", [
+			"deleted" => 1
+		], $this, 'json');
+		
+		$data = [
+			[
+				'key' => $json['key'],
+				'version' => $json['version'],
+				'title' => 'A'
+			]
+		];
+		$response = API::postItems($data);
+		$json = API::getJSONFromResponse($response);
+		
+		$this->assertArrayHasKey('deleted', $json['successful'][0]['data']);
+		$this->assertEquals(1, !$json['successful'][0]['data']['deleted']);
+	}
+	
+	
 	public function testParentItem() {
 		$json = API::createItem("book", false, $this, 'jsonData');
 		$parentKey = $json['key'];
