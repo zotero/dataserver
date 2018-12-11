@@ -464,6 +464,28 @@ class CollectionTests extends APITests {
 	}
 	
 	
+	public function test_should_move_parent_collection_to_root_if_descendent_of_collection() {
+		$jsonA = API::createCollection('A', false, $this, 'jsonData');
+		// Set B as a child of A
+		$keyB = API::createCollection('B', ['parentCollection' => $jsonA['key']], $this, 'key');
+		
+		// Try to set B as parent of A
+		$jsonA['parentCollection'] = $keyB;
+		$response = API::userPost(
+			self::$config['userID'],
+			"collections",
+			json_encode([$jsonA]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($keyB, $json['successful'][0]['data']['parentCollection']);
+		
+		$jsonB = API::getCollection($keyB, $this);
+		$this->assertFalse($jsonB['data']['parentCollection']);
+	}
+	
+	
 	public function test_should_allow_emoji_in_name() {
 		$name = "🐶"; // 4-byte character
 		$json = API::createCollection($name, false, $this, 'json');

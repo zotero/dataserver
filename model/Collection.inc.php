@@ -118,7 +118,7 @@ class Zotero_Collection extends Zotero_DataObject {
 					// If the designated parent collection is already within this
 					// collection (which shouldn't happen), move it to the root
 					if (!$isNew && $this->hasDescendent('collection', $newParentCollection->id)) {
-						$newParentCollection->parent = null;
+						$newParentCollection->parentKey = null;
 						$newParentCollection->save();
 					}
 				}
