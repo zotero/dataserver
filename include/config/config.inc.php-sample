@@ -50,9 +50,9 @@ class Z_CONFIG {
 		'memcached1.localdomain:11211:2', 'memcached2.localdomain:11211:1'
 	);
 	
-	public static $TRANSLATION_SERVERS = array(
-		"translation1.localdomain:1969"
-	);
+	public static $TRANSLATION_SERVERS = [
+		"http://translation1.localdomain:1969"
+	];
 	
 	public static $CITATION_SERVERS = array(
 		"citeserver1.localdomain:8080", "citeserver2.localdomain:8080"

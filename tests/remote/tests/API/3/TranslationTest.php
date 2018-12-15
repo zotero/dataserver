@@ -42,13 +42,13 @@ class TranslationTests extends APITests {
 	
 	
 	public function testWebTranslationSingle() {
-		$title = 'Zotero: A Guide for Librarians, Researchers and Educators';
+		$title = 'Recent Discussions';
 		
 		$response = API::userPost(
 			self::$config['userID'],
 			"items",
 			json_encode([
-				"url" => "http://www.amazon.com/Zotero-Guide-Librarians-Researchers-Educators/dp/0838985890/"
+				"url" => "https://forums.zotero.org/"
 			]),
 			array("Content-Type: application/json")
 		);

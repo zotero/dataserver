@@ -504,38 +504,27 @@ class ItemsController extends ApiController {
 						
 						// Server-side translation
 						if (isset($obj->url)) {
-							if ($this->apiVersion == 1) {
-								Zotero_DB::beginTransaction();
+							if ($this->apiVersion < 2) {
+								$this->e501("URL translation requires APIv2 or later");
 							}
-							
-							$token = $this->getTranslationToken($obj);
 							
 							$results = Zotero_Items::addFromURL(
 								$obj,
 								$this->queryParams,
 								$this->objectLibraryID,
 								$this->userID,
-								$this->permissions,
-								$token
+								$this->permissions
 							);
 							
-							if ($this->apiVersion == 1) {
-								Zotero_DB::commit();
-							}
 							// Multiple choices
 							if ($results instanceof stdClass) {
 								$this->queryParams['format'] = null;
 								header("Content-Type: application/json");
-								if ($this->queryParams['v'] >= 2) {
-									echo Zotero_Utilities::formatJSON([
-										'url' => $obj->url,
-										'token' => $token,
-										'items' => $results->select
-									]);
-								}
-								else {
-									echo Zotero_Utilities::formatJSON($results->select);
-								}
+								echo Zotero_Utilities::formatJSON([
+									'url' => $obj->url,
+									'token' => $results->token,
+									'items' => $results->select
+								]);
 								$this->e300();
 							}
 							// Error from translation server
@@ -549,33 +538,8 @@ class ItemsController extends ApiController {
 										$this->e500("Error translating URL");
 								}
 							}
-							// In v1, return data for saved items
-							else if ($this->apiVersion == 1) {
-								$uri = Zotero_API::getItemsURI($this->objectLibraryID);
-								$keys = array_merge(
-									get_object_vars($results['success']),
-									get_object_vars($results['unchanged'])
-								);
-								$queryString = "itemKey="
-									. urlencode(implode(",", $keys))
-									. "&format=atom&content=json&order=itemKeyList&sort=asc";
-								if ($this->apiKey) {
-									$queryString .= "&key=" . $this->apiKey;
-								}
-								$uri .= "?" . $queryString;
-								$this->queryParams = Zotero_API::parseQueryParams($queryString, $this->action, false);
-								$this->responseCode = 201;
-								
-								$title = "Items";
-								$results = Zotero_Items::search(
-									$this->objectLibraryID,
-									false,
-									$this->queryParams,
-									$includeTrashed,
-									$this->permissions
-								);
-							}
-							// Otherwise return write status report
+							
+							// Return write status report
 						}
 						// Uploaded items
 						else {
@@ -1196,33 +1160,5 @@ class ItemsController extends ApiController {
 			throw new Exception("Invalid request", Z_ERROR_INVALID_INPUT);
 		}
 		exit;
-	}
-	
-	
-	
-	/**
-	 * Get a token to pass to the translation server to retain state for multi-item saves
-	 */
-	protected function getTranslationToken($obj) {
-		$allowExplicitToken = $this->queryParams['v'] >= 2 || ($this->queryParams['v'] == 1 && Z_ENV_TESTING_SITE);
-		
-		if ($allowExplicitToken && isset($obj->token)) {
-			if (!isset($obj->items)) {
-				throw new Exception("'token' is valid only for item selection requests", Z_ERROR_INVALID_INPUT);
-			}
-			return $obj->token;
-		}
-		
-		// Bookmarklet uses cookie auth with v1
-		if ($this->queryParams['v'] == 1 && $this->cookieAuth) {
-			return md5($this->userID . $_GET['session']);
-		}
-		if (!$allowExplicitToken) {
-			return false;
-		}
-		if (isset($obj->items)) {
-			throw new Exception("Token not provided with selected items", Z_ERROR_INVALID_INPUT);
-		}
-		return md5($this->userID . $_SERVER['REMOTE_ADDR'] . uniqid());
 	}
 }

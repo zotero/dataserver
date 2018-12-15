@@ -1613,14 +1613,32 @@ class Zotero_Items {
 	 * Initial request:
 	 *
 	 * {
-	 *   "url": "http://..."
+	 *   "url": "https://example.com"
+	 * }
+	 *
+	 * Response:
+	 *
+	 * {
+	 *   "url": "https://example.com",
+	 *   "token": "abcdefgh123456789",
+	 *   "items": {
+	 *     "0": {
+	 *       "title": "Item 1 Title"
+	 *     },
+	 *     "1": {
+	 *       "title": "Item 2 Title"
+	 *     },
+	 *     "2": {
+	 *       "title": "Item 3 Title"
+	 *     }
+	 *   }
 	 * }
 	 *
 	 * Item selection for multi-item results:
 	 *
 	 * {
-	 *   "url": "http://...",
-	 *   "token": "<token>"
+	 *   "url": "https://example.com",
+	 *   "token": "abcdefgh123456789"
 	 *   "items": {
 	 *     "0": "Item 1 Title",
 	 *     "3": "Item 2 Title"
@@ -1628,20 +1646,17 @@ class Zotero_Items {
 	 * }
 	 *
 	 * Returns an array of keys of added items (like updateMultipleFromJSON) or an object
-	 * with a 'select' property containing an array of titles for multi-item results
+	 * with 'token' and 'items' properties for multi-item results
 	 */
-	public static function addFromURL($json, $requestParams, $libraryID, $userID,
-			Zotero_Permissions $permissions, $translationToken) {
-		if (!$translationToken) {
-			throw new Exception("Translation token not provided");
-		}
-		
+	public static function addFromURL($json, $requestParams, $libraryID, $userID, Zotero_Permissions $permissions) {
 		self::validateJSONURL($json, $requestParams);
 		
-		$cacheKey = 'addFromURLKeyMappings_' . md5($json->url . $translationToken);
-		
 		// Replace numeric keys with URLs for selected items
-		if (isset($json->items) && $requestParams['v'] >= 2) {
+		if (isset($json->items)) {
+			if ($requestParams['v'] >= 3 && empty($json->token)) {
+				throw new Exception("Token not provided with selected items", Z_ERROR_INVALID_INPUT);
+			}
+			$cacheKey = 'addFromURLKeyMappings_' . md5($json->url . $json->token);
 			$keyMappings = Z_Core::$MC->get($cacheKey);
 			$newItems = [];
 			foreach ($json->items as $number => $title) {
@@ -1653,10 +1668,13 @@ class Zotero_Items {
 			}
 			$json->items = $newItems;
 		}
+		else if (isset($json->token)) {
+			throw new Exception("'token' is valid only for item selection requests", Z_ERROR_INVALID_INPUT);
+		}
 		
 		$response = Zotero_Translate::doWeb(
 			$json->url,
-			$translationToken,
+			isset($json->token) ? $json->token : null,
 			isset($json->items) ? $json->items : null
 		);
 		
@@ -1696,12 +1714,9 @@ class Zotero_Items {
 					
 					// TODO: link attachments, or not possible from translation-server?
 				}
-				
-				$response = $items;
 			}
-			// APIv2 (was this ever used? it's possible the bookmarklet used v1 and we never publicized
-			// this for v2)
-			else if ($requestParams['v'] == 2) {
+			// APIv2
+			else {
 				for ($i = 0, $len = sizeOf($items); $i < $len; $i++) {
 					// Assign key here so that we can add notes if necessary
 					do {
@@ -1717,7 +1732,7 @@ class Zotero_Items {
 								"itemType" => "note",
 								"note" => $note->note,
 								"parentItem" => $itemKey
-							];
+								];
 							$items[] = $newNote;
 						}
 						unset($items[$i]->notes);
@@ -1726,15 +1741,8 @@ class Zotero_Items {
 					// TODO: link attachments, or not possible from translation-server?
 				}
 			}
-			// APIv1
-			else {
-				for ($i = 0, $len = sizeOf($items); $i < $len; $i++) {
-					unset($items[$i]->key);
-					unset($items[$i]->version);
-					unset($items[$i]->itemKey);
-					unset($items[$i]->itemVersion);
-				}
-			}
+			
+			$response = $items;
 			
 			try {
 				self::validateMultiObjectJSON($response, $requestParams);
@@ -1747,20 +1755,23 @@ class Zotero_Items {
 		}
 		// Multi-item select
 		else if (isset($response->select)) {
+			$result = new stdClass;
+			$result->token = $response->token;
+			
 			// Replace URLs with numeric keys for found items
-			if ($requestParams['v'] >= 2) {
-				$keyMappings = [];
-				$newItems = new stdClass;
-				$number = 0;
-				foreach ($response->select as $url => $title) {
-					$keyMappings[$number] = $url;
-					$newItems->$number = $title;
-					$number++;
-				}
-				Z_Core::$MC->set($cacheKey, $keyMappings, 600);
-				$response->select = $newItems;
+			$keyMappings = [];
+			$newItems = new stdClass;
+			$number = 0;
+			foreach ($response->select as $url => $title) {
+				$keyMappings[$number] = $url;
+				$newItems->$number = $title;
+				$number++;
 			}
-			return $response;
+			$cacheKey = 'addFromURLKeyMappings_' . md5($json->url . $response->token);
+			Z_Core::$MC->set($cacheKey, $keyMappings, 600);
+			
+			$result->select = $newItems;
+			return $result;
 		}
 		else {
 			throw new Exception("Invalid return value from doWeb()");

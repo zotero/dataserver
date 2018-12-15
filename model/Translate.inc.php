@@ -77,7 +77,13 @@ class Zotero_Translate {
 		shuffle($servers);
 		
 		foreach ($servers as $server) {
-			$url = "http://$server/export?format=$format";
+			if (strpos($server, 'http') === 0) {
+				$url = $server;
+			}
+			else {
+				$url = "http://$server";
+			}
+			$url .= "/export?format=$format";
 			
 			$start = microtime(true);
 			
@@ -125,8 +131,8 @@ class Zotero_Translate {
 	}
 	
 	
-	public static function doWeb($url, $sessionKey, $items=false) {
-		if (!$sessionKey) {
+	public static function doWeb($url, $sessionKey=false, $items=false) {
+		if ($items && !$sessionKey) {
 			throw new Exception("Session key not provided");
 		}
 		
@@ -135,37 +141,34 @@ class Zotero_Translate {
 		// Try servers in a random order
 		shuffle($servers);
 		
-		$cacheKey = 'sessionTranslationServer_' . $sessionKey;
-		
-		$json = [
-			"url" => $url,
-			"sessionid" => $sessionKey
-		];
-		
 		if ($items) {
-			$json['items'] = $items;
-			
-			// Send session requests to the same node
-			if ($server = Z_Core::$MC->get($cacheKey)) {
-				$servers = [$server];
-			}
-			else {
-				error_log("WARNING: Server not found for translation session");
-			}
+			$postData = json_encode([
+				'url' => $url,
+				'session' => $sessionKey,
+				'items' => $items
+			]);
+			$contentType = 'application/json';
+		}
+		else {
+			$postData = $url;
+			$contentType = 'text/plain';
 		}
 		
-		$json = json_encode($json);
-		
-		
 		foreach ($servers as $server) {
-			$serverURL = "http://$server/web";
+			if (strpos($server, 'http') === 0) {
+				$serverURL = $server;
+			}
+			else {
+				$serverURL = "http://$server";
+			}
+			$serverURL .= "/web";
 			
 			$start = microtime(true);
 			
 			$ch = curl_init($serverURL);
 			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, array("Expect:", "Content-Type: application/json"));
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: $contentType"]);
 			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
 			curl_setopt($ch, CURLOPT_TIMEOUT, 4);
 			curl_setopt($ch, CURLOPT_HEADER, 0); // do not return HTTP headers
@@ -190,7 +193,7 @@ class Zotero_Translate {
 				
 				// If unknown error, log and try another server
 				$response = null;
-				Z_Core::logError("HTTP $code from translate server $server translating URL");
+				Z_Core::logError("HTTP $code from $serverURL translating URL");
 				Z_Core::logError($response);
 				continue;
 			}
@@ -199,10 +202,6 @@ class Zotero_Translate {
 				$response = "";
 			}
 			
-			// Remember translation-server node for item selection
-			if ($code == 300) {
-				Z_Core::$MC->set($cacheKey, $server, 600);
-			}
 			break;
 		}
 		
@@ -215,7 +214,8 @@ class Zotero_Translate {
 		$obj = new stdClass;
 		// Multiple choices
 		if ($code == 300) {
-			$obj->select = $response;
+			$obj->token = $response->session;
+			$obj->select = $response->items;
 		}
 		// Saved items
 		else {
