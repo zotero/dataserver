@@ -75,6 +75,7 @@ class Zotero_API {
 		'style' => "chicago-note-bibliography",
 		'css' => "inline",
 		'linkwrap' => 0,
+		'locale' => "en-US",
 		
 		// search
 		'fq' => '',

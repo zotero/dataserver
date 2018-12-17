@@ -387,11 +387,12 @@ class Zotero_Cite {
 		
 		// Any query parameters that have an effect on the output
 		// need to be added here
-		$allowedParams = array(
+		$allowedParams = [
 			'style',
+			'locale',
 			'css',
 			'linkwrap'
-		);
+		];
 		$cachedParams = Z_Array::filterKeys($queryParams, $allowedParams);
 		
 		return $mode . "_" . $lk . "_"
@@ -407,6 +408,7 @@ class Zotero_Cite {
 		// need to be added here
 		$allowedParams = array(
 			'style',
+			'locale',
 			'css',
 			'linkwrap'
 		);
@@ -448,6 +450,13 @@ class Zotero_Cite {
 		}
 		if ($mode == 'citation') {
 			$url .= "&citations=1&bibliography=0";
+		}
+		if ($queryParams['locale'] != "en-US"
+				&& preg_match('/^[a-z]{2}(-[A-Z]{2})?/', $queryParams['locale'], $matches)) {
+			if (strlen($matches[0]) == 2) {
+				$matches[0] = $matches . '-' . strtoupper($matches[0]);
+			}
+			$url .= "&locale=" . $matches[0];
 		}
 		return $url;
 	}

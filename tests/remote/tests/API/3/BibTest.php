@@ -32,6 +32,7 @@ require_once 'include/api3.inc.php';
 class BibTests extends APITests {
 	private static $items;
 	private static $multiResponses = [];
+	private static $multiResponsesLocales = [];
 	private static $styles = [
 		"default",
 		"apa",
@@ -47,41 +48,46 @@ class BibTests extends APITests {
 		$key = API::createItem("book", array(
 			"title" => "Title",
 			"date" => "January 1, 2014",
-			"creators" => array(
-				array(
+			"creators" => [
+				[
 					"creatorType" => "author",
-					"firstName" => "First",
-					"lastName" => "Last"
-				)
-			)
+					"firstName" => "Alice",
+					"lastName" => "Doe"
+				],
+				[
+					"creatorType" => "author",
+					"firstName" => "Bob",
+					"lastName" => "Smith"
+				]
+			]
 		), null, 'key');
 		self::$items[$key] = [
 			'json' => [
 				"citation" => array(
-					"default" => '<span>Last, <i>Title</i>.</span>',
-					"apa" => '<span>(Last, 2014)</span>',
-					"https://www.zotero.org/styles/apa" => '<span>(Last, 2014)</span>',
+					"default" => '<span>Doe and Smith, <i>Title</i>.</span>',
+					"apa" => '<span>(Doe &#38; Smith, 2014)</span>',
+					"https://www.zotero.org/styles/apa" => '<span>(Doe &#38; Smith, 2014)</span>',
 					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<span>[1]</span>'
 				),
 				"bib" => array(
-					"default" => '<div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, First. <i>Title</i>, 2014.</div></div>',
-					"apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title</i>.</div></div>',
-					"https://www.zotero.org/styles/apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title</i>.</div></div>',
-					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title</i>. 2014.</div></div></div>'
+					"default" => '<div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, Alice, and Bob Smith. <i>Title</i>, 2014.</div></div>',
+					"apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div></div>',
+					"https://www.zotero.org/styles/apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div></div>',
+					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">A. Doe and B. Smith, <i>Title</i>. 2014.</div></div></div>'
 				)
 			],
 			'atom' => [
 				"citation" => array(
-					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">Last, <i>Title</i>.</span></content>',
-					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Last, 2014)</span></content>',
-					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Last, 2014)</span></content>',
+					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">Doe and Smith, <i>Title</i>.</span></content>',
+					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Doe &#38; Smith, 2014)</span></content>',
+					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Doe &#38; Smith, 2014)</span></content>',
 					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">[1]</span></content>'
 				),
 				"bib" => array(
-					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, First. <i>Title</i>, 2014.</div></div></content>',
-					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title</i>.</div></div></content>',
-					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title</i>.</div></div></content>',
-					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title</i>. 2014.</div></div></div></content>'
+					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, Alice, and Bob Smith. <i>Title</i>, 2014.</div></div></content>',
+					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div></div></content>',
+					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div></div></content>',
+					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">A. Doe and B. Smith, <i>Title</i>. 2014.</div></div></div></content>'
 				)
 			]
 		];
@@ -90,54 +96,58 @@ class BibTests extends APITests {
 			"title" => "Title 2",
 			"date" => "June 24, 2014",
 			"creators" => array(
-				array(
+				[
 					"creatorType" => "author",
-					"firstName" => "First",
-					"lastName" => "Last"
-				),
-				array(
+					"firstName" => "Jane",
+					"lastName" => "Smith"
+				],
+				[
 					"creatorType" => "editor",
 					"firstName" => "Ed",
 					"lastName" => "McEditor"
-				)
+				]
 			)
 		), null, 'key');
 		self::$items[$key] = [
 			'json' => [
 				"citation" => array(
-					"default" => '<span>Last, <i>Title 2</i>.</span>',
-					"apa" => '<span>(Last, 2014)</span>',
-					"https://www.zotero.org/styles/apa" => '<span>(Last, 2014)</span>',
+					"default" => '<span>Smith, <i>Title 2</i>.</span>',
+					"apa" => '<span>(Smith, 2014)</span>',
+					"https://www.zotero.org/styles/apa" => '<span>(Smith, 2014)</span>',
 					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<span>[1]</span>'
 				),
 				"bib" => array(
-					"default" => '<div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, First. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div>',
-					"apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
-					"https://www.zotero.org/styles/apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
-					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title 2</i>. 2014.</div></div></div>'
+					"default" => '<div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, Jane. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div>',
+					"apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
+					"https://www.zotero.org/styles/apa" => '<div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
+					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">J. Smith, <i>Title 2</i>. 2014.</div></div></div>'
 				)
 			],
 			'atom' => [
 				"citation" => array(
-					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">Last, <i>Title 2</i>.</span></content>',
-					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Last, 2014)</span></content>',
-					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Last, 2014)</span></content>',
+					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">Smith, <i>Title 2</i>.</span></content>',
+					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Smith, 2014)</span></content>',
+					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">(Smith, 2014)</span></content>',
 					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="citation" type="xhtml"><span xmlns="http://www.w3.org/1999/xhtml">[1]</span></content>'
 				),
 				"bib" => array(
-					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, First. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div></content>',
-					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div></content>',
-					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div></content>',
-					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title 2</i>. 2014.</div></div></div></content>'
+					"default" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, Jane. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div></content>',
+					"apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div></content>',
+					"https://www.zotero.org/styles/apa" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div></content>',
+					"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<content xmlns:zapi="http://zotero.org/ns/api" zapi:type="bib" type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">J. Smith, <i>Title 2</i>. 2014.</div></div></div></content>'
 				)
 			]
 		];
 		
 		self::$multiResponses = [
-			"default" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, First. <i>Title</i>, 2014.</div><div class="csl-entry">&#x2014;&#x2014;&#x2014;. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div>',
-			"apa" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014a). <i>Title</i>.</div><div class="csl-entry">Last, F. (2014b). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
-			"https://www.zotero.org/styles/apa" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Last, F. (2014a). <i>Title</i>.</div><div class="csl-entry">Last, F. (2014b). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
-			"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title 2</i>. 2014.</div></div><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[2]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">F. Last, <i>Title</i>. 2014.</div></div></div>'
+			"default" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, Alice, and Bob Smith. <i>Title</i>, 2014.</div><div class="csl-entry">Smith, Jane. <i>Title 2</i>. Edited by Ed McEditor, 2014.</div></div>',
+			"apa" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
+			"https://www.zotero.org/styles/apa" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 2; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, A., &amp; Smith, B. (2014). <i>Title</i>.</div><div class="csl-entry">Smith, J. (2014). <i>Title 2</i>. (E. McEditor, Ed.).</div></div>',
+			"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl" => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 1.35; "><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[1]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">J. Smith, <i>Title 2</i>. 2014.</div></div><div class="csl-entry" style="clear: left; "><div class="csl-left-margin" style="float: left; padding-right: 0.5em; text-align: right; width: 1em;">[2]</div><div class="csl-right-inline" style="margin: 0 .4em 0 1.5em;">A. Doe and B. Smith, <i>Title</i>. 2014.</div></div></div>'
+		];
+		
+		self::$multiResponsesLocales = [
+			'fr' => '<?xml version="1.0"?><div class="csl-bib-body" style="line-height: 1.35; padding-left: 2em; text-indent:-2em;"><div class="csl-entry">Doe, Alice, et Bob Smith. <i>Title</i>, 2014.</div><div class="csl-entry">Smith, Jane. <i>Title 2</i>. &#xC9;dit&#xE9; par Ed McEditor, 2014.</div></div>'
 		];
 	}
 	
@@ -332,5 +342,15 @@ class BibTests extends APITests {
 			$this->assert200($response);
 			$this->assertXmlStringEqualsXmlString(self::$multiResponses[$style], $response->getBody());
 		}
+	}
+	
+	
+	public function testFormatBibLocale() {
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/?format=bib&locale=fr-FR"
+		);
+		$this->assert200($response);
+		$this->assertXmlStringEqualsXmlString(self::$multiResponsesLocales['fr'], $response->getBody());
 	}
 }
