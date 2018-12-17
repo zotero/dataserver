@@ -54,7 +54,7 @@ class Zotero_Translate {
 		
 		$jsonItems = array();
 		foreach ($items as $item) {
-			$arr = $item->toJSON(true, $requestParams);
+			$arr = $item->toJSON(true, $requestParams, true);
 			$arr['uri'] = Zotero_URI::getItemURI($item);
 			$jsonItems[] = $arr;
 		}
