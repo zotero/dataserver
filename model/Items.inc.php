@@ -2108,6 +2108,19 @@ class Zotero_Items {
 					|| (!$partialUpdate && (!isset($json->parentItem) || $json->parentItem === false))) {
 				$isChild = false;
 			}
+			// Implicit parentItem: false for PATCH if collections provided
+			//
+			// This shouldn't really happen, but there's apparently a client bug where attachments
+			// going through PDF metadata retrieval are initially being uploaded as children of
+			// unrelated items and then getting uploaded again as standalone attachments in the same
+			// collection without setting `parentItem: false`. Since child items can't be in
+			// collections themselves, we can take a `collections` property as an implicit
+			// `parentItem: false`.
+			else if ($partialUpdate && !isset($json->parentItem) && !empty($json->collections)) {
+				error_log("WARNING: 'collections' property provided without 'parentItem: false' for child item $libraryID/$json->key");
+				$json->parentItem = false;
+				$isChild = false;
+			}
 		}
 		else {
 			if (isset($json->parentItem) && $json->parentItem !== false) {

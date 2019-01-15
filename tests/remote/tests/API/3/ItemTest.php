@@ -1037,6 +1037,26 @@ class ItemTests extends APITests {
 	}
 	
 	
+	// See note in validateJSONItem()
+	public function test_should_convert_child_attachment_to_top_level_and_add_to_collection_via_PATCH_without_parentItem_false() {
+		$collectionKey = API::createCollection('Test', false, $this, 'key');
+		$parentItemKey = API::createItem("book", false, $this, 'key');
+		$attachmentJSON = API::createAttachmentItem("linked_url", [], $parentItemKey, $this, 'jsonData');
+		unset($attachmentJSON['parentItem']);
+		$attachmentJSON['collections'] = [$collectionKey];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/{$attachmentJSON['key']}",
+			json_encode($attachmentJSON)
+		);
+		$this->assert204($response);
+		$json = API::getItem($attachmentJSON['key'], $this, 'json')['data'];
+		$this->assertArrayNotHasKey('parentItem', $json);
+		$this->assertCount(1, $json['collections']);
+		$this->assertEquals($collectionKey, $json['collections'][0]);
+	}
+	
+	
 	public function testEditTitleWithCollectionInMultipleMode() {
 		$collectionKey = API::createCollection('Test', false, $this, 'key');
 		
