@@ -1,4 +1,4 @@
-<?
+<?php
 class Zotero_Processors {
 	public static function notifyProcessors($mode, $signal="NEXT") {
 		$sql = "SELECT INET_NTOA(addr) AS addr, port FROM processorDaemons WHERE mode=?";

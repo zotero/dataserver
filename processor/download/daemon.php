@@ -1,4 +1,4 @@
-<?
+<?php
 if (file_exists('../config')) {
 	include('../config');
 }

@@ -1,4 +1,4 @@
-<?
+<?php
 /*
     ***** BEGIN LICENSE BLOCK *****
     
