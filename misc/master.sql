@@ -96,7 +96,8 @@ CREATE TABLE `groups` (
   `version` mediumint(8) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`groupID`),
   UNIQUE KEY `libraryID` (`libraryID`),
-  UNIQUE KEY `slug` (`slug`)
+  UNIQUE KEY `slug` (`slug`),
+  FULLTEXT KEY `name` (`name`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 
 

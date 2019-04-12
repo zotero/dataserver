@@ -137,8 +137,8 @@ class Zotero_Groups {
 						$queryParams[] = $field[1];
 					}
 					else {
-						$querySQL .= "AND name LIKE ? ";
-						$queryParams[] = "%$q%";
+						$querySQL .= "AND MATCH(name) AGAINST (?) ";
+						$queryParams[] = $q;
 					}
 				}
 			}
