@@ -405,6 +405,24 @@ class ItemTests extends APITests {
 		$data = API::getItem($objectKey, $this, 'json')['data'];
 		// But the value shouldn't have actually changed
 		$this->assertEquals($originalDateAdded, $data['dateAdded']);
+		
+		// Allow if the there's a merge-tracking relation
+		$newDateAdded = "2019-04-13T01:48:54Z";
+		$data['dateAdded'] = $newDateAdded;
+		$data['relations'] = [
+			"dc:replaces" => [
+				"http://zotero.org/users/" . self::$config['userID'] . "/items/AAAAAAAA"
+			]
+		];
+		$response = API::userPut(
+			self::$config['userID'],
+			"$objectTypePlural/$objectKey",
+			json_encode($data)
+		);
+		$this->assert204($response);
+		$data = API::getItem($objectKey, $this, 'json')['data'];
+		// The value should have changed
+		$this->assertEquals($newDateAdded, $data['dateAdded']);
 	}
 	
 	

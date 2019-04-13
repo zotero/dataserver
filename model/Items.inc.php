@@ -2547,7 +2547,7 @@ class Zotero_Items {
 							$val = Zotero_Date::iso8601ToSQL($val);
 						}
 						// Don't allow dateAdded to change
-						if ($val != $item->$key) {
+						if ($val != $item->$key && empty($json->relations->{Zotero_Relations::$deletedItemPredicate})) {
 							// If passed dateAdded is exactly one hour or one day off, assume it's from
 							// a DST bug we haven't yet tracked down
 							// (https://github.com/zotero/zotero/issues/1201) and ignore it
