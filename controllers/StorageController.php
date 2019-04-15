@@ -165,4 +165,67 @@ class StorageController extends ApiController {
 		Zotero_Storage::transferBucket('zoterofilestorage', 'zoterofilestoragetest');
 		exit;
 	}
+	
+	public function identify() {
+		$this->allowMethods(array('POST'));
+		
+		// 10 requests per second per IP with 100 requests burst
+		$rateLimit = [
+			'logOnly' => false,
+			'bucket' => $_SERVER['REMOTE_ADDR'],
+			'capacity' => 100,
+			'rate' => 10
+		];
+		
+		// $this->requestLimiter must be initialized in ApiController
+		$requestsRemaining = $this->requestLimiter->checkBucketRate($rateLimit);
+		
+		if (!$requestsRemaining) {
+			StatsD::increment("request.limit.identify.rate.rejected", 1);
+			Z_Core::logError('Request rate limit exceeded for' . $rateLimit['bucket']);
+			
+			if (!$rateLimit['logOnly']) {
+				header("Retry-After: " . (int)$rateLimit['capacity'] / $rateLimit['rate']);
+				$this->e429();
+			}
+		}
+		
+		if (!empty($_REQUEST['hash'])) {
+			$hash = $_REQUEST['hash'];
+			$fieldTypes = [
+				11, // ISBN
+				13, // ISSN
+				26 // DOI
+			];
+			$identifiers = [];
+			
+			// Returns up to 10 identifiers and checks up to 5 libraries
+			$numIdentifiers = 0;
+			$numLibraries = 0;
+			
+			$libraryIDs = Zotero_Storage::getHashLibraries($hash);
+			while (($libraryID = array_shift($libraryIDs))
+				&& $numIdentifiers < 10
+				&& $numLibraries++ < 5) {
+				$fields = Zotero_Storage::getFileSourceFields($libraryID, $hash, $fieldTypes);
+				foreach ($fields as $fieldID => $values) {
+					$fieldName = Zotero_ItemFields::getName($fieldID);
+					foreach ($values as $value) {
+						if (!isset($identifiers[$fieldName])) {
+							$identifiers[$fieldName] = [];
+						}
+						
+						if (!in_array($value, $identifiers[$fieldName])) {
+							$identifiers[$fieldName][] = $value;
+							$numIdentifiers++;
+						}
+					}
+				}
+			}
+			
+			echo Zotero_Utilities::formatJSON([
+				'identifiers' => $identifiers
+			]);
+		}
+	}
 }
