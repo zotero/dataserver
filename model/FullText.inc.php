@@ -228,7 +228,7 @@ class Zotero_FullText {
 		$searchText = str_replace('"', '', $searchText);
 		
 		$params = [
-			'index' => self::$elasticsearchType . "_index_read",
+			'index' => self::$elasticsearchType . "_index",
 			'type' => self::$elasticsearchType,
 			'routing' => $libraryID,
 			"body" => [
