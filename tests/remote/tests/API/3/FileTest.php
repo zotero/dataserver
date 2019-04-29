@@ -25,7 +25,7 @@
 */
 
 namespace APIv3;
-use API3 as API, HTTP, SimpleXMLElement, Sync, Z_Tests;
+use API3 as API, HTTP, SimpleXMLElement, Z_Tests;
 require_once 'APITests.inc.php';
 require_once 'include/bootstrap.inc.php';
 
@@ -294,9 +294,6 @@ class FileTests extends APITests {
 		);
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileFormDataFullParams() {
 		$json = API::createAttachmentItem("imported_file", [], false, $this, 'jsonData');
 		$attachmentKey = $json['key'];
@@ -306,13 +303,6 @@ class FileTests extends APITests {
 		sleep(1);
 		
 		$originalVersion = $json['version'];
-		
-		// Get a sync timestamp from before the file is updated
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		$file = "work/file";
 		$fileContents = self::getRandomUnicodeString();
@@ -399,12 +389,6 @@ class FileTests extends APITests {
 		
 		// Make sure version has changed
 		$this->assertNotEquals($originalVersion, $json['version']);
-		
-		// Make sure new attachment is passed via sync
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertGreaterThan(0, $xml->updated[0]->count());
 	}
 	
 	
@@ -516,7 +500,6 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testGetFile
-	 * @group classic-sync
 	 */
 	public function testAddFilePartial($getFileData) {
 		// Get serverDateModified
@@ -529,13 +512,6 @@ class FileTests extends APITests {
 		sleep(1);
 		
 		$originalVersion = $json['version'];
-		
-		// Get a sync timestamp from before the file is updated
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		$oldFilename = "work/old";
 		$fileContents = $getFileData['response']->getBody();
@@ -626,12 +602,6 @@ class FileTests extends APITests {
 			
 			// Make sure version has changed
 			$this->assertNotEquals($originalVersion, $json['version']);
-			
-			// Make sure new attachment is passed via sync
-			$sessionID = Sync::login();
-			$xml = Sync::updated($sessionID, $lastsync);
-			Sync::logout($sessionID);
-			$this->assertGreaterThan(0, $xml->updated[0]->count());
 			
 			// Verify file on S3
 			$response = API::userGet(
@@ -817,9 +787,6 @@ class FileTests extends APITests {
 		$this->assertEquals($contentType, $response->getHeader('Content-Type'));
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileClientV4() {
 		API::userClear(self::$config['userID']);
 		
@@ -853,14 +820,6 @@ class FileTests extends APITests {
 		);
 		$this->assert204($response);
 		$originalVersion = $response->getHeader("Last-Modified-Version");
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		// Get file info
 		$response = API::userGet(
@@ -965,17 +924,12 @@ class FileTests extends APITests {
 			"items/{$json['key']}"
 		);
 		$json = API::getJSONFromResponse($response)['data'];
-		
+		// Make sure attachment item version hasn't changed (or else the client
+		// will get a conflict when it tries to update the metadata)
+		$this->assertEquals($originalVersion, $json['version']);
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($filename, $json['filename']);
 		$this->assertEquals($mtime, $json['mtime']);
-		
-		// Make sure attachment item wasn't updated (or else the client
-		// will get a conflict when it tries to update the metadata)
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
 		
 		$response = API::userGet(
 			self::$config['userID'],
@@ -1028,26 +982,15 @@ class FileTests extends APITests {
 		$this->assertContentType("application/xml", $response);
 		$this->assertEquals("<exists/>", $response->getBody());
 		
-		// Make sure attachment item still wasn't updated
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		$this->assertEquals(0, $xml->updated[0]->count());
-		
-		// Get attachment
-		$xml = Sync::updated($sessionID, 2);
-		$this->assertEquals(1, $xml->updated[0]->items->count());
-		$itemXML = $xml->xpath("//updated/items/item[@key='" . $json['key'] . "']")[0];
-		$this->assertEquals($fileContentType, (string) $itemXML['mimeType']);
-		$this->assertEquals($fileCharset, (string) $itemXML['charset']);
-		$this->assertEquals($hash, (string) $itemXML['storageHash']);
-		$this->assertEquals($mtime + 1000, (string) $itemXML['storageModTime']);
-		
-		Sync::logout($sessionID);
+		// Make sure attachment version still hasn't changed
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/{$json['key']}"
+		);
+		$json = API::getJSONFromResponse($response)['data'];
+		$this->assertEquals($originalVersion, $json['version']);
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileClientV4Zip() {
 		API::userClear(self::$config['userID']);
 		
@@ -1089,14 +1032,7 @@ class FileTests extends APITests {
 			)
 		);
 		$this->assert204($response);
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
+		$originalVersion = $response->getHeader("Last-Modified-Version");
 		
 		// Get file info
 		$response = API::userGet(
@@ -1185,17 +1121,12 @@ class FileTests extends APITests {
 			"items/{$json['key']}"
 		);
 		$json = API::getJSONFromResponse($response)['data'];
-		
+		// Make sure attachment item version hasn't changed (or else the client
+		// will get a conflict when it tries to update the metadata)
+		$this->assertEquals($originalVersion, $json['version']);
 		$this->assertEquals($hash, $json['md5']);
 		$this->assertEquals($fileFilename, $json['filename']);
 		$this->assertEquals($fileModtime, $json['mtime']);
-		
-		// Make sure attachment item wasn't updated (or else the client
-		// will get a conflict when it tries to update the metadata)
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
 		
 		$response = API::userGet(
 			self::$config['userID'],
@@ -1230,16 +1161,15 @@ class FileTests extends APITests {
 		$this->assertContentType("application/xml", $response);
 		$this->assertEquals("<exists/>", $response->getBody());
 		
-		// Make sure attachment item still wasn't updated
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
+		// Make sure attachment version still hasn't changed
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/{$json['key']}"
+		);
+		$json = API::getJSONFromResponse($response)['data'];
+		$this->assertEquals($originalVersion, $json['version']);
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileClientV5() {
 		API::userClear(self::$config['userID']);
 		
@@ -1266,14 +1196,6 @@ class FileTests extends APITests {
 		], false, $this, 'jsonData');
 		$key = $json['key'];
 		$originalVersion = $json['version'];
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		// File shouldn't exist
 		$response = API::userGet(
@@ -1491,22 +1413,8 @@ class FileTests extends APITests {
 		$this->assertArrayHasKey("exists", $json);
 		$version = $response->getHeader("Last-Modified-Version");
 		$this->assertGreaterThan($newVersion, $version);
-		
-		// Get attachment via classic sync
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, 2);
-		$this->assertEquals(1, $xml->updated[0]->items->count());
-		$itemXML = $xml->xpath("//updated/items/item[@key='$key']")[0];
-		$this->assertEquals($contentType, (string) $itemXML['mimeType']);
-		$this->assertEquals($charset, (string) $itemXML['charset']);
-		$this->assertEquals($hash, (string) $itemXML['storageHash']);
-		$this->assertEquals($mtime + 1000, (string) $itemXML['storageModTime']);
-		Sync::logout($sessionID);
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileClientV5Zip() {
 		API::userClear(self::$config['userID']);
 		
@@ -1516,7 +1424,6 @@ class FileTests extends APITests {
 		$filename = "file.html";
 		$mtime = time();
 		$hash = md5($fileContents);
-		
 		
 		// Get last storage sync
 		$response = API::userGet(
@@ -1548,14 +1455,6 @@ class FileTests extends APITests {
 		$zipFilename = $key . ".zip";
 		$zipSize = filesize($file);
 		$zipFileContents = file_get_contents($file);
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		//
 		// Get upload authorization
@@ -1673,17 +1572,6 @@ class FileTests extends APITests {
 		$this->assertArrayHasKey("exists", $json);
 		$version = $response->getHeader("Last-Modified-Version");
 		$this->assertGreaterThan($newVersion, $version);
-		
-		// Get attachment via classic sync
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, 2);
-		$this->assertEquals(1, $xml->updated[0]->items->count());
-		$itemXML = $xml->xpath("//updated/items/item[@key='$key']")[0];
-		$this->assertEquals($contentType, (string) $itemXML['mimeType']);
-		$this->assertEquals($charset, (string) $itemXML['charset']);
-		$this->assertEquals($hash, (string) $itemXML['storageHash']);
-		$this->assertEquals($mtime + 1000, (string) $itemXML['storageModTime']);
-		Sync::logout($sessionID);
 	}
 	
 	

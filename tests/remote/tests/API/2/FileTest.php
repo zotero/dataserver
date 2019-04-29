@@ -25,7 +25,7 @@
 */
 
 namespace APIv2;
-use API2 as API, \HTTP, \SimpleXMLElement, \Sync, \Z_Tests, \ZipArchive;
+use API2 as API, \HTTP, \SimpleXMLElement, \Z_Tests, \ZipArchive;
 require_once 'APITests.inc.php';
 require_once 'include/bootstrap.inc.php';
 
@@ -284,9 +284,6 @@ class FileTests extends APITests {
 		);
 	}
 	
-	/**
-	 * @group classic-sync
-	 */
 	public function testAddFileFullParams() {
 		$xml = API::createAttachmentItem("imported_file", [], false, $this);
 		$data = API::parseDataFromAtomEntry($xml);
@@ -296,13 +293,6 @@ class FileTests extends APITests {
 		sleep(1);
 		
 		$originalVersion = $data['version'];
-		
-		// Get a sync timestamp from before the file is updated
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		$file = "work/file";
 		$fileContents = self::getRandomUnicodeString();
@@ -394,12 +384,6 @@ class FileTests extends APITests {
 		
 		// Make sure version has changed
 		$this->assertNotEquals($originalVersion, $data['version']);
-		
-		// Make sure new attachment is passed via sync
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertGreaterThan(0, $xml->updated[0]->count());
 	}
 	
 	
@@ -511,7 +495,6 @@ class FileTests extends APITests {
 	
 	/**
 	 * @depends testGetFile
-	 * @group classic-sync
 	 */
 	public function testAddFilePartial($getFileData) {
 		// Get serverDateModified
@@ -525,13 +508,6 @@ class FileTests extends APITests {
 		
 		$data = API::parseDataFromAtomEntry($xml);
 		$originalVersion = $data['version'];
-		
-		// Get a sync timestamp from before the file is updated
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
 		
 		$oldFilename = "work/old";
 		$fileContents = $getFileData['response']->getBody();
@@ -625,12 +601,6 @@ class FileTests extends APITests {
 			
 			// Make sure version has changed
 			$this->assertNotEquals($originalVersion, $data['version']);
-			
-			// Make sure new attachment is passed via sync
-			$sessionID = Sync::login();
-			$xml = Sync::updated($sessionID, $lastsync);
-			Sync::logout($sessionID);
-			$this->assertGreaterThan(0, $xml->updated[0]->count());
 			
 			// Verify file on S3
 			$response = API::userGet(
@@ -816,435 +786,6 @@ class FileTests extends APITests {
 		$this->assert200($response);
 		$this->assertEquals($fileContents, $response->getBody());
 		$this->assertEquals($contentType, $response->getHeader('Content-Type'));
-	}
-	
-	/**
-	 * @group classic-sync
-	 */
-	public function testAddFileClient() {
-		API::userClear(self::$config['userID']);
-		
-		$fileContentType = "text/html";
-		$fileCharset = "utf-8";
-		
-		$auth = array(
-			'username' => self::$config['username'],
-			'password' => self::$config['password']
-		);
-		
-		// Get last storage sync
-		$response = API::userGet(
-			self::$config['userID'],
-			"laststoragesync?auth=1",
-			array(),
-			$auth
-		);
-		$this->assert404($response);
-		
-		$xml = API::createAttachmentItem("imported_file", [], false, $this);
-		$data = API::parseDataFromAtomEntry($xml);
-		$originalVersion = $data['version'];
-		$json = json_decode($data['content']);
-		$json->contentType = $fileContentType;
-		$json->charset = $fileCharset;
-		
-		$response = API::userPut(
-			self::$config['userID'],
-			"items/{$data['key']}?key=" . self::$config['apiKey'],
-			json_encode($json),
-			array("Content-Type: application/json")
-		);
-		$this->assert204($response);
-		$originalVersion = $response->getHeader("Last-Modified-Version");
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
-		
-		// Get file info
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1&info=1",
-			array(),
-			$auth
-		);
-		$this->assert404($response);
-		
-		$file = "work/file";
-		$fileContents = self::getRandomUnicodeString();
-		file_put_contents($file, $fileContents);
-		$hash = md5_file($file);
-		$filename = "test_" . $fileContents;
-		$mtime = filemtime($file) * 1000;
-		$size = filesize($file);
-		
-		// Get upload authorization
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			$this->implodeParams(array(
-				"md5" => $hash,
-				"filename" => $filename,
-				"filesize" => $size,
-				"mtime" => $mtime
-			)),
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert200($response);
-		$this->assertContentType("application/xml", $response);
-		$xml = new SimpleXMLElement($response->getBody());
-		
-		self::$toDelete[] = "$hash";
-		
-		$boundary = "---------------------------" . rand();
-		$postData = "";
-		foreach ($xml->params->children() as $key => $val) {
-			$postData .= "--" . $boundary . "\r\nContent-Disposition: form-data; "
-				. "name=\"$key\"\r\n\r\n$val\r\n";
-		}
-		$postData .= "--" . $boundary . "\r\nContent-Disposition: form-data; "
-				. "name=\"file\"\r\n\r\n" . $fileContents . "\r\n";
-		$postData .= "--" . $boundary . "--";
-		
-		// Upload to S3
-		$response = HTTP::post(
-			(string) $xml->url,
-			$postData,
-			array(
-				"Content-Type: multipart/form-data; boundary=" . $boundary
-			)
-		);
-		$this->assert201($response);
-		
-		//
-		// Register upload
-		//
-		
-		// Invalid upload key
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			"update=invalidUploadKey&mtime=" . $mtime,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert400($response);
-		
-		// No mtime
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			"update=" . $xml->key,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert500($response);
-		
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			"update=" . $xml->key . "&mtime=" . $mtime,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert204($response);
-		
-		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
-		);
-		$xml = API::getXMLFromResponse($response);
-		$data = API::parseDataFromAtomEntry($xml);
-		$json = json_decode($data['content']);
-		
-		$this->assertEquals($hash, $json->md5);
-		$this->assertEquals($filename, $json->filename);
-		$this->assertEquals($mtime, $json->mtime);
-		
-		// Make sure attachment item wasn't updated (or else the client
-		// will get a conflict when it tries to update the metadata)
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
-		
-		$response = API::userGet(
-			self::$config['userID'],
-			"laststoragesync?auth=1",
-			array(),
-			array(
-				'username' => self::$config['username'],
-				'password' => self::$config['password']
-			)
-		);
-		$this->assert200($response);
-		$mtime = $response->getBody();
-		$this->assertRegExp('/^[0-9]{10}$/', $mtime);
-		
-		// File exists
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			$this->implodeParams(array(
-				"md5" => $hash,
-				"filename" => $filename,
-				"filesize" => $size,
-				"mtime" => $mtime + 1000
-			)),
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert200($response);
-		$this->assertContentType("application/xml", $response);
-		$this->assertEquals("<exists/>", $response->getBody());
-		
-		// File exists with different filename
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			$this->implodeParams(array(
-				"md5" => $hash,
-				"filename" => $filename . '等', // Unicode 1.1 character, to test signature generation
-				"filesize" => $size,
-				"mtime" => $mtime + 1000
-			)),
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert200($response);
-		$this->assertContentType("application/xml", $response);
-		$this->assertEquals("<exists/>", $response->getBody());
-		
-		// Make sure attachment item still wasn't updated
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		$this->assertEquals(0, $xml->updated[0]->count());
-		
-		// Get attachment
-		$xml = Sync::updated($sessionID, 2);
-		$this->assertEquals(1, $xml->updated[0]->items->count());
-		$itemXML = $xml->updated[0]->items[0]->item[0]->asXML();
-		$this->assertEquals($fileContentType, (string) $xml->updated[0]->items[0]->item[0]['mimeType']);
-		$this->assertEquals($fileCharset, (string) $xml->updated[0]->items[0]->item[0]['charset']);
-		$this->assertEquals($hash, (string) $xml->updated[0]->items[0]->item[0]['storageHash']);
-		$this->assertEquals($mtime + 1000, (string) $xml->updated[0]->items[0]->item[0]['storageModTime']);
-		
-		Sync::logout($sessionID);
-	}
-	
-	/**
-	 * @group classic-sync
-	 */
-	public function testAddFileClientZip() {
-		API::userClear(self::$config['userID']);
-		
-		$auth = array(
-			'username' => self::$config['username'],
-			'password' => self::$config['password']
-		);
-		
-		// Get last storage sync
-		$response = API::userGet(
-			self::$config['userID'],
-			"laststoragesync?auth=1",
-			array(),
-			$auth
-		);
-		$this->assert404($response);
-		
-		$xml = API::createItem("book", false, $this);
-		$data = API::parseDataFromAtomEntry($xml);
-		$key = $data['key'];
-		
-		$fileContentType = "text/html";
-		$fileCharset = "UTF-8";
-		$fileFilename = "file.html";
-		$fileModtime = time();
-		
-		$xml = API::createAttachmentItem("imported_url", [], $key, $this);
-		$data = API::parseDataFromAtomEntry($xml);
-		$key = $data['key'];
-		$version = $data['version'];
-		$json = json_decode($data['content']);
-		$json->contentType = $fileContentType;
-		$json->charset = $fileCharset;
-		$json->filename = $fileFilename;
-		
-		$response = API::userPut(
-			self::$config['userID'],
-			"items/$key?key=" . self::$config['apiKey'],
-			json_encode($json),
-			array(
-				"Content-Type: application/json"
-			)
-		);
-		$this->assert204($response);
-		
-		// Get a sync timestamp from before the file is updated
-		sleep(1);
-		require_once 'include/sync.inc.php';
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID);
-		$lastsync = (int) $xml['timestamp'];
-		Sync::logout($sessionID);
-		
-		// Get file info
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1&info=1",
-			array(),
-			$auth
-		);
-		$this->assert404($response);
-		
-		$zip = new ZipArchive();
-		$file = "work/$key.zip";
-		
-		if ($zip->open($file, ZIPARCHIVE::CREATE) !== TRUE) {
-			throw new Exception("Cannot open ZIP file");
-		}
-		
-		$zip->addFromString($fileFilename, self::getRandomUnicodeString());
-		$zip->addFromString("file.css", self::getRandomUnicodeString());
-		$zip->close();
-		
-		$hash = md5_file($file);
-		$filename = $key . ".zip";
-		$size = filesize($file);
-		$fileContents = file_get_contents($file);
-		
-		// Get upload authorization
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			$this->implodeParams(array(
-				"md5" => $hash,
-				"filename" => $filename,
-				"filesize" => $size,
-				"mtime" => $fileModtime,
-				"zip" => 1
-			)),
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert200($response);
-		$this->assertContentType("application/xml", $response);
-		$xml = new SimpleXMLElement($response->getBody());
-		
-		self::$toDelete[] = "$hash";
-		
-		$boundary = "---------------------------" . rand();
-		$postData = "";
-		foreach ($xml->params->children() as $key => $val) {
-			$postData .= "--" . $boundary . "\r\nContent-Disposition: form-data; "
-				. "name=\"$key\"\r\n\r\n$val\r\n";
-		}
-		$postData .= "--" . $boundary . "\r\nContent-Disposition: form-data; "
-				. "name=\"file\"\r\n\r\n" . $fileContents . "\r\n";
-		$postData .= "--" . $boundary . "--";
-		
-		// Upload to S3
-		$response = HTTP::post(
-			(string) $xml->url,
-			$postData,
-			array(
-				"Content-Type: multipart/form-data; boundary=" . $boundary
-			)
-		);
-		$this->assert201($response);
-		
-		//
-		// Register upload
-		//
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			"update=" . $xml->key . "&mtime=" . $fileModtime,
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert204($response);
-		
-		// Verify attachment item metadata
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/{$data['key']}?key=" . self::$config['apiKey'] . "&content=json"
-		);
-		$xml = API::getXMLFromResponse($response);
-		$data = API::parseDataFromAtomEntry($xml);
-		$json = json_decode($data['content']);
-		
-		$this->assertEquals($hash, $json->md5);
-		$this->assertEquals($fileFilename, $json->filename);
-		$this->assertEquals($fileModtime, $json->mtime);
-		
-		// Make sure attachment item wasn't updated (or else the client
-		// will get a conflict when it tries to update the metadata)
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
-		
-		$response = API::userGet(
-			self::$config['userID'],
-			"laststoragesync?auth=1",
-			array(),
-			array(
-				'username' => self::$config['username'],
-				'password' => self::$config['password']
-			)
-		);
-		$this->assert200($response);
-		$mtime = $response->getBody();
-		$this->assertRegExp('/^[0-9]{10}$/', $mtime);
-		
-		// File exists
-		$response = API::userPost(
-			self::$config['userID'],
-			"items/{$data['key']}/file?auth=1&iskey=1&version=1",
-			$this->implodeParams(array(
-				"md5" => $hash,
-				"filename" => $filename,
-				"filesize" => $size,
-				"mtime" => $fileModtime + 1000,
-				"zip" => 1
-			)),
-			array(
-				"Content-Type: application/x-www-form-urlencoded"
-			),
-			$auth
-		);
-		$this->assert200($response);
-		$this->assertContentType("application/xml", $response);
-		$this->assertEquals("<exists/>", $response->getBody());
-		
-		// Make sure attachment item still wasn't updated
-		$sessionID = Sync::login();
-		$xml = Sync::updated($sessionID, $lastsync);
-		Sync::logout($sessionID);
-		$this->assertEquals(0, $xml->updated[0]->count());
 	}
 	
 	
