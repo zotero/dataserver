@@ -48,7 +48,7 @@ class TagTests extends APITests {
 		API::useAPIVersion(2);
 	}
 	
-	public function testEmptyTag() {
+	public function test_empty_tag_should_be_ignored() {
 		$json = API::getItemTemplate("book");
 		$json->tags[] = array(
 			"tag" => "",
@@ -56,7 +56,7 @@ class TagTests extends APITests {
 		);
 		
 		$response = API::postItem($json);
-		$this->assert400ForObject($response, "Tag cannot be empty");
+		$this->assert200($response);
 	}
 	
 	
