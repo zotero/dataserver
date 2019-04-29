@@ -257,7 +257,7 @@ class BibTests extends APITests {
 				);
 				$this->assert200($response);
 				$json = API::getJSONFromResponse($response);
-				$this->assertXmlStringEqualsXmlString($expected['json']['bib'][$style], $json['bib']);
+				$this->assertXmlStringEqualsXmlString($expected['json']['bib'][$style], $json['bib'], "Style: $style");
 			}
 		}
 	}

@@ -92,6 +92,9 @@ class Zotero_NotifierObserver {
 					// /groups/1234
 					$topic = '/' . $extraData[$libraryID]['type'] . "s/"
 						. $extraData[$libraryID]['libraryTypeID'];
+					// Remove extra parameters, which shouldn't go to client
+					unset($extraData[$libraryID]['type']);
+					unset($extraData[$libraryID]['libraryTypeID']);
 				}
 				$message = [
 					"event" => $event,

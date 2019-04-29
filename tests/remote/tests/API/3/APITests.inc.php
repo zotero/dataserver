@@ -245,7 +245,7 @@ class APITests extends \APITests {
 			}, $notifications));
 		}
 		catch (Exception $e) {
-			echo "\nHeaders: " . base64_decode($header) . "\n";
+			echo "\nHeader: " . base64_decode($header) . "\n";
 			throw $e;
 		}
 	}

@@ -235,15 +235,15 @@ class ParamsTests extends APITests {
 		case 'tag':
 			API::createItem("book", [
 				'tags' => [
-					'a',
-					'b'
+					[ 'tag' => 'a' ],
+					[ 'tag' => 'b' ]
 				]
 			], $this);
 			API::createItem("book", [
 				'tags' => [
-					'c',
-					'd',
-					'e'
+					[ 'tag' => 'c' ],
+					[ 'tag' => 'd' ],
+					[ 'tag' => 'e' ]
 				]
 			], $this);
 			break;
