@@ -28,7 +28,7 @@
 class Zotero_FullText {
 	private static $minFileSizeStandardIA = 75 * 1024;
 	private static $elasticsearchType = "item_fulltext";
-	public static $metadata = array('indexedChars', 'totalChars', 'indexedPages', 'totalPages');
+	public static $metadata = ['indexedChars', 'totalChars', 'indexedPages', 'totalPages'];
 	
 	public static function indexItem(Zotero_Item $item, $data) {
 		if (!$item->isAttachment()) {
@@ -84,12 +84,7 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.put", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
-		
-		// Todo: Remove fall back code after migration
-		$redis = Z_Redis::get('fulltext-migration');
-		$redis->set('s3:' . $libraryID . "/" . $key, '1');
 	}
-	
 	
 	public static function updateMultipleFromJSON($json, $requestParams, $libraryID, $userID,
 			Zotero_Permissions $permissions) {
@@ -147,7 +142,6 @@ class Zotero_FullText {
 		return $results->generateReport();
 	}
 	
-	
 	private static function validateMultiObjectJSON($json) {
 		if (!is_array($json)) {
 			throw new Exception('Uploaded data must be a JSON array', Z_ERROR_INVALID_INPUT);
@@ -158,43 +152,14 @@ class Zotero_FullText {
 		}
 	}
 	
-	/*
-	 * TODO: Remove fall back code after migration
-	 */
-	public static function getItemDataES($libraryID, $key) {
-		$index = self::getReadIndex();
-		$type = self::getReadType();
-		$id = $libraryID . "/" . $key;
-		
-		try {
-			$document = $type->getDocument($id, [
-				'routing' => $libraryID
-			]);
-		}
-		catch (\Elastica\Exception\NotFoundException $e) {
-			return false;
-		}
-		
-		$esData = $document->getData();
-		$itemData = array(
-			"libraryID" => $libraryID,
-			"key" => $key,
-			"content" => $esData['content'],
-			"version" => $esData['version'],
-		);
-		if (isset($esData['language'])) {
-			$itemData['language'] = $esData['language'];
-		}
-		foreach (self::$metadata as $prop) {
-			$itemData[$prop] = isset($esData[$prop]) ? $esData[$prop] : 0;
-		}
-		return $itemData;
-	}
-	
 	/**
 	 * Get item full-text data from S3 by libraryID and key
+	 *
+	 * @param {$libraryID}
+	 * @param {$key}
+	 * @return {object|null}
 	 */
-	public static function getItemDataS3($libraryID, $key) {
+	public static function getItemData($libraryID, $key) {
 		$s3Client = Z_Core::$AWS->createS3();
 		
 		try {
@@ -207,7 +172,7 @@ class Zotero_FullText {
 		}
 		catch (Aws\S3\Exception\S3Exception $e) {
 			if ($e->getAwsErrorCode() == 'NoSuchKey') {
-				return false;
+				return null;
 			}
 			throw $e;
 		}
@@ -220,12 +185,12 @@ class Zotero_FullText {
 		
 		$json = json_decode($json);
 		
-		$itemData = array(
+		$itemData = [
 			"libraryID" => $libraryID,
 			"key" => $key,
 			"content" => $json->content,
 			"version" => $json->version
-		);
+		];
 		if (isset($json->language)) {
 			$itemData['language'] = $json->language;
 		}
@@ -234,18 +199,6 @@ class Zotero_FullText {
 		}
 		return $itemData;
 	}
-	
-	/*
-	 * TODO: Remove fall back code after migration
-	 */
-	public static function getItemData($libraryID, $key) {
-		$data = self::getItemDataS3($libraryID, $key);
-		if (!$data) {
-			$data = self::getItemDataES($libraryID, $key);
-		}
-		return $data;
-	}
-	
 	
 	/**
 	 * @return {Object} An object with item keys for keys and full-text content versions for values
@@ -265,115 +218,49 @@ class Zotero_FullText {
 		return $versions;
 	}
 	
-	
-	/**
-	 * Used by classic sync
-	 *
-	 * @return {Array} Array of arrays of item data
-	 */
-	public static function getNewerInLibraryByTime($libraryID, $timestamp, $keys=[]) {
-		$sql = "(SELECT libraryID, `key` FROM itemFulltext JOIN items USING (itemID) "
-			. "WHERE libraryID=? AND timestamp>=FROM_UNIXTIME(?))";
-		$params = [$libraryID, $timestamp];
-		if ($keys) {
-			$sql .= " UNION "
-			. "(SELECT libraryID, `key` FROM itemFulltext JOIN items USING (itemID) "
-				. "WHERE libraryID=? AND `key` IN ("
-			. implode(', ', array_fill(0, sizeOf($keys), '?')) . ")"
-			. ")";
-			$params = array_merge($params, [$libraryID], $keys);
-		}
-		$rows = Zotero_DB::query(
-			$sql, $params, Zotero_Shards::getByLibraryID($libraryID)
-		);
-		if (!$rows) {
-			return [];
-		}
-		
-		$maxChars = 1000000;
-		
-		$first = true;
-		$stop = false;
-		$chars = 0;
-		$data = [];
-		
-		while (($chars < $maxChars) && ($row = array_shift($rows)) && !$stop) {
-			$libraryID = $row['libraryID'];
-			$key = $row['key'];
-			
-			$data[$key] = self::getItemData($libraryID, $key);
-			if (!$data[$key]) {
-				error_log("WARNING: JSON " . $libraryID . "/" . $key . " not found in S3 bucket");
-				continue;
-			}
-			
-			// If the current item would put us over max characters,
-			// leave it empty, unless it's the first one
-			$currentChars = strlen($data[$key]['content']);
-			if (!$first && (($chars + $currentChars) > $maxChars)) {
-				unset($data[$key]['content']);
-				$data[$key]['empty'] = true;
-				$stop = true;
-			}
-			else {
-				$data[$key]['empty'] = false;
-				$chars += $currentChars;
-			}
-			$first = false;
-		}
-		
-		// Add unprocessed rows as empty
-		foreach ($rows as $row) {
-			$data[$row['key']] = [
-				"libraryID" => $row['libraryID'],
-				"key" => $row['key'],
-				"version" => 0,
-				"indexedChars" => 0,
-				"totalChars" => 0,
-				"indexedPages" => 0,
-				"empty" => true
-			];
-		}
-		
-		return $data;
-	}
-	
-	
 	/**
 	 * @param {Integer} libraryID
 	 * @param {String} searchText
-	 * @return {Array<String>|Boolean} An array of item keys, or FALSE if no results
+	 * @return {Array<String>|null} An array of item keys, or null if no results
 	 */
 	public static function searchInLibrary($libraryID, $searchText) {
 		// TEMP: For now, strip double-quotes and make everything a phrase search
 		$searchText = str_replace('"', '', $searchText);
 		
-		$type = self::getReadType();
+		$params = [
+			'index' => self::$elasticsearchType . "_index",
+			'type' => self::$elasticsearchType,
+			'routing' => $libraryID,
+			"body" => [
+				'query' => [
+					'bool' => [
+						'must' => [
+							'match_phrase' => [
+								'content' => $searchText
+							]
+						],
+						'filter' => [
+							'term' => [
+								'libraryID' => $libraryID
+							]
+						]
+					]
+				]
+			]
+		];
 		
-		$libraryFilter = new \Elastica\Filter\Term();
-		$libraryFilter->setTerm("libraryID", $libraryID);
-		
-		$matchQuery = new \Elastica\Query\Match();
-		$matchQuery->setFieldQuery('content', $searchText);
-		$matchQuery->setFieldType('content', 'phrase');
-		
-		$matchQuery = new \Elastica\Query\Filtered($matchQuery, $libraryFilter);
 		$start = microtime(true);
-		$resultSet = $type->search($matchQuery, [
-			'routing' => $libraryID
-		]);
+		$resp = Z_Core::$ES->search($params);
 		StatsD::timing("elasticsearch.client.item_fulltext.search", (microtime(true) - $start) * 1000);
-		if ($resultSet->getResponse()->hasError()) {
-			throw new Exception($resultSet->getResponse()->getError());
-		}
-		$results = $resultSet->getResults();
-		$keys = array();
+		
+		$results = $resp['hits']['hits'];
+		
+		$keys = [];
 		foreach ($results as $result) {
-			$keys[] = explode("/", $result->getId())[1];
+			$keys[] = explode("/", $result['_id'])[1];
 		}
 		return $keys;
 	}
-	
 	
 	public static function deleteItemContent(Zotero_Item $item) {
 		$libraryID = $item->libraryID;
@@ -399,11 +286,6 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.delete", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
-		
-		// Todo: Remove after migration
-		// Make sure the full-text won't be recreated when doing migration
-		$redis = Z_Redis::get('fulltext-migration');
-		$redis->set('s3:' . $libraryID . "/" . $key, '1');
 	}
 	
 	public static function deleteByLibrary($libraryID) {
@@ -420,86 +302,12 @@ class Zotero_FullText {
 		StatsD::timing("s3.fulltext.bulk_delete", (microtime(true) - $start) * 1000);
 		
 		Zotero_DB::commit();
-		
-		// Todo: Remove after migration
-		// Make sure the library full-texts won't be recreated when doing migration
-		$redis = Z_Redis::get('fulltext-migration');
-		$redis->set('s3:' . $libraryID, '1');
 	}
-	
 	
 	public static function deleteByLibraryMySQL($libraryID) {
 		$sql = "DELETE IFT FROM itemFulltext IFT JOIN items USING (itemID) WHERE libraryID=?";
 		Zotero_DB::query(
 			$sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID)
 		);
-	}
-	
-	
-	public static function indexFromXML(DOMElement $xml, $userID) {
-		if ($xml->textContent === "") {
-			error_log("Skipping empty full-text content for item "
-				. $xml->getAttribute('libraryID') . "/" . $xml->getAttribute('key'));
-			return;
-		}
-		$item = Zotero_Items::getByLibraryAndKey(
-			$xml->getAttribute('libraryID'), $xml->getAttribute('key')
-		);
-		if (!$item) {
-			error_log("Item " . $xml->getAttribute('libraryID') . "/" . $xml->getAttribute('key')
-				. " not found during full-text indexing");
-			return;
-		}
-		if (!Zotero_Libraries::userCanEdit($item->libraryID, $userID)) {
-			error_log("Skipping full-text content from user $userID for uneditable item "
-				. $xml->getAttribute('libraryID') . "/" . $xml->getAttribute('key'));
-			return;
-		}
-		$data = new stdClass;
-		$data->content = $xml->textContent;
-		foreach (self::$metadata as $prop) {
-			$data->$prop = $xml->getAttribute($prop);
-		}
-		self::indexItem($item, $data);
-	}
-	
-	
-	/**
-	 * @param {Array} $data  Item data from Elasticsearch
-	 * @param {DOMDocument} $doc
-	 * @param {Boolean} [$empty=false]  If true, don't include full-text content
-	 */
-	public static function itemDataToXML($data, DOMDocument $doc, $empty=false) {
-		$xmlNode = $doc->createElement('fulltext');
-		$xmlNode->setAttribute('libraryID', $data['libraryID']);
-		$xmlNode->setAttribute('key', $data['key']);
-		foreach (self::$metadata as $prop) {
-			$xmlNode->setAttribute($prop, isset($data[$prop]) ? $data[$prop] : 0);
-		}
-		$xmlNode->setAttribute('version', $data['version']);
-		if (!$empty) {
-			$xmlNode->appendChild($doc->createTextNode($data['content']));
-		}
-		return $xmlNode;
-	}
-	
-	
-	private static function getReadIndex() {
-		return Z_Core::$Elastica->getIndex(self::$elasticsearchType . "_index_read");
-	}
-	
-	
-	private static function getWriteIndex() {
-		return Z_Core::$Elastica->getIndex(self::$elasticsearchType . "_index_write");
-	}
-	
-	
-	private static function getReadType() {
-		return new \Elastica\Type(self::getReadIndex(), self::$elasticsearchType);
-	}
-	
-	
-	private static function getWriteType() {
-		return new \Elastica\Type(self::getWriteIndex(), self::$elasticsearchType);
 	}
 }
