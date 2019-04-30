@@ -235,7 +235,7 @@ class Zotero_FullText {
 				'query' => [
 					'bool' => [
 						'must' => [
-							'match_phrase' => [
+							'match_phrase_prefix' => [
 								'content' => $searchText
 							]
 						],
