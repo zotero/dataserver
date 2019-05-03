@@ -176,34 +176,6 @@ class Zotero_Relation {
 	}
 	
 	
-	/**
-	 * Converts a Zotero_Relation object to a SimpleXMLElement item
-	 *
-	 * @return	SimpleXMLElement				Relation data as SimpleXML element
-	 */
-	public function toXML() {
-		if (!$this->loaded) {
-			$this->load();
-		}
-		
-		$xml = new SimpleXMLElement('<relation/>');
-		$xml['libraryID'] = $this->libraryID;
-		
-		// Swap dc:replaces for dc:isReplacedBy
-		if ($this->predicate == 'dc:replaces') {
-			$xml->subject = $this->object;
-			$xml->predicate = 'dc:isReplacedBy';
-			$xml->object = $this->subject;
-		}
-		else {
-			$xml->subject = $this->subject;
-			$xml->predicate = $this->predicate;
-			$xml->object = $this->object;
-		}
-		return $xml;
-	}
-	
-	
 	public function toJSON($asArray=false) {
 		if (!$this->loaded) {
 			$this->load();

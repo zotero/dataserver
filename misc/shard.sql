@@ -22,9 +22,6 @@
 --  ***** END LICENSE BLOCK *****
 
 
-SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
-
-
 --
 -- IMPORTANT: All tables added here must be added to Zotero_Shards::moveLibrary()!
 --

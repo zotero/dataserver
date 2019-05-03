@@ -1,6 +1,5 @@
 ; 0 => off, 1 => HTTP requests, 2 => HTTP request/response bodies
 verbose = 0
-syncURLPrefix = ""
 apiURLPrefix = ""
 rootUsername = ""
 rootPassword = ""
@@ -9,7 +8,6 @@ s3Bucket = ""
 ; Leave credentials empty to use IAM role
 awsAccessKey = ""
 awsSecretKey = ""
-syncVersion = 9
 
 [user1]
 userID = 0

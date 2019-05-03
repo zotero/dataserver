@@ -1,0 +1,11 @@
+DROP EVENT sessionGC;
+DROP TABLE syncDownloadProcessLog;
+DROP TABLE syncUploadProcessLog;
+DROP TABLE syncUploadQueueLocks;
+DROP TABLE syncProcessLocks;
+DROP TABLE syncDownloadQueue;
+DROP TABLE syncUploadQueuePostWriteLog;
+DROP TABLE syncUploadQueue;
+DROP TABLE syncProcesses;
+DROP TABLE processorDaemons;
+DROP TABLE sessions;

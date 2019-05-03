@@ -275,53 +275,6 @@ class Zotero_Relations extends Zotero_ClassicDataObjects {
 	}
 	
 	
-	/**
-	 * Converts a DOMElement item to a Zotero_Relation object
-	 *
-	 * @param	DOMElement			$xml		Relation data as DOM element
-	 * @param	Integer				$libraryID
-	 * @return	Zotero_Relation					Zotero relation object
-	 */
-	public static function convertXMLToRelation(DOMElement $xml, $userLibraryID) {
-		$relation = new Zotero_Relation;
-		$libraryID = $xml->getAttribute('libraryID');
-		if ($libraryID) {
-			$relation->libraryID = $libraryID;
-		}
-		else {
-			$relation->libraryID = $userLibraryID;
-		}
-		
-		$subject = $xml->getElementsByTagName('subject')->item(0)->nodeValue;
-		$predicate = $xml->getElementsByTagName('predicate')->item(0)->nodeValue;
-		$object = $xml->getElementsByTagName('object')->item(0)->nodeValue;
-		
-		if ($predicate == 'dc:isReplacedBy') {
-			$relation->subject = $object;
-			$relation->predicate = 'dc:replaces';
-			$relation->object = $subject;
-		}
-		else {
-			$relation->subject = $subject;
-			$relation->predicate = $predicate;
-			$relation->object = $object;
-		}
-		
-		return $relation;
-	}
-	
-	
-	/**
-	 * Converts a Zotero_Relation object to a SimpleXMLElement item
-	 *
-	 * @param	object				$item		Zotero_Relation object
-	 * @return	SimpleXMLElement				Relation data as SimpleXML element
-	 */
-	public static function convertRelationToXML(Zotero_Relation $relation) {
-		return $relation->toXML();
-	}
-	
-	
 	private static function _getPrefixAndValue($uri) {
 		$parts = explode(':', $uri);
 		if (isset($parts[1])) {

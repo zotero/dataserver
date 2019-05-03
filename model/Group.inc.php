@@ -327,17 +327,6 @@ class Zotero_Group {
 			return $key->id . "-" . $this->libraryID;
 		}, $apiKeys));
 		
-		// If group is locked by a sync, flag for later timestamp update
-		// once the sync is done so that the uploading user gets the change
-		try {
-			if ($syncUploadQueueID = Zotero_Sync::getUploadQueueIDByUserID($userID)) {
-				Zotero_Sync::postWriteLog($syncUploadQueueID, 'groupUser', $this->id . '-' . $userID, 'update');
-			}
-		}
-		catch (Exception $e) {
-			Z_Core::logError($e);
-		}
-		
 		Zotero_DB::commit();
 		
 		return $added;
@@ -379,17 +368,6 @@ class Zotero_Group {
 		
 		// Clear cache
 		unset($this->userData[$userID]);
-		
-		// If group is locked by a sync, flag for later timestamp update
-		// once the sync is done so that the uploading user gets the change
-		try {
-			if ($syncUploadQueueID = Zotero_Sync::getUploadQueueIDByUserID($userID)) {
-				Zotero_Sync::postWriteLog($syncUploadQueueID, 'groupUser', $this->id . '-' . $userID, 'update');
-			}
-		}
-		catch (Exception $e) {
-			Z_Core::logError($e);
-		}
 		
 		Zotero_DB::commit();
 		
@@ -436,17 +414,6 @@ class Zotero_Group {
 		Zotero_Notifier::trigger('remove', 'apikey-library', array_map(function ($key) {
 			return $key->id . "-" . $this->libraryID;
 		}, $apiKeys));
-		
-		// If group is locked by a sync, flag for later timestamp update
-		// once the sync is done so that the uploading user gets the change
-		try {
-			if ($syncUploadQueueID = Zotero_Sync::getUploadQueueIDByUserID($userID)) {
-				Zotero_Sync::postWriteLog($syncUploadQueueID, 'groupUser', $this->id . '-' . $userID, 'delete');
-			}
-		}
-		catch (Exception $e) {
-			Z_Core::logError($e);
-		}
 		
 		Zotero_DB::commit();
 	}
@@ -676,20 +643,6 @@ class Zotero_Group {
 			}, $apiKeys));
 		}
 		
-		// If any of the group's users have a queued upload, flag group for a timestamp
-		// update once the sync is done so that the uploading user gets the change
-		try {
-			$userIDs = self::getUsers();
-			foreach ($userIDs as $userID) {
-				if ($syncUploadQueueID = Zotero_Sync::getUploadQueueIDByUserID($userID)) {
-					Zotero_Sync::postWriteLog($syncUploadQueueID, 'group', $this->id, 'update');
-				}
-			}
-		}
-		catch (Exception $e) {
-			Z_Core::logError($e);
-		}
-		
 		Zotero_DB::commit();
 		
 		$this->load();
@@ -738,19 +691,6 @@ class Zotero_Group {
 				. implode(', ', array_fill(0, sizeOf($keyIDs), '?'))
 				. ") AND KP.keyID IS NULL";
 			Zotero_DB::query($sql, $keyIDs);
-		}
-		
-		// If group is locked by a sync, flag group for a timestamp update
-		// once the sync is done so that the uploading user gets the change
-		try {
-			foreach ($userIDs as $userID) {
-				if ($syncUploadQueueID = Zotero_Sync::getUploadQueueIDByUserID($userID)) {
-					Zotero_Sync::postWriteLog($syncUploadQueueID, 'group', $this->id, 'delete');
-				}
-			}
-		}
-		catch (Exception $e) {
-			Z_Core::logError($e);
 		}
 		
 		Zotero_Notifier::trigger(
@@ -900,58 +840,39 @@ class Zotero_Group {
 	 *
 	 * @return	SimpleXMLElement				Group data as SimpleXML element
 	 */
-	public function toXML($userID=false) {
+	public function toXML() {
 		if (($this->id || $this->libraryID) && !$this->loaded) {
 			$this->load();
 		}
 		
-		$syncMode = !!$userID;
-		
-		$xml = '<group';
-		if (!$syncMode) {
-			$xml .= ' xmlns="' . Zotero_Atom::$nsZoteroTransfer . '"';
-		}
-		$xml .= '/>';
+		$xml = '<group xmlns="' . Zotero_Atom::$nsZoteroTransfer . '"/>';
 		$xml = new SimpleXMLElement($xml);
 		
 		$xml['id'] = $this->id;
-		if ($syncMode) {
-			$xml['libraryID'] = $this->libraryID;
-		}
-		else {
-			$xml['owner'] = $this->ownerUserID;
-			$xml['type'] = $this->type;
-		}
+		$xml['owner'] = $this->ownerUserID;
+		$xml['type'] = $this->type;
 		$xml['name'] = $this->name;
-		if ($syncMode) {
-			$xml['editable'] = (int) $this->userCanEdit($userID);
-			$xml['filesEditable'] = (int) $this->userCanEditFiles($userID);
-		}
-		else {
-			$xml['libraryEditing'] = $this->libraryEditing;
-			$xml['libraryReading'] = $this->libraryReading;
-			$xml['fileEditing'] = $this->fileEditing;
-		}
+		$xml['libraryEditing'] = $this->libraryEditing;
+		$xml['libraryReading'] = $this->libraryReading;
+		$xml['fileEditing'] = $this->fileEditing;
 		if ($this->description) {
 			$xml->description = $this->description;
 		}
-		if (!$syncMode && $this->url) {
+		if ($this->url) {
 			$xml->url = $this->url;
 		}
-		if (!$syncMode && $this->hasImage) {
+		if ($this->hasImage) {
 			$xml['hasImage'] = 1;
 		}
 		
-		if (!$syncMode) {
-			$admins = $this->getAdmins();
-			if ($admins) {
-				$xml->admins = implode(' ', $admins);
-			}
-			
-			$members = $this->getMembers();
-			if ($members) {
-				$xml->members = implode(' ', $members);
-			}
+		$admins = $this->getAdmins();
+		if ($admins) {
+			$xml->admins = implode(' ', $admins);
+		}
+		
+		$members = $this->getMembers();
+		if ($members) {
+			$xml->members = implode(' ', $members);
 		}
 		
 		return $xml;

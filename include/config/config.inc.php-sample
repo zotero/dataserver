@@ -1,8 +1,6 @@
 <?
 class Z_CONFIG {
 	public static $API_ENABLED = true;
-	public static $SYNC_ENABLED = true;
-	public static $PROCESSORS_ENABLED = true;
 	public static $MAINTENANCE_MESSAGE = 'Server updates in progress. Please try again in a few minutes.';
 	public static $BACKOFF = 0;
 
@@ -12,9 +10,8 @@ class Z_CONFIG {
 	public static $DEBUG_LOG = false;
 	
 	public static $BASE_URI = '';
-	public static $API_BASE_URI = '';
-	public static $WWW_BASE_URI = '';
-	public static $SYNC_DOMAIN = '';
+	public static $API_BASE_URI = 'https://api.example.com/';
+	public static $WWW_BASE_URI = 'https://www.example.com/';
 	
 	public static $AUTH_SALT = '';
 	public static $API_SUPER_USERNAME = '';
@@ -81,21 +78,9 @@ class Z_CONFIG {
 	
 	public static $HTMLCLEAN_SERVER_URL = '';
 	
-	public static $PROCESSOR_PORT_DOWNLOAD = 3455;
-	public static $PROCESSOR_PORT_UPLOAD = 3456;
-	public static $PROCESSOR_PORT_ERROR = 3457;
-	
-	public static $PROCESSOR_LOG_TARGET_DOWNLOAD = 'sync-processor-download';
-	public static $PROCESSOR_LOG_TARGET_UPLOAD = 'sync-processor-upload';
-	public static $PROCESSOR_LOG_TARGET_ERROR = 'sync-processor-error';
-	
-	public static $SYNC_DOWNLOAD_SMALLEST_FIRST = false;
-	public static $SYNC_UPLOAD_SMALLEST_FIRST = false;
-	
 	// Set some things manually for running via command line
 	public static $CLI_PHP_PATH = '/usr/bin/php';
 	
-	public static $SYNC_ERROR_PATH = '/var/log/httpd/sync-errors/';
 	public static $ERROR_PATH = '/var/log/httpd/errors/';
 	
 	public static $CACHE_VERSION_ATOM_ENTRY = 1;

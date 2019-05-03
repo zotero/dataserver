@@ -82,7 +82,7 @@ require('config/config.inc.php');
 
 if (Z_Core::isCommandLine()) {
 	$_SERVER['DOCUMENT_ROOT'] = realpath(dirname(dirname(__FILE__))) . '/';
-	$_SERVER['SERVER_NAME'] = Z_CONFIG::$SYNC_DOMAIN;
+	$_SERVER['SERVER_NAME'] = parse_url(Z_CONFIG::$API_BASE_URI)['host'];
 	$_SERVER['HTTP_HOST'] = $_SERVER['SERVER_NAME'];
 	$_SERVER['REQUEST_URI'] = "/";
 }
@@ -191,7 +191,7 @@ Zotero_NotifierObserver::init();
 // Memcached
 require('Memcached.inc.php');
 Z_Core::$MC = new Z_MemcachedClientLocal(
-	Z_CONFIG::$SYNC_DOMAIN,
+	Z_CONFIG::$API_BASE_URI,
 	array(
 		'disabled' => !Z_CONFIG::$MEMCACHED_ENABLED,
 		'servers' => Z_CONFIG::$MEMCACHED_SERVERS

@@ -332,12 +332,8 @@ class Zotero_Libraries {
 	
 	
 	public static function isLocked($libraryID) {
-		$sql = "SELECT COUNT(*) FROM syncUploadQueueLocks WHERE libraryID=?";
-		if (Zotero_DB::valueQuery($sql, $libraryID)) {
-			return true;
-		}
-		$sql = "SELECT COUNT(*) FROM syncProcessLocks WHERE libraryID=?";
-		return !!Zotero_DB::valueQuery($sql, $libraryID);
+		// TODO
+		throw new Exception("Use last modified timestamp?");
 	}
 	
 	

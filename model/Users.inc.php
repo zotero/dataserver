@@ -505,11 +505,6 @@ class Zotero_Users {
 		$libraryID = self::getLibraryIDFromUserID($userID);
 		Zotero_Libraries::clearAllData($libraryID);
 		
-		// TODO: Better handling of locked out sessions elsewhere
-		$sql = "UPDATE sessions SET timestamp='0000-00-00 00:00:00',
-					exclusive=0 WHERE userID=? AND exclusive=1";
-		Zotero_DB::query($sql, $userID);
-		
 		Zotero_DB::commit();
 	}
 	

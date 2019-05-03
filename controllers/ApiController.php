@@ -404,25 +404,6 @@ class ApiController extends Controller {
 			}
 		}
 		
-		// Return 409 if target library is locked
-		switch ($this->method) {
-			case 'POST':
-			case 'PUT':
-			case 'DELETE':
-				switch ($this->action) {
-					// Library lock doesn't matter for some admin requests
-					case 'keys':
-					case 'storageadmin':
-						break;
-					
-					default:
-						if ($this->objectLibraryID && Zotero_Libraries::isLocked($this->objectLibraryID)) {
-							$this->e409("Target library is locked");
-						}
-						break;
-				}
-		}
-		
 		$this->scopeObject = !empty($extra['scopeObject']) ? $extra['scopeObject'] : $this->scopeObject;
 		$this->subset = !empty($extra['subset']) ? $extra['subset'] : $this->subset;
 		

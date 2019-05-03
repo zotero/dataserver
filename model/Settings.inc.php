@@ -77,43 +77,6 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 	}
 	
 	
-	
-	/**
-	 * Converts a DOMElement item to a Zotero_Setting object
-	 *
-	 * @param DOMElement $xml Setting data as DOMElement
-	 * @return Zotero_Setting Setting object
-	 */
-	public static function convertXMLToSetting(DOMElement $xml) {
-		$libraryID = (int) $xml->getAttribute('libraryID');
-		$name = (string) $xml->getAttribute('name');
-		$setting = self::getByLibraryAndKey($libraryID, $name);
-		if (!$setting) {
-			$setting = new Zotero_Setting;
-			$setting->libraryID = $libraryID;
-			$setting->name = $name;
-		}
-		$setting->value = json_decode((string) $xml->nodeValue);
-		return $setting;
-	}
-	
-	
-	/**
-	 * Converts a Zotero_Setting object to a SimpleXMLElement item
-	 *
-	 * @param Zotero_Setting $item Zotero_Setting object
-	 * @return DOMElement
-	 */
-	public static function convertSettingToXML(Zotero_Setting $setting, DOMDocument $doc) {
-		$xmlSetting = $doc->createElement('setting');
-		$xmlSetting->setAttribute('libraryID', $setting->libraryID);
-		$xmlSetting->setAttribute('name', $setting->name);
-		$xmlSetting->setAttribute('version', $setting->version);
-		$xmlSetting->appendChild($doc->createTextNode(json_encode($setting->value)));
-		return $xmlSetting;
-	}
-	
-	
 	/**
 	 * @param Zotero_Setting $setting The setting object to update;
 	 *                                this should be either an existing

@@ -26,55 +26,5 @@
 require_once 'include/bootstrap.inc.php';
 
 class TagsTests extends PHPUnit_Framework_TestCase {
-	/*public function testGetDataValuesFromXML() {
-		$xml = <<<'EOD'
-			<data>
-				<creators><creator/></creators>
-				<tags>
-					<tag libraryID="1" key="AAAAAAAA" name="Animal" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20">
-						<items>AAAAAAAA</items>
-					</tag>
-					<tag libraryID="1" key="BBBBBBBB" name="Vegetable" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-					<tag libraryID="1" key="CCCCCCCC" name="Mineral" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-					<tag libraryID="1" key="DDDDDDDD" name="mineral" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-					<tag libraryID="1" key="EEEEEEEE" name="Minéral" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-					<tag libraryID="2" key="FFFFFFFF" name="Animal" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-				</tags>
-			</data>
-EOD;
-		$xml = new SimpleXMLElement($xml);
-		$domSXE = dom_import_simplexml($xml->tags);
-		$doc = new DOMDocument();
-		$domSXE = $doc->importNode($domSXE, true);
-		$domSXE = $doc->appendChild($domSXE);
-		
-		$values = Zotero_Tags::getDataValuesFromXML($doc);
-		sort($values);
-		$this->assertEquals(5, sizeOf($values));
-		$this->assertEquals("Animal", $values[0]);
-		$this->assertEquals("Mineral", $values[1]);
-		$this->assertEquals("Minéral", $values[2]);
-		$this->assertEquals("Vegetable", $values[3]);
-		$this->assertEquals("mineral", $values[4]);
-	}*/
 	
-	
-	public function testGetLongDataValueFromXML() {
-		$longTag = "Longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong";
-		$xml = <<<EOD
-			<data>
-				<creators><creator/></creators>
-				<tags>
-					<tag libraryID="1" key="AAAAAAAA" name="Test" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20">
-						<items>AAAAAAAA</items>
-					</tag>
-					<tag libraryID="1" key="BBBBBBBB" name="$longTag" dateAdded="2009-04-13 12:22:31" dateModified="2009-08-06 10:21:20"/>
-				</tags>
-			</data>
-EOD;
-		$doc = new DOMDocument();
-		$doc->loadXML($xml);
-		$tag = Zotero_Tags::getLongDataValueFromXML($doc);
-		$this->assertEquals($longTag, $tag);
-	}
 }
