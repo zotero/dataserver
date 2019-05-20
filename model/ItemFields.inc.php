@@ -37,121 +37,6 @@ class Zotero_ItemFields {
 	private static $typeFieldIDsByBaseCache = array();
 	private static $typeFieldNamesByBaseCache = array();
 	
-	private static $localizedFields = array(
-			"itemType"			=> "Type",
-			"title"        		=> "Title",
-			"dateAdded"    		=> "Date Added",
-			"dateModified" 		=> "Modified",
-			"source"       		=> "Source",
-			"notes"				=> "Notes",
-			"tags"				=> "Tags",
-			"attachments"		=> "Attachments",
-			"related"			=> "Related",
-			"url"				=> "URL",
-			"rights"       		=> "Rights",
-			"series"	    		=> "Series",
-			"volume"       		=> "Volume",
-			"issue"	       		=> "Issue",
-			"edition"      		=> "Edition",
-			"place"        		=> "Place",
-			"publisher"    		=> "Publisher",
-			"pages"        		=> "Pages",
-			"ISBN"         		=> "ISBN",
-			"publicationTitle"	=> "Publication",
-			"ISSN"         		=> "ISSN",
-			"date"					=> "Date",
-			"section"				=> "Section",
-			"callNumber"			=> "Call Number",
-			"archiveLocation"		=> "Loc. in Archive",
-			"distributor"			=> "Distributor",
-			"extra"				=> "Extra",
-			"journalAbbreviation"	=> "Journal Abbr",
-			"DOI"					=> "DOI",
-			"accessDate"			=> "Accessed",
-			"seriesTitle"    		=> "Series Title",
-			"seriesText"    		=> "Series Text",
-			"seriesNumber"   		=> "Series Number",
-			"institution"			=> "Institution",
-			"reportType"			=> "Report Type",
-			"code"					=> "Code",
-			"session"				=> "Session",
-			"legislativeBody"		=> "Legislative Body",
-			"history"				=> "History",
-			"reporter"				=> "Reporter",
-			"court"				=> "Court",
-			"numberOfVolumes"		=> "# of Volumes",
-			"committee"			=> "Committee",
-			"assignee"				=> "Assignee",
-			"patentNumber"			=> "Patent Number",
-			"priorityNumbers"		=> "Priority Numbers",
-			"issueDate"			=> "Issue Date",
-			"references"			=> "References",
-			"legalStatus"			=> "Legal Status",
-			"codeNumber"			=> "Code Number",
-			"artworkMedium"			=> "Medium",
-			"number"				=> "Number",
-			"artworkSize"			=> "Artwork Size",
-			"libraryCatalog"		=> "Library Catalog",
-			"repository"			=> "Repository",
-			"videoRecordingFormat"	=> "Format",
-			"interviewMedium"		=> "Medium",
-			"letterType"			=> "Type",
-			"manuscriptType"		=> "Type",
-			"mapType"				=> "Type",
-			"scale"				=> "Scale",
-			"thesisType"			=> "Type",
-			"websiteType"			=> "Website Type",
-			"audioRecordingFormat"	=> "Format",
-			"label"				=> "Label",
-			"presentationType"	=> "Type",
-			"meetingName"			=> "Meeting Name",
-			"studio"				=> "Studio",
-			"runningTime"			=> "Running Time",
-			"network"				=> "Network",
-			"postType"				=> "Post Type",
-			"audioFileType"		=> "File Type",
-			"versionNumber"			=> "Version",
-			"system"				=> "System",
-			"company"				=> "Company",
-			"conferenceName"		=> "Conference Name",
-			"encyclopediaTitle"		=> "Encyclopedia Title",
-			"dictionaryTitle"		=> "Dictionary Title",
-			"language"				=> "Language",
-			"programmingLanguage"	=> "Language",
-			"university"			=> "University",
-			"abstractNote"			=> "Abstract",
-			"websiteTitle"			=> "Website Title",
-			"reportNumber"			=> "Report Number",
-			"billNumber"			=> "Bill Number",
-			"codeVolume"			=> "Code Volume",
-			"codePages"				=> "Code Pages",
-			"dateDecided"			=> "Date Decided",
-			"reporterVolume"		=> "Reporter Volume",
-			"firstPage"				=> "First Page",
-			"documentNumber"		=> "Document Number",
-			"dateEnacted"			=> "Date Enacted",
-			"publicLawNumber"		=> "Public Law Number",
-			"country"				=> "Country",
-			"applicationNumber"		=> "Application Number",
-			"forumTitle"			=> "Forum/Listserv Title",
-			"episodeNumber"			=> "Episode Number",
-			"blogTitle"				=> "Blog Title",
-			"medium"				=> "Medium",
-			"caseName"				=> "Case Name",
-			"nameOfAct"				=> "Name of Act",
-			"subject"				=> "Subject",
-			"proceedingsTitle"		=> "Proceedings Title",
-			"bookTitle"				=> "Book Title",
-			"shortTitle"			=> "Short Title",
-			"docketNumber"			=> "Docket Number",
-			"numPages"				=> "# of Pages",
-			"programTitle"			=> "Program Title",
-			"issuingAuthority"		=> "Issuing Authority",
-			"filingDate"			=> "Filing Date",
-			"genre"					=> "Genre",
-			"archive"				=> "Archive"
-		);
-
 	
 	public static function getID($fieldOrFieldID) {
 		// TODO: batch load
@@ -204,11 +89,7 @@ class Zotero_ItemFields {
 	}
 	
 	
-	public static function getLocalizedString($itemType, $field, $locale='en-US') {
-		if ($locale != 'en-US') {
-			throw new Exception("Locale not yet supported");
-		}
-		
+	public static function getLocalizedString($field, $locale='en-US') {
 		// Fields in the items table are special cases
 		switch ($field) {
 			case 'dateAdded':
@@ -223,9 +104,12 @@ class Zotero_ItemFields {
 				$fieldName = self::getName($field);
 		}
 		
-		// TODO: different labels for different item types
-		
-		return self::$localizedFields[$fieldName];
+		$strings = \Zotero\Schema::getLocaleStrings($locale)['fields'];
+		if (!isset($strings[$fieldName])) {
+			Z_Core::logError("Localized string not found for field '$fieldName' in $locale");
+			return $fieldName;
+		}
+		return $strings[$fieldName];
 	}
 	
 	
@@ -243,7 +127,7 @@ class Zotero_ItemFields {
 		}
 		
 		foreach ($rows as &$row) {
-			$row['localized'] =  self::getLocalizedString(false, $row['id'], $locale);
+			$row['localized'] =  self::getLocalizedString($row['id'], $locale);
 		}
 		
 		usort($rows, function ($a, $b) {
@@ -311,6 +195,20 @@ class Zotero_ItemFields {
 		Z_Core::$MC->set($cacheKey, $valid ? true : 0);
 		
 		return $valid;
+	}
+	
+	
+	public static function isDate($field) {
+		$fieldID = self::getID($field);
+		$fieldName = self::getName($field);
+		if (self::isFieldOfBase($fieldID, 'date')) {
+			return true;
+		}
+		$schema = \Zotero\Schema::get();
+		if (isset($schema['fields'][$fieldName])) {
+			return $schema['fields'][$fieldName]['type'] == 'date';
+		}
+		return false;
 	}
 	
 	
@@ -541,11 +439,6 @@ class Zotero_ItemFields {
 			Z_Core::$MC->set($cacheKey, $fieldNames);
 			
 			return $fieldNames;
-		}
-		
-		// TEMP
-		if ($baseFieldID==14) {
-			return array(96,52,100,10008);
 		}
 		
 		if (isset(self::$typeFieldIDsByBaseCache[$baseFieldID])) {

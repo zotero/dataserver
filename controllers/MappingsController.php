@@ -98,9 +98,7 @@ class MappingsController extends ApiController {
 					$rows[] = array(
 						'id' => $fieldID,
 						'name' => $fieldName,
-						'localized' => Zotero_ItemFields::getLocalizedString(
-							$itemTypeID, $fieldName, $locale
-						)
+						'localized' => Zotero_ItemFields::getLocalizedString($fieldName, $locale)
 					);
 				}
 				$propName = 'field';

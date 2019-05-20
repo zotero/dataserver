@@ -252,7 +252,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
         if (!$unformatted) {
 			// Multipart date fields
-			if (Zotero_ItemFields::isFieldOfBase($fieldID, 'date')) {
+			if (Zotero_ItemFields::isDate($fieldID)) {
 				$value = Zotero_Date::multipartToStr($value);
 			}
 		}
@@ -266,18 +266,28 @@ class Zotero_Item extends Zotero_DataObject {
 		$title = $this->getField('title', false, true);
 		$itemTypeID = $this->itemTypeID;
 		
-		if (!$title && ($itemTypeID == 8 || $itemTypeID == 10)) { // 'letter' and 'interview' itemTypeIDs
+		$itemTypeLetter = Zotero_ItemTypes::getID('letter');
+		$itemTypeInterview = Zotero_ItemTypes::getID('interview');
+		$itemTypeCase = Zotero_ItemTypes::getID('case');
+		
+		$creatorTypeAuthor = Zotero_CreatorTypes::getID('author');
+		$creatorTypeRecipient = Zotero_CreatorTypes::getID('recipient');
+		$creatorTypeInterviewer = Zotero_CreatorTypes::getID('interviewer');
+		$creatorTypeInterviewee = Zotero_CreatorTypes::getID('interviewee');
+		
+		// 'letter' or 'interview'
+		if (!$title && ($itemTypeID == $itemTypeLetter || $itemTypeID == $itemTypeInterview)) {
 			$creators = $this->getCreators();
 			$authors = array();
 			$participants = array();
 			if ($creators) {
 				foreach ($creators as $creator) {
-					if (($itemTypeID == 8 && $creator['creatorTypeID'] == 16) || // 'letter'/'recipient'
-							($itemTypeID == 10 && $creator['creatorTypeID'] == 7)) { // 'interview'/'interviewer'
+					if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeRecipient) ||
+							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewer)) {
 						$participants[] = $creator;
 					}
-					else if (($itemTypeID == 8 && $creator['creatorTypeID'] == 1) ||   // 'letter'/'author'
-							($itemTypeID == 10 && $creator['creatorTypeID'] == 6)) { // 'interview'/'interviewee'
+					else if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeAuthor) ||
+							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewee)) {
 						$authors[] = $creator;
 					}
 				}
@@ -339,7 +349,7 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				$loc = Zotero_ItemTypes::getLocalizedString($itemTypeID);
 				// Letter
-				if ($itemTypeID == 8) {
+				if ($itemTypeID == $itemTypeLetter) {
 					$loc .= ' to ';
 				}
 				// Interview
@@ -364,7 +374,8 @@ class Zotero_Item extends Zotero_DataObject {
 			$title .= join('; ', $strParts);
 			$title .= ']';
 		}
-		else if ($itemTypeID == 17) { // 'case' itemTypeID
+		// 'case'
+		else if ($itemTypeID == $itemTypeCase) {
 			if ($title) {
 				$reporter = $this->getField('reporter');
 				if ($reporter) {
@@ -386,7 +397,7 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				
 				$creators = $this->getCreators();
-				if ($creators && $creators[0]['creatorTypeID'] === 1) {
+				if ($creators && $creators[0]['creatorTypeID'] === $creatorTypeAuthor) {
 					$strParts[] = $creators[0]['ref']->lastName;
 				}
 				
@@ -726,8 +737,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		if (!$loadIn) {
 			// Save date field as multipart date
-			if (Zotero_ItemFields::isFieldOfBase($fieldID, 'date') &&
-					!Zotero_Date::isMultipart($value)) {
+			if (Zotero_ItemFields::isDate($fieldID) && !Zotero_Date::isMultipart($value)) {
 				$value = Zotero_Date::strToMultipart($value);
 				if ($value === "") {
 					$value = false;
@@ -1126,9 +1136,7 @@ class Zotero_Item extends Zotero_DataObject {
 						
 						// Check length
 						if (strlen($value) > $max) {
-							$fieldName = Zotero_ItemFields::getLocalizedString(
-								$this->_itemTypeID, $fieldID
-							);
+							$fieldName = Zotero_ItemFields::getLocalizedString($fieldID);
 							$msg = "=$fieldName field value " .
 								 "'" . mb_substr($value, 0, 50) . "…' too long";
 							if ($this->_key) {
@@ -1520,9 +1528,7 @@ class Zotero_Item extends Zotero_DataObject {
 						
 						// Check length
 						if (strlen($value) > $max) {
-							$fieldName = Zotero_ItemFields::getLocalizedString(
-								$this->_itemTypeID, $fieldID
-							);
+							$fieldName = Zotero_ItemFields::getLocalizedString($fieldID);
 							$msg = "=$fieldName field value " .
 								 "'" . mb_substr($value, 0, 50) . "...' too long";
 							if ($this->_key) {
@@ -3146,7 +3152,7 @@ class Zotero_Item extends Zotero_DataObject {
 		// Title
 		$tr = $html->addChild('tr');
 		$tr->addAttribute('class', 'title');
-		$tr->addChild('th', Zotero_ItemFields::getLocalizedString(false, 'title'));
+		$tr->addChild('th', Zotero_ItemFields::getLocalizedString('title'));
 		$tr->addChild('td', htmlspecialchars($item->getDisplayTitle(true)));
 		*/
 		
@@ -3154,7 +3160,7 @@ class Zotero_Item extends Zotero_DataObject {
 		Zotero_Atom::addHTMLRow(
 			$html,
 			"itemType",
-			Zotero_ItemFields::getLocalizedString(false, 'itemType'),
+			Zotero_ItemFields::getLocalizedString('itemType'),
 			Zotero_ItemTypes::getLocalizedString($this->itemTypeID)
 		);
 		
@@ -3213,7 +3219,7 @@ class Zotero_Item extends Zotero_DataObject {
 				continue;
 			}
 			
-			$localizedFieldName = Zotero_ItemFields::getLocalizedString(false, $field);
+			$localizedFieldName = Zotero_ItemFields::getLocalizedString($field);
 			
 			$value = $this->getField($field);
 			$value = trim($value);

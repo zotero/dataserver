@@ -37,7 +37,12 @@ class Zotero_ID {
 			case 'savedSearches':
 			case 'tags':
 				return self::getNext($table);
-				
+			
+			case 'creatorTypes':
+			case 'fields':
+			case 'itemTypes':
+				return self::getMaxPlus1($table);
+			
 			default:
 				trigger_error("Unsupported table '$table'", E_USER_ERROR);
 		}
@@ -56,6 +61,14 @@ class Zotero_ID {
 	
 	public static function getBigInt() {
 		return rand(1, 2147483647);
+	}
+	
+	
+	private static function getTableColumn($table) {
+		switch ($table) {
+		default:
+			return substr($table, 0, strlen($table) - 1) . 'ID';
+		}
 	}
 	
 	
@@ -93,5 +106,17 @@ class Zotero_ID {
 		
 		return $id;
 	}
+	
+	/**
+	 * Get MAX(id) + 1 from table
+	 *
+	 * @return {Promise<Integer>}
+	 */
+	private static function getMaxPlus1($table) {
+		$col = self::getTableColumn($table);
+		$sql = "SELECT COALESCE(MAX($col) + 1, 1) FROM $table "
+			// TEMP
+			. "WHERE $col < 10000";
+		return Zotero_DB::valueQuery($sql);
+	}
 }
-?>

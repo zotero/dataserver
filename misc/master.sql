@@ -190,6 +190,13 @@ CREATE TABLE `libraries` (
 
 
 
+CREATE TABLE `settings` (
+  `name` varchar(100) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 CREATE TABLE `shardHostReplicas` (
   `shardHostID` tinyint(3) unsigned NOT NULL,
   `address` varchar(75) NOT NULL,

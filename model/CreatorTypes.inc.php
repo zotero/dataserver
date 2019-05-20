@@ -112,11 +112,13 @@ class Zotero_CreatorTypes {
 	
 	
 	public static function getLocalizedString($typeOrTypeID, $locale='en-US') {
-		if ($locale != 'en-US') {
-			throw new Exception("Locale not yet supported");
+		$creatorType = self::getName($typeOrTypeID);
+		$strings = \Zotero\Schema::getLocaleStrings($locale)['creatorTypes'];
+		if (!isset($strings[$creatorType])) {
+			Z_Core::logError("Localized string not found for creator type $creatorType in $locale");
+			return $creatorType;
 		}
-		$type = self::getName($typeOrTypeID);
-		return self::$localizedStrings[$type];
+		return $strings[$creatorType];
 	}
 	
 	

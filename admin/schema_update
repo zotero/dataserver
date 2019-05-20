@@ -1,0 +1,12 @@
+#!/usr/bin/php
+<?php
+set_include_path("../include");
+require("header.inc.php");
+
+Z_Core::$debug = true;
+
+$opts = getopt('n', ['dry-run']);
+$dryRun = isset($opts['n']) || isset($opts['dry-run']);
+
+$schema = \Zotero\Schema::readFromFile();
+\Zotero\Schema::updateDatabase($schema, $dryRun);

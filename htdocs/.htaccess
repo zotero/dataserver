@@ -19,6 +19,16 @@ php_value memory_limit 500M
 
 RewriteEngine On
 
+# Serve precompressed schema file from zotero-schema submodule
+AddEncoding gzip gz
+RewriteCond %{HTTP:Accept-Encoding} gzip
+#RewriteCond %{REQUEST_FILENAME}\.gz -s
+RewriteRule ^schema$ zotero-schema/schema.json.gz
+# Serve as JSON, and avoid double-gzip by mod_deflate
+RewriteRule ^zotero-schema/schema\.json.gz$ - [T=application/json,E=no-gzip:1,L]
+# Serve as JSON when serving the uncompressed file too
+RewriteRule ^schema$ zotero-schema/schema.json [L]
+
 # If file or directory doesn't exist, pass to director for MVC redirections
 RewriteCond %{SCRIPT_FILENAME} !-f
 RewriteCond %{SCRIPT_FILENAME} !-d
