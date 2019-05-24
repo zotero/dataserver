@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class UsersTests extends PHPUnit_Framework_TestCase {
+class UsersTests extends \PHPUnit\Framework\TestCase {
 	public function testExists() {
 		$this->assertTrue(Zotero_Users::exists(1));
 		$this->assertFalse(Zotero_Users::exists(100));

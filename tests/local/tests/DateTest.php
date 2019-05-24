@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class DateTests extends PHPUnit_Framework_TestCase {
+class DateTests extends \PHPUnit\Framework\TestCase {
 	public function test_strToDate() {
 		$patterns = array(
 			"February 28, 2011",

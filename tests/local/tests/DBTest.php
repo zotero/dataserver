@@ -25,12 +25,12 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class DBTests extends PHPUnit_Framework_TestCase {
-	public function setUp() {
+class DBTests extends \PHPUnit\Framework\TestCase {
+	public function setUp(): void {
 		Zotero_DB::query("DROP TABLE IF EXISTS test");
 	}
 	
-	public function tearDown() {
+	public function tearDown(): void {
 		Zotero_DB::query("DROP TABLE IF EXISTS test");
 		Zotero_DB::query("SET wait_timeout = 28800");
 	}

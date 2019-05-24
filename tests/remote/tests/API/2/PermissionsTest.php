@@ -30,7 +30,7 @@ require_once 'APITests.inc.php';
 require_once 'include/api2.inc.php';
 
 class PermissionsTest extends APITests {
-	public function tearDown() {
+	public function tearDown(): void {
 		API::setKeyOption(
 			self::$config['userID'], self::$config['apiKey'], 'libraryWrite', 1
 		);

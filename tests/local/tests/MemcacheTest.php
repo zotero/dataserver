@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class MemcacheTests extends PHPUnit_Framework_TestCase {
+class MemcacheTests extends \PHPUnit\Framework\TestCase {
 	public function testQueue() {
 		// Clean up
 		Z_Core::$MC->rollback(true);

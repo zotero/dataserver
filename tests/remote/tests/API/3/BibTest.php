@@ -40,7 +40,7 @@ class BibTests extends APITests {
 		"https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl"
 	];
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 		
@@ -151,7 +151,7 @@ class BibTests extends APITests {
 		];
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 	}

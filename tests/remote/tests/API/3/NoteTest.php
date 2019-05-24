@@ -33,20 +33,20 @@ class NoteTests extends APITests {
 	private $content;
 	private $json;
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		require 'include/config.inc.php';
 		API::userClear($config['userID']);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		require 'include/config.inc.php';
 		API::userClear($config['userID']);
 	}
 	
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		
 		// Create too-long note content

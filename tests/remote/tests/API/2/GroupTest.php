@@ -30,13 +30,13 @@ require_once 'APITests.inc.php';
 require_once 'include/api2.inc.php';
 
 class GroupTests extends APITests {
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		require 'include/config.inc.php';
 		API::userClear($config['userID']);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		require 'include/config.inc.php';
 		API::userClear($config['userID']);

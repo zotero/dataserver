@@ -30,13 +30,13 @@ require_once 'APITests.inc.php';
 require_once 'include/api3.inc.php';
 
 class ItemTests extends APITests {
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 		API::groupClear(self::$config['ownedPrivateGroupID']);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 		API::groupClear(self::$config['ownedPrivateGroupID']);
@@ -1992,7 +1992,7 @@ class ItemTests extends APITests {
 		$this->assert200($response);
 		$this->assertNumResults(1, $response);
 		$json = API::getJSONFromResponse($response);
-		$this->assertContains($parentKeys[0], $json[0]['key']);
+		$this->assertEquals($parentKeys[0], $json[0]['key']);
 		
 		// /top, Atom, in collection, with q for all items
 		$response = API::userGet(
@@ -2014,7 +2014,7 @@ class ItemTests extends APITests {
 		$this->assert200($response);
 		$this->assertNumResults(1, $response);
 		$json = API::getJSONFromResponse($response);
-		$this->assertContains($parentKeys[0], $json[0]['key']);
+		$this->assertEquals($parentKeys[0], $json[0]['key']);
 		
 		// /top, Atom, with q for child item
 		$response = API::userGet(
@@ -2516,27 +2516,27 @@ class ItemTests extends APITests {
 			self::$config['userID'],
 			"items/$key"
 		);
-		$this->assertContains("\"title\": \"$title\"", $response->getBody());
+		$this->assertStringContainsString("\"title\": \"$title\"", $response->getBody());
 		
 		// Test feed (JSON)
 		$response = API::userGet(
 			self::$config['userID'],
 			"items"
 		);
-		$this->assertContains("\"title\": \"$title\"", $response->getBody());
+		$this->assertStringContainsString("\"title\": \"$title\"", $response->getBody());
 		
 		// Test entry (Atom)
 		$response = API::userGet(
 			self::$config['userID'],
 			"items/$key?content=json"
 		);
-		$this->assertContains("\"title\": \"$title\"", $response->getBody());
+		$this->assertStringContainsString("\"title\": \"$title\"", $response->getBody());
 		
 		// Test feed (Atom)
 		$response = API::userGet(
 			self::$config['userID'],
 			"items?content=json"
 		);
-		$this->assertContains("\"title\": \"$title\"", $response->getBody());
+		$this->assertStringContainsString("\"title\": \"$title\"", $response->getBody());
 	}
 }

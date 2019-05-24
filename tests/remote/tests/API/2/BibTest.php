@@ -33,7 +33,7 @@ class BibTests extends APITests {
 	private static $items;
 	private static $styles = array("default", "apa");
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 		
@@ -86,7 +86,7 @@ class BibTests extends APITests {
 		);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 	}

@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class UnicodeTests extends PHPUnit_Framework_TestCase {
+class UnicodeTests extends \PHPUnit\Framework\TestCase {
 	public function testConvert() {
 		$original = "Abcdefg Âéìøü 这是一个测试。";
 		$str = Zotero_Attachments::encodeRelativeDescriptorString($original);

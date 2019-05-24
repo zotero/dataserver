@@ -36,7 +36,7 @@ class APITests extends \APITests {
 	protected static $config;
 	protected static $nsZAPI;
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		
 		require 'include/config.inc.php';
@@ -54,13 +54,15 @@ class APITests extends \APITests {
 	}
 	
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		API::useAPIVersion(2);
 	}
 	
 	
-	public function test() {}
+	public function test() {
+		$this->assertTrue(true);
+	}
 	
 	public function __call($name, $arguments) {
 		if (preg_match("/^assert([1-5][0-9]{2})$/", $name, $matches)) {

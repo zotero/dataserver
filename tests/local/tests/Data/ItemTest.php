@@ -25,16 +25,16 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class ItemTests extends PHPUnit_Framework_TestCase {
+class ItemTests extends \PHPUnit\Framework\TestCase {
 	protected static $config;
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		require("include/config.inc.php");
 		self::$config = $config;
 		self::$config['userLibraryID'] = Zotero_Users::getLibraryIDFromUserID($config['userID']);
 	}
 	
-	public function setUp() {
+	public function setUp(): void {
 		Zotero_Users::clearAllData(self::$config['userID']);
 	}
 	

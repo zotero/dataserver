@@ -30,14 +30,14 @@ require_once 'APITests.inc.php';
 require_once 'include/api3.inc.php';
 
 class SettingsTests extends APITests {
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		API::userClear(self::$config['userID']);
 		API::groupClear(self::$config['ownedPrivateGroupID']);
 	}
 	
 	
-	public function tearDown() {
+	public function tearDown(): void {
 		API::userClear(self::$config['userID']);
 		API::groupClear(self::$config['ownedPrivateGroupID']);
 	}

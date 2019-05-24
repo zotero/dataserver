@@ -25,6 +25,6 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class CreatorsTests extends PHPUnit_Framework_TestCase {
+class CreatorsTests extends \PHPUnit\Framework\TestCase {
 	
 }

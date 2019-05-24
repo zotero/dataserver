@@ -34,18 +34,18 @@ class ParamsTests extends APITests {
 	private static $itemKeys = array();
 	private static $searchKeys = array();
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 	}
 	
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		API::userClear(self::$config['userID']);
 	}

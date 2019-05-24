@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class CiteTests extends PHPUnit_Framework_TestCase {
+class CiteTests extends \PHPUnit\Framework\TestCase {
 	public function test_retrieveItem_should_return_correct_date_parts() {
 		$item = new Zotero_Item('book');
 		$item->setField('date', '2017-04-06T07:11:44Z');

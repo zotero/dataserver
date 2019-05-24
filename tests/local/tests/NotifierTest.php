@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class NotifierTests extends PHPUnit_Framework_TestCase {
+class NotifierTests extends \PHPUnit\Framework\TestCase {
 	public function testNotify() {
 		$event = "modify";
 		$type = "item";

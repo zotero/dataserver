@@ -29,11 +29,11 @@ require_once 'include/bootstrap.inc.php';
 //
 // Helper functions
 //
-class APITests extends PHPUnit_Framework_TestCase {
+class APITests extends \PHPUnit\Framework\TestCase {
 	protected static $config;
 	protected static $nsZAPI;
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		require 'include/config.inc.php';
 		foreach ($config as $k => $v) {
 			self::$config[$k] = $v;
@@ -41,11 +41,13 @@ class APITests extends PHPUnit_Framework_TestCase {
 	}
 	
 	
-	public function setUp() {
+	public function setUp(): void {
 	}
 	
 	
-	public function test() {}
+	public function test() {
+		$this->assertTrue(true);
+	}
 	
 	
 	protected function assertContentType($contentType, $response) {

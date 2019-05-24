@@ -35,12 +35,12 @@ require_once 'include/bootstrap.inc.php';
 class FileTests extends APITests {
 	private static $toDelete = array();
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 	}
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		
 		// Delete work files
@@ -53,7 +53,7 @@ class FileTests extends APITests {
 		clearstatcache();
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		
 		$s3Client = Z_Tests::$AWS->createS3();

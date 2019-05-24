@@ -32,7 +32,7 @@ require_once 'include/api3.inc.php';
 class AtomTests extends APITests {
 	private static $items;
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 		
@@ -71,7 +71,7 @@ class AtomTests extends APITests {
 			. '</zapi:subcontent></content>';
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 	}

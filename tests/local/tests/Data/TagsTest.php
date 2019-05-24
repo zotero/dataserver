@@ -25,6 +25,6 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class TagsTests extends PHPUnit_Framework_TestCase {
+class TagsTests extends \PHPUnit\Framework\TestCase {
 	
 }

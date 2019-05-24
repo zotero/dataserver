@@ -30,12 +30,12 @@ require_once 'APITests.inc.php';
 require_once 'include/api2.inc.php';
 
 class ObjectTests extends APITests {
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		API::userClear(self::$config['userID']);
 	}
 	
-	public function tearDown() {
+	public function tearDown(): void {
 		API::userClear(self::$config['userID']);
 	}
 	

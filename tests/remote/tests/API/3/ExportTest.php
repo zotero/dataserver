@@ -34,7 +34,7 @@ class ExportTests extends APITests {
 	private static $multiResponses = [];
 	private static $formats = ['bibtex', 'ris', 'csljson'];
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 		API::userClear(self::$config['userID']);
 		
@@ -136,7 +136,7 @@ class ExportTests extends APITests {
 	}
 	
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
 	}

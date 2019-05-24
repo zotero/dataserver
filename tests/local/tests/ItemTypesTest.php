@@ -25,7 +25,7 @@
 */
 require_once 'include/bootstrap.inc.php';
 
-class ItemTypesTests extends PHPUnit_Framework_TestCase {
+class ItemTypesTests extends \PHPUnit\Framework\TestCase {
 	public function testGetID() {
 		$this->assertInternalType('integer', Zotero_ItemTypes::getID('book'));
 	}

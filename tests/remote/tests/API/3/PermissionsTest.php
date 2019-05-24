@@ -32,7 +32,7 @@ require_once 'include/api3.inc.php';
 class PermissionsTest extends APITests {
 	private static $publicGroupID;
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		API::resetKey(self::$config['apiKey']);
 		API::setKeyUserPermission(self::$config['apiKey'], 'library', true);

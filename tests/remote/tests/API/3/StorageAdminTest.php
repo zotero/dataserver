@@ -34,11 +34,11 @@ class StorageAdminTests extends APITests {
 	
 	private static $toDelete = array();
 	
-	public static function setUpBeforeClass() {
+	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 	}
 	
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		
 		// Clear subscription
@@ -56,7 +56,7 @@ class StorageAdminTests extends APITests {
 		$this->assertEquals(self::DEFAULT_QUOTA, (int) $xml->quota);
 	}
 	
-	public static function tearDownAfterClass() {
+	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		
 		// Clear subscription
