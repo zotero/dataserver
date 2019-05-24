@@ -71,36 +71,108 @@ class TagsController extends ApiController {
 			if ($this->scopeObject) {
 				$this->allowMethods(array('GET'));
 				
-				switch ($this->scopeObject) {
-					case 'collections':
-						$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
-						if (!$collection) {
-							$this->e404();
-						}
-						$title =  "Tags in Collection ‘" . $collection->name . "’";
-						$counts = $collection->getTagItemCounts();
-						$tagIDs = array();
-						if ($counts) {
-							foreach ($counts as $tagID=>$count) {
-								$tagIDs[] = $tagID;
-								$fixedValues[$tagID] = array(
-									'numItems' => $count
-								);
-							}
-						}
-						break;
-						
-					case 'items':
-						$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
-						if (!$item) {
-							$this->e404();
-						}
-						$title = "Tags of '" . $item->getDisplayTitle() . "'";
-						$tagIDs = $item->getTags(true);
-						break;
+				// Tags within items
+				if (($this->scopeObject == 'items' && !$this->scopeObjectKey) || $this->scopeObject == 'collection-items') {
+					// Proxy certain query parameters to items search
+					$validItemParams = [
+						'itemQ' => 'q',
+						'itemQMode' => 'qmode',
+						'itemKey' => 'itemKey',
+						'itemType' => 'itemType',
+						'itemTag' => 'tag',
+						'includeTrashed' => 'includeTrashed'
+					];
+					$itemParams = [
+						// Get back itemIDs
+						'format' => 'ids'
+					];
+					foreach ($validItemParams as $k => $v) {
+						$itemParams[$v] = $this->queryParams[$k];
+					}
+					// 'itemTag' is specified as foo,bar, but we need to convert to an array for
+					// compatibility with the real 'tag'
+					/*if (is_string($itemParams['tag'])) {
+						$itemParams['tag'] = explode(",", $itemParams['tag']);
+					}*/
 					
-					default:
-						throw new Exception("Invalid tags scope object '$this->scopeObject'");
+					// Get items within a specific collection
+					if ($this->scopeObject == 'collection-items') {
+						$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
+						$itemIDs = $collection->getItems(true);
+						$itemParams['itemIDs'] = $itemIDs;
+					}
+					
+					if ($this->subset == 'top') {
+						$itemResults = Zotero_Items::search(
+							$this->objectLibraryID,
+							true,
+							$itemParams,
+							$this->permissions
+						);
+					}
+					else if ($this->subset == 'trash') {
+						$itemParams['includeTrashed'] = true;
+						$itemParams['trashedItemsOnly'] = true;
+						$itemResults = Zotero_Items::search(
+							$this->objectLibraryID,
+							false,
+							$itemParams,
+							$this->permissions
+						);
+					}
+					else {
+						$itemResults = Zotero_Items::search(
+							$this->objectLibraryID,
+							false,
+							$itemParams,
+							$this->permissions
+						);
+					}
+					
+					$title = "Tags Within Items";
+					
+					if ($itemResults['total']) {
+						$tagParams = $this->queryParams;
+						$tagParams['itemIDs'] = $itemResults['results'];
+						$results = Zotero_Tags::search($this->objectLibraryID, $tagParams);
+					}
+				}
+				// Tags within a collection or item
+				else if ($this->scopeObjectKey) {
+					switch ($this->scopeObject) {
+						case 'collections':
+							$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
+							if (!$collection) {
+								$this->e404();
+							}
+							$title =  "Tags in Collection ‘" . $collection->name . "’";
+							$counts = $collection->getTagItemCounts();
+							$tagIDs = array();
+							if ($counts) {
+								foreach ($counts as $tagID=>$count) {
+									$tagIDs[] = $tagID;
+									$fixedValues[$tagID] = array(
+										'numItems' => $count
+									);
+								}
+							}
+							break;
+							
+						case 'items':
+							$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
+							if (!$item) {
+								$this->e404();
+							}
+							$title = "Tags of '" . $item->getDisplayTitle() . "'";
+							$tagIDs = $item->getTags(true);
+							break;
+						
+						default:
+							throw new Exception("Invalid tags scope object '$this->scopeObject'");
+					}
+				}
+				else {
+					$this->e400();
 				}
 			}
 			else if ($this->method == 'DELETE') {

@@ -91,6 +91,11 @@ class Zotero_API {
 		'since' => null,
 		'sincetime' => null,
 		
+		// Tags within items
+		'itemQ' => '',
+		'itemQMode' => 'titleCreatorYear',
+		'itemTag' => [],
+		
 		'sort' => [
 			'v' => [
 				'default' => [

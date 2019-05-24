@@ -340,6 +340,226 @@ class TagTests extends APITests {
 	}
 	
 	
+	//
+	// /tags subviews
+	//
+	public function test_tags_within_items() {
+		API::userClear(self::$config['userID']);
+		
+		$collectionKey = API::createCollection("Collection", false, $this, 'key');
+		$item1Key = API::createItem(
+			"book",
+			[
+				"title" => "Foo",
+				"tags" => [
+					["tag" => "a"],
+					["tag" => "g"]
+				]
+			],
+			$this,
+			'key'
+		);
+		// Child note
+		API::createItem(
+			"note",
+			[
+				"note" => "Test Note 1",
+				"parentItem" => $item1Key,
+				"tags" => [
+					["tag" => "a"],
+					["tag" => "e"]
+				]
+			],
+			$this
+		);
+		// Another item
+		API::createItem(
+			"book",
+			[
+				"title" => "Bar",
+				"tags" => [
+					["tag" => "b"]
+				]
+			],
+			$this
+		);
+		// Item within collection
+		$item4Key = API::createItem(
+			"book",
+			[
+				"title" => "Foo",
+				"collections" => [$collectionKey],
+				"tags" => [
+					["tag" => "a"],
+					["tag" => "c"],
+					["tag" => "g"]
+				]
+			],
+			$this,
+			'key'
+		);
+		// Child note within collection
+		API::createItem(
+			"note",
+			[
+				"note" => "Test Note 2",
+				"parentItem" => $item4Key,
+				"tags" => [
+					["tag" => "a"],
+					["tag" => "f"]
+				]
+			],
+			$this
+		);
+		// Another item within collection
+		API::createItem(
+			"book",
+			[
+				"title" => "Bar",
+				"collections" => [$collectionKey],
+				"tags" => [
+					["tag" => "d"]
+				]
+			],
+			$this
+		);
+		
+		// All items, equivalent to /tags
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(7, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// All items, filtered by 'tag', equivalent to /tags
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?tag=a"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals(
+			['a'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// All items, filtered by 'itemQ'
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?itemQ=foo"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(3, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'c', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?itemQ=bar"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(2, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['b', 'd'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?itemQ=Test%20Note"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(3, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'e', 'f'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// All items with the given tags
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?itemTag=a&itemTag=g"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(3, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'c', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// Disjoint tags
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/tags?itemTag=a&itemTag=d"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(0, $response);
+		
+		// Items within a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/tags"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(5, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'c', 'd', 'f', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// Top-level items within a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/top/tags"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(4, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'c', 'd', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// Search within a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/tags?itemQ=Test%20Note"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(2, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'f'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
+		// Items with the given tags within a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/tags?itemTag=a&itemTag=g"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(3, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'c', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+	}
+	
+	
 	public function testTagSearch() {
 		$tags1 = array("a", "aa", "b");
 		$tags2 = array("b", "c", "cc");

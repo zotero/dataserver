@@ -590,7 +590,9 @@ class Zotero_Items {
 		
 		$results['total'] = Zotero_DB::valueQuery("SELECT FOUND_ROWS()", false, $shardID);
 		if ($rows) {
-			if ($params['format'] == 'keys') {
+			if ($params['format'] == 'keys'
+					// Used internally
+					|| $params['format'] == 'ids') {
 				$results['results'] = $rows;
 			}
 			else if ($params['format'] == 'versions') {

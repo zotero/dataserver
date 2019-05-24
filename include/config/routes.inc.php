@@ -63,6 +63,21 @@ $router->map('/groups/i:objectGroupID/tags/:objectName/:subset', array('controll
 $router->map('/users/i:objectUserID/:scopeObject/:scopeObjectKey/tags/:objectKey/:subset', array('controller' => 'Tags'));
 $router->map('/groups/i:objectGroupID/:scopeObject/:scopeObjectKey/tags/:objectKey/:subset', array('controller' => 'Tags'));
 
+// Tags within items
+$router->map('/users/i:objectUserID/items/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items']]);
+$router->map('/groups/i:objectGroupID/items/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items']]);
+$router->map('/users/i:objectUserID/items/top/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items', 'extra' => ['scopeObject' => 'items', 'subset' => 'top']]]);
+$router->map('/groups/i:objectGroupID/items/top/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items', 'extra' => ['scopeObject' => 'items', 'subset' => 'top']]]);
+$router->map('/users/i:objectUserID/items/trash/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items', 'extra' => ['scopeObject' => 'items', 'subset' => 'trash']]]);
+$router->map('/groups/i:objectGroupID/items/trash/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items', 'extra' => ['scopeObject' => 'items', 'subset' => 'trash']]]);
+// Tags within items within a collection
+$router->map('/users/i:objectUserID/collections/:scopeObjectKey/items/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'collection-items']]);
+$router->map('/groups/i:objectGroupID/collections/:scopeObjectKey/items/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'collection-items']]);
+$router->map('/users/i:objectUserID/collections/:scopeObjectKey/items/top/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'collection-items', 'subset' => 'top']]);
+$router->map('/groups/i:objectGroupID/collections/:scopeObjectKey/items/top/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'collection-items', 'subset' => 'top']]);
+// Tags within items within My Publications
+$router->map('/users/i:objectUserID/publications/items/tags', ['controller' => 'Tags', 'extra' => ['scopeObject' => 'items', 'publications' => true]]);
+
 // Top-level items within something else
 $router->map('/users/i:objectUserID/:scopeObject/:scopeObjectKey/items/top', array('controller' => 'Items', 'extra' => array('subset' => 'top')));
 $router->map('/groups/i:objectGroupID/:scopeObject/:scopeObjectKey/items/top', array('controller' => 'Items', 'extra' => array('subset' => 'top')));

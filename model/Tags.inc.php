@@ -144,6 +144,8 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		$tagIDs = !empty($params['tagIDs']) ? $params['tagIDs'] : array();
 		// Filter for specific tags with "?tag=foo || bar"
 		$tagNames = !empty($params['tag']) ? explode(' || ', $params['tag']): array();
+		// Filter for tags associated with a set of items
+		$itemIDs = $params['itemIDs'] ?? [];
 		
 		if ($tagIDs) {
 			$sql .= "AND tagID IN ("
@@ -157,6 +159,13 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 					. implode(', ', array_fill(0, sizeOf($tagNames), '?'))
 					. ") ";
 			$sqlParams = array_merge($sqlParams, $tagNames);
+		}
+		
+		if ($itemIDs) {
+			$sql .= "AND itemID IN ("
+					. implode(', ', array_fill(0, sizeOf($itemIDs), '?'))
+					. ") ";
+			$sqlParams = array_merge($sqlParams, $itemIDs);
 		}
 		
 		if (!empty($params['q'])) {
