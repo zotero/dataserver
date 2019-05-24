@@ -84,6 +84,13 @@ class DateTests extends \PHPUnit\Framework\TestCase {
 	}
 	
 	
+	public function test_sqlToISO8601() {
+		$sqlDate = "2019-05-23 01:23:45";
+		$isoDate = Zotero_Date::sqlToISO8601($sqlDate);
+		$this->assertEquals("2019-05-23T01:23:45Z", $isoDate);
+	}
+	
+	
 	/*public function test_strToDate_BCE() {
 		$patterns = array(
 			"c380 BC/1935",

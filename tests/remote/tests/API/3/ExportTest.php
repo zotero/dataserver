@@ -42,6 +42,7 @@ class ExportTests extends APITests {
 		$key = API::createItem("book", array(
 			"title" => "Title",
 			"date" => "January 1, 2014",
+			"accessDate" => "2019-05-23T01:23:45Z",
 			"creators" => array(
 				array(
 					"creatorType" => "author",
@@ -51,8 +52,8 @@ class ExportTests extends APITests {
 			)
 		), null, 'key');
 		self::$items[$key] = [
-			'bibtex' => "\n@book{last_title_2014,\n	title = {Title},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
-			'ris' => "TY  - BOOK\r\nTI  - Title\r\nAU  - Last, First\r\nDA  - 2014/01/01/\r\nPY  - 2014\r\nER  - \r\n\r\n",
+			'bibtex' => "\n@book{last_title_2014,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
+			'ris' => "TY  - BOOK\r\nTI  - Title\r\nAU  - Last, First\r\nDA  - 2014/01/01/\r\nPY  - 2014\r\nY2  - 2019/05/23/01:23:45\r\nER  - \r\n\r\n",
 			'csljson' => [
 				'id' => self::$config['libraryID'] . "/$key",
 				'type' => 'book',
@@ -66,6 +67,11 @@ class ExportTests extends APITests {
 				'issued' => [
 					'date-parts' => [
 						['2014', 1, 1]
+					]
+				],
+				'accessed' => [
+					'date-parts' => [
+						['2019', 5, 23]
 					]
 				]
 			]
@@ -117,11 +123,11 @@ class ExportTests extends APITests {
 		self::$multiResponses = [
 			'bibtex' => [
 				"contentType" => "application/x-bibtex",
-				"content" => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014}\n}\n\n@book{last_title_2014-1,\n	title = {Title},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
+				"content" => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014}\n}\n\n@book{last_title_2014-1,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
 			],
 			'ris' => [
 				"contentType" => "application/x-research-info-systems",
-				"content" => "TY  - BOOK\r\nTI  - Title 2\r\nAU  - Last, First\r\nA3  - McEditor, Ed\r\nDA  - 2014/06/24/\r\nPY  - 2014\r\nER  - \r\n\r\nTY  - BOOK\r\nTI  - Title\r\nAU  - Last, First\r\nDA  - 2014/01/01/\r\nPY  - 2014\r\nER  - \r\n\r\n"
+				"content" => "TY  - BOOK\r\nTI  - Title 2\r\nAU  - Last, First\r\nA3  - McEditor, Ed\r\nDA  - 2014/06/24/\r\nPY  - 2014\r\nER  - \r\n\r\nTY  - BOOK\r\nTI  - Title\r\nAU  - Last, First\r\nDA  - 2014/01/01/\r\nPY  - 2014\r\nY2  - 2019/05/23/01:23:45\r\nER  - \r\n\r\n"
 			],
 			'csljson' => [
 				"contentType" => "application/vnd.citationstyles.csl+json",
@@ -151,7 +157,7 @@ class ExportTests extends APITests {
 			$this->assert200($response);
 			$json = API::getJSONFromResponse($response);
 			foreach ($json as $obj) {
-				$this->assertEquals(self::$items[$obj['key']][$format], $obj[$format]);
+				$this->assertEquals(self::$items[$obj['key']][$format], $obj[$format], "Format: $format");
 			}
 		}
 	}
@@ -191,7 +197,7 @@ class ExportTests extends APITests {
 			if (is_array(self::$multiResponses[$format]['content'])) {
 				$body = json_decode($body, true);
 			}
-			$this->assertEquals(self::$multiResponses[$format]['content'], $body);
+			$this->assertEquals(self::$multiResponses[$format]['content'], $body, "Format: $format");
 		}
 	}
 }
