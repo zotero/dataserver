@@ -61,12 +61,14 @@ class Zotero_Items {
 	}
 	
 	
-	public static function search($libraryID, $onlyTopLevel=false, $params=array(), $includeTrashed=false, Zotero_Permissions $permissions=null) {
+	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
 		
 		$shardID = Zotero_Shards::getByLibraryID($libraryID);
+		
+		$includeTrashed = $params['includeTrashed'];
 		
 		$isPublications = !empty($params['publications']);
 		if ($isPublications && Zotero_Libraries::getType($libraryID) == 'publications') {

@@ -287,8 +287,6 @@ class ItemsController extends ApiController {
 				$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
 			}
 			
-			$includeTrashed = $this->queryParams['includeTrashed'];
-			
 			if ($this->scopeObject) {
 				$this->allowMethods(array('GET', 'POST'));
 				
@@ -397,7 +395,6 @@ class ItemsController extends ApiController {
 						$this->objectLibraryID,
 						true,
 						$this->queryParams,
-						$includeTrashed,
 						$this->permissions
 					);
 				}
@@ -406,13 +403,12 @@ class ItemsController extends ApiController {
 					$this->allowMethods(array('GET'));
 					
 					$title = "Deleted Items";
+					$this->queryParams['includeTrashed'] = true;
 					$this->queryParams['trashedItemsOnly'] = true;
-					$includeTrashed = true;
 					$results = Zotero_Items::search(
 						$this->objectLibraryID,
 						false,
 						$this->queryParams,
-						$includeTrashed,
 						$this->permissions
 					);
 				}
@@ -482,7 +478,6 @@ class ItemsController extends ApiController {
 							$this->objectLibraryID,
 							false,
 							$this->queryParams,
-							$includeTrashed,
 							$this->permissions
 						);
 					}
@@ -580,7 +575,6 @@ class ItemsController extends ApiController {
 									$this->objectLibraryID,
 									false,
 									$this->queryParams,
-									$includeTrashed,
 									$this->permissions
 								);
 							}
@@ -606,7 +600,6 @@ class ItemsController extends ApiController {
 							$this->objectLibraryID,
 							false,
 							$this->queryParams,
-							$includeTrashed,
 							$this->permissions
 						);
 					}
@@ -624,7 +617,6 @@ class ItemsController extends ApiController {
 					$this->objectLibraryID,
 					false,
 					$this->queryParams,
-					$includeTrashed,
 					$this->permissions
 				);
 			}
