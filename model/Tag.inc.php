@@ -393,7 +393,7 @@ class Zotero_Tag {
 			return $this->linkedItems;
 		}
 		
-		return array_map(function ($key) use ($libraryID) {
+		return array_map(function ($key) {
 			return Zotero_Items::getByLibraryAndKey($this->libraryID, $key);
 		}, $this->linkedItems);
 	}
