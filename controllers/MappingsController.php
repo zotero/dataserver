@@ -31,11 +31,9 @@ class MappingsController extends ApiController {
 	 * JSON type/field data
 	 */
 	public function mappings() {
-		if (!empty($_GET['locale']) && $_GET['locale'] != 'en-US') {
-			$this->e400("Non-English locales are not yet supported");
-		}
-		
-		$locale = empty($_GET['locale']) ? 'en-US' : $_GET['locale'];
+		$locale = !empty($_GET['locale'])
+			? \Zotero\Schema::resolveLocale($_GET['locale'])
+			: 'en-US';
 		
 		if ($this->subset == 'itemTypeFields') {
 			if (empty($_GET['itemType'])) {

@@ -58,6 +58,48 @@ class Schema {
 	}
 	
 	
+	public static function resolveLocale($locale) {
+		if (!self::$schema) {
+			self::init();
+		}
+		// If the locale exists as-is, use that
+		if (isset(self::$schema['locales'][$locale])) {
+			return $locale;
+		}
+		// If there's a locale with just the language, use that
+		$langCode = substr($locale, 0, 2);
+		if (isset(self::$schema['locales'][$langCode])) {
+			return $langCode;
+		}
+		// Find locales matching language
+		$locales = array_keys(self::$schema['locales']);
+		$locales = array_filter($locales, function ($x) use ($langCode) {
+			return substr($x, 0, 2) == $langCode;
+		});
+		// If none, use en-US
+		if (!$locales) {
+			if (!isset(self::$schema['locales']['en-US'])) {
+				throw new \Exception("Locales not available");
+			}
+			Z_Core::logError("Locale $locale not found");
+			return 'en-US';
+		}
+		usort($locales, function ($a, $b) {
+			if ($a == 'en-US') return -1;
+			if ($b == 'en-US') return 1;
+			
+			if (substr($a, 0, 2) == strtolower(substr($a, 3, 2))) {
+				return -1;
+			}
+			if (substr($b, 0, 2) == strtolower(substr($b, 3, 2))) {
+				return -1;
+			}
+			return strcmp(substr($a, 3, 2), substr($b, 3, 2));
+		});
+		return $locales[0];
+	}
+	
+	
 	/**
 	 * Update the item-type/field/creator mapping tables based on the passed schema
 	 */

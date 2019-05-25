@@ -41,7 +41,6 @@ class MappingsTests extends APITests {
 		$this->assertEquals('book', $json->itemType);
 	}
 	
-	
 	public function testNewItemAttachment() {
 		$response = API::get("items/new?itemType=attachment");
 		$this->assert400($response);
@@ -78,5 +77,16 @@ class MappingsTests extends APITests {
 		$this->assertContains('versionNumber', $fields);
 		$this->assertNotContains('version', $fields);
 	}
+	
+	public function testLocale() {
+		$response = API::get("itemTypes?locale=fr-FR");
+		$this->assert200($response);
+		$json = json_decode($response->getBody());
+		foreach ($json as $o) {
+			if ($o->itemType == 'book') {
+				break;
+			}
+		}
+		$this->assertEquals('Livre', $o->localized);
+	}
 }
-?>
