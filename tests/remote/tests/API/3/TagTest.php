@@ -437,6 +437,19 @@ class TagTests extends APITests {
 			array_map(function ($tag) { return $tag['tag']; }, $json)
 		);
 		
+		// Top-level items
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top/tags"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(5, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEqualsCanonicalizing(
+			['a', 'b', 'c', 'd', 'g'],
+			array_map(function ($tag) { return $tag['tag']; }, $json)
+		);
+		
 		// All items, filtered by 'tag', equivalent to /tags
 		$response = API::userGet(
 			self::$config['userID'],
