@@ -143,7 +143,14 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		// Pass a list of tagIDs, for when the initial search is done via SQL
 		$tagIDs = !empty($params['tagIDs']) ? $params['tagIDs'] : array();
 		// Filter for specific tags with "?tag=foo || bar"
-		$tagNames = !empty($params['tag']) ? explode(' || ', $params['tag']): array();
+		$tagNames = [];
+		if (!empty($params['tag'])) {
+			// tag=foo&tag=bar (AND) doesn't make sense in this context
+			if (is_array($params['tag'])) {
+				throw new Exception("Cannot specify 'tag' more than once", Z_ERROR_INVALID_INPUT);
+			}
+			$tagNames = explode(' || ', $params['tag']);
+		}
 		// Filter for tags associated with a set of items
 		$itemIDs = $params['itemIDs'] ?? [];
 		

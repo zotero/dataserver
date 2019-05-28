@@ -89,11 +89,6 @@ class TagsController extends ApiController {
 					foreach ($validItemParams as $k => $v) {
 						$itemParams[$v] = $this->queryParams[$k];
 					}
-					// 'itemTag' is specified as foo,bar, but we need to convert to an array for
-					// compatibility with the real 'tag'
-					/*if (is_string($itemParams['tag'])) {
-						$itemParams['tag'] = explode(",", $itemParams['tag']);
-					}*/
 					
 					// Get items within a specific collection
 					if ($this->scopeObject == 'collection-items') {
