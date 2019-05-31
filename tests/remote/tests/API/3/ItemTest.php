@@ -1598,12 +1598,17 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function testCannotChangeStoragePropertiesInGroupLibraries() {
-		$key = API::groupCreateItem(
-			self::$config['ownedPrivateGroupID'], "book", [], $this, 'key'
-		);
-		$json = API::groupCreateAttachmentItem(
-			self::$config['ownedPrivateGroupID'], "imported_url", [], $key, $this, 'jsonData'
+	public function test_cannot_change_existing_storage_properties_to_null() {
+		$key = API::createItem("book", [], $this, 'key');
+		$json = API::createAttachmentItem(
+			"imported_url",
+			[
+				'md5' => md5(\Zotero_Utilities::randomString(50)),
+				'mtime' => time()
+			],
+			$key,
+			$this,
+			'jsonData'
 		);
 		
 		$key = $json['key'];
@@ -1612,18 +1617,18 @@ class ItemTests extends APITests {
 		$props = ["md5", "mtime"];
 		foreach ($props as $prop) {
 			$json2 = $json;
-			$json2[$prop] = "new" . ucwords($prop);
-			$response = API::groupPut(
-				self::$config['ownedPrivateGroupID'],
+			$json2[$prop] = null;
+			$response = API::userPut(
+				self::$config['userID'],
 				"items/$key",
 				json_encode($json2),
-				array(
+				[
 					"Content-Type: application/json",
 					"If-Unmodified-Since-Version: $version"
-				)
+				]
 			);
 			$this->assert400($response);
-			$this->assertEquals("Cannot change '$prop' directly in group library", $response->getBody());
+			$this->assertEquals("Cannot change existing '$prop' to null", $response->getBody());
 		}
 	}
 	

@@ -2293,12 +2293,12 @@ class Zotero_Items {
 							break;
 					}
 					
-					if (($key == 'mtime' || $key == 'md5') && $libraryType == 'group') {
-						if (($item && $item->$propName !== $val) || (!$item && $val !== null && $val !== "")) {
-							throw new Exception("Cannot change '$key' directly in group library", Z_ERROR_INVALID_INPUT);
+					if ($key == 'mtime' || $key == 'md5') {
+						if ($item && $item->$propName !== $val && is_null($val)) {
+							throw new Exception("Cannot change existing '$key' to null", Z_ERROR_INVALID_INPUT);
 						}
 					}
-					else if ($key == 'md5') {
+					if ($key == 'md5') {
 						if ($val && !preg_match("/^[a-f0-9]{32}$/", $val)) {
 							throw new Exception("'$val' is not a valid MD5 hash", Z_ERROR_INVALID_INPUT);
 						}
