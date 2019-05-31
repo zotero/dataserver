@@ -222,7 +222,7 @@ class FileTests extends APITests {
 			]
 		);
 		$this->assert400($response);
-		$this->assertContains(
+		$this->assertStringContainsString(
 			"The Content-MD5 you specified did not match what we received.", $response->getBody()
 		);
 		
@@ -1624,7 +1624,7 @@ class FileTests extends APITests {
 			]
 		);
 		$this->assert400($response);
-		$this->assertContains(
+		$this->assertStringContainsString(
 			"Your proposed upload exceeds the maximum allowed size", $response->getBody()
 		);
 	}
