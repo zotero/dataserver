@@ -73,7 +73,7 @@ class MappingsController extends ApiController {
 		if (isset($itemTypeID)) {
 			$cacheKey .= "_" . $itemTypeID;
 		}
-		$cacheKey .= '_' . $this->apiVersion;
+		$cacheKey .= '_' . $this->apiVersion . '_' . $locale;
 		$ttl = 60;
 		$json = Z_Core::$MC->get($cacheKey);
 		if ($json) {
