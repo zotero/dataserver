@@ -115,6 +115,9 @@ $router->map('/itemTypeCreatorTypes', array('controller' => 'Mappings', 'extra' 
 $router->map('/creatorFields', array('controller' => 'Mappings', 'extra' => array('subset' => 'creatorFields')));
 $router->map('/items/new', array('controller' => 'Mappings', 'action' => 'newItem'));
 
+// 4.0 sync warning
+$router->map('/login', ['controller' => 'Api', 'action' => 'noop']);
+
 $router->map('/test/setup', array('controller' => 'Api', 'action' => 'testSetup'));
 
 return $router->match($_SERVER['REQUEST_URI']);

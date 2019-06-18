@@ -137,6 +137,16 @@ class ApiController extends Controller {
 			$this->end();
 		}
 		
+		if ($_SERVER['HTTP_HOST'] == 'sync.zotero.org') {
+			if ($this->method == 'GET' || $this->method == 'POST') {
+				header("Content-Type: text/xml");
+				header("HTTP/1.1 400");
+				echo '<response><error code="UPGRADE_REQUIRED">Zotero 4 syncing is no longer supported. Please upgrade to Zotero 5 to continue syncing.</error></response>';
+				$this->end();
+			}
+			$this->e400("Invalid endpoint");
+		}
+		
 		if (in_array($this->method, array('POST', 'PUT', 'PATCH'))) {
 			$this->ifUnmodifiedSince =
 				isset($_SERVER['HTTP_IF_UNMODIFIED_SINCE'])
