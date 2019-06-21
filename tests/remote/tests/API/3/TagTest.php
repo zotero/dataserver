@@ -573,6 +573,32 @@ class TagTests extends APITests {
 	}
 	
 	
+	public function test_tags_within_items_within_empty_collection() {
+		API::userClear(self::$config['userID']);
+		
+		$collectionKey = API::createCollection("Empty collection", false, $this, 'key');
+		$itemKey = API::createItem(
+			"book",
+			[
+				"title" => "Foo",
+				"tags" => [
+					["tag" => "a"],
+					["tag" => "b"]
+				]
+			],
+			$this,
+			'key'
+		);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/top/tags"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(0, $response);
+	}
+	
+	
 	public function testTagSearch() {
 		$tags1 = array("a", "aa", "b");
 		$tags2 = array("b", "c", "cc");

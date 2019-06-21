@@ -91,13 +91,22 @@ class TagsController extends ApiController {
 					}
 					
 					// Get items within a specific collection
+					$empty = false;
 					if ($this->scopeObject == 'collection-items') {
 						$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
 						$itemIDs = $collection->getItems(true);
 						$itemParams['itemIDs'] = $itemIDs;
+						if (!$itemIDs) {
+							$empty = true;
+						}
 					}
 					
-					if ($this->subset == 'top') {
+					if ($empty) {
+						$itemResults = [
+							'total' => 0
+						];
+					}
+					else if ($this->subset == 'top') {
 						$itemResults = Zotero_Items::search(
 							$this->objectLibraryID,
 							true,
