@@ -840,11 +840,17 @@ class Zotero_Storage {
 	}
 	
 	
+	/**
+	 * Get quota and expiration date for a user
+	 */
 	public static function getUserValues($userID) {
 		$sql = "SELECT quota, UNIX_TIMESTAMP(expiration) AS expiration FROM storageAccounts WHERE userID=?";
 		return Zotero_DB::rowQuery($sql, $userID);
 	}
 	
+	/**
+	 * Set quota and expiration date for a user
+	 */
 	public static function setUserValues($userID, $quota, $expiration) {
 		$cacheKey = "userStorageQuota_" . $userID;
 		Z_Core::$MC->delete($cacheKey);
@@ -857,7 +863,7 @@ class Zotero_Storage {
 		
 		// If changing quota, make sure it's not less than current usage
 		$current = self::getUserValues($userID);
-		$usage = self::getUserUsage($userID);
+		$usage = self::getUserUsage($userID, 'mb');
 		if ($current['quota'] != $quota && $quota < $usage['total']) {
 			throw new Exception("Cannot set quota below current usage", Z_ERROR_GROUP_QUOTA_SET_BELOW_USAGE);
 		}
@@ -943,10 +949,11 @@ class Zotero_Storage {
 		return $quota;
 	}
 	
-	public static function getUserUsage($userID) {
-		$cacheKey = "userStorageUsage_" . $userID;
+	public static function getUserUsage($userID, $unit = 'b') {
+		$cacheKey = "userStorageUsageBytes_" . $userID;
 		$usage = Z_Core::$MC->get($cacheKey);
 		if ($usage) {
+			$usage = self::usageToUnit($usage, $unit);
 			return $usage;
 		}
 		
@@ -956,7 +963,7 @@ class Zotero_Storage {
 		$sql = "SELECT SUM(size) AS bytes FROM storageFileItems "
 				. "JOIN items USING (itemID) WHERE libraryID=?";
 		$libraryBytes = Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
-		$usage['library'] = round($libraryBytes / 1024 / 1024, 1);
+		$usage['library'] = $libraryBytes;
 		
 		$groupBytes = 0;
 		$usage['groups'] = array();
@@ -977,7 +984,7 @@ class Zotero_Storage {
 						if ($library['libraryID']) {
 							$usage['groups'][] = array(
 								'id' => Zotero_Groups::getGroupIDFromLibraryID($library['libraryID']),
-								'usage' => round($library['bytes'] / 1024 / 1024, 1)
+								'usage' => $library['bytes']
 							);
 						}
 						// ROLLUP row
@@ -989,16 +996,17 @@ class Zotero_Storage {
 			}
 		}
 		
-		$usage['total'] = round(($libraryBytes + $groupBytes) / 1024 / 1024, 1);
+		$usage['total'] = $libraryBytes + $groupBytes;
 		
 		Z_Core::$MC->set($cacheKey, $usage, 600);
 		
+		$usage = self::usageToUnit($usage, $unit);
 		return $usage;
 	}
 	
 	
 	public static function clearUserUsage($userID) {
-		$cacheKey = "userStorageUsage_" . $userID;
+		$cacheKey = "userStorageUsageBytes_" . $userID;
 		Z_Core::$MC->delete($cacheKey);
 	}
 	
@@ -1006,6 +1014,25 @@ class Zotero_Storage {
 	private static function updateLastAdded($storageFileID) {
 		$sql = "UPDATE storageFiles SET lastAdded=NOW() WHERE storageFileID=?";
 		Zotero_DB::query($sql, $storageFileID);
+	}
+	
+	
+	private static function usageToUnit($usage, $unit) {
+		if ($unit == 'b') {
+			return $usage;
+		}
+		if ($unit == 'mb') {
+			$divisor = 1024 * 1024;
+		}
+		else {
+			throw new Exception("Invalid unit $unit");
+		}
+		$usage['library'] = round($usage['library'] / $divisor, 1);
+		foreach ($usage['groups'] as &$value) {
+			$value['usage'] = round($value['usage'] / $divisor, 1);
+		}
+		$usage['total'] = round($usage['total'] / $divisor, 1);
+		return $usage;
 	}
 	
 	

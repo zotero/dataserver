@@ -901,17 +901,19 @@ class ItemsController extends ApiController {
 				// Reject file if it would put account over quota
 				if ($group) {
 					$quota = Zotero_Storage::getEffectiveUserQuota($group->ownerUserID);
-					$usage = Zotero_Storage::getUserUsage($group->ownerUserID);
+					$usage = Zotero_Storage::getUserUsage($group->ownerUserID, 'b');
 				}
 				else {
 					$quota = Zotero_Storage::getEffectiveUserQuota($this->objectUserID);
-					$usage = Zotero_Storage::getUserUsage($this->objectUserID);
+					$usage = Zotero_Storage::getUserUsage($this->objectUserID, 'b');
 				}
-				$total = $usage['total'];
-				$fileSizeMB = round($info->size / 1024 / 1024, 1);
-				if ($total + $fileSizeMB > $quota) {
+				$requestedMB = round(($usage['total'] + $info->size) / 1024 / 1024, 1);
+				if ($requestedMB > $quota) {
 					StatsD::increment("storage.upload.quota", 1);
-					$this->e413("File would exceed quota ($total + $fileSizeMB > $quota)");
+					$usageMB = round($usage['total'] / 1024 / 1024, 1);
+					header("Zotero-Storage-Usage: $usageMB");
+					header("Zotero-Storage-Quota: $quota");
+					$this->e413("File would exceed quota ($requestedMB > $quota)");
 				}
 				
 				Zotero_DB::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
