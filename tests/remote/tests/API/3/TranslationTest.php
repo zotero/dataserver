@@ -42,13 +42,14 @@ class TranslationTests extends APITests {
 	
 	
 	public function testWebTranslationSingle() {
+		$url = "https://forums.zotero.org";
 		$title = 'Recent Discussions';
 		
 		$response = API::userPost(
 			self::$config['userID'],
 			"items",
 			json_encode([
-				"url" => "https://forums.zotero.org/"
+				"url" => $url
 			]),
 			array("Content-Type: application/json")
 		);
@@ -99,15 +100,16 @@ class TranslationTests extends APITests {
 	 * @group failing-translation
 	 */
 	public function testWebTranslationMultiple() {
-		$title = 'Zotero: A guide for librarians, researchers, and educators, Second Edition';
+		$url = 'https://zotero-static.s3.amazonaws.com/test-multiple.html';
+		$title = 'Digital history: A guide to gathering, preserving, and presenting the past on the web';
 		
 		$response = API::userPost(
 			self::$config['userID'],
-			"items?key=" . self::$config['apiKey'],
+			"items",
 			json_encode([
-				"url" => "http://www.amazon.com/s/field-keywords=zotero+guide+librarians"
+				"url" => $url
 			]),
-			array("Content-Type: application/json")
+			["Content-Type: application/json"]
 		);
 		$this->assert300($response);
 		$json = json_decode($response->getBody());
@@ -126,10 +128,10 @@ class TranslationTests extends APITests {
 			self::$config['userID'],
 			"items?key=" . self::$config['apiKey'],
 			json_encode([
-				"url" => "http://www.amazon.com/s/field-keywords=zotero+guide+librarians",
+				"url" => $url,
 				"items" => $items
 			]),
-			array("Content-Type: application/json")
+			["Content-Type: application/json"]
 		);
 		$this->assert400($response, "Token not provided with selected items");
 		
@@ -142,11 +144,11 @@ class TranslationTests extends APITests {
 			self::$config['userID'],
 			"items?key=" . self::$config['apiKey'],
 			json_encode([
-				"url" => "http://www.amazon.com/s/field-keywords=zotero+guide+librarians",
+				"url" => $url,
 				"token" => $json->token,
 				"items" => $items2
 			]),
-			array("Content-Type: application/json")
+			["Content-Type: application/json"]
 		);
 		$this->assert400($response, "Index '$invalidKey' not found for URL and token");
 		
@@ -154,11 +156,11 @@ class TranslationTests extends APITests {
 			self::$config['userID'],
 			"items?key=" . self::$config['apiKey'],
 			json_encode([
-				"url" => "http://www.amazon.com/s/field-keywords=zotero+guide+librarians",
+				"url" => $url,
 				"token" => $json->token,
 				"items" => $items
 			]),
-			array("Content-Type: application/json")
+			["Content-Type: application/json"]
 		);
 		
 		$this->assert200($response);
@@ -171,11 +173,13 @@ class TranslationTests extends APITests {
 	
 	
 	public function testWebTranslationInvalidToken() {
+		$url = "https://zotero-static.s3.amazonaws.com/test.html";
+		
 		$response = API::userPost(
 			self::$config['userID'],
 			"items?key=" . self::$config['apiKey'],
 			json_encode([
-				"url" => "http://www.amazon.com/s/field-keywords=zotero+guide+librarians",
+				"url" => $url,
 				"token" => md5(uniqid())
 			]),
 			["Content-Type: application/json"]

@@ -2390,7 +2390,7 @@ class Zotero_Items {
 				throw new Exception("Invalid property '$key'", Z_ERROR_INVALID_INPUT);
 			}
 			
-			if ($key == 'items' && sizeOf($val) > Zotero_API::$maxTranslateItems) {
+			if ($key == 'items' && sizeOf(get_object_vars($val)) > Zotero_API::$maxTranslateItems) {
 				throw new Exception("Cannot translate more than " . Zotero_API::$maxTranslateItems . " items at a time", Z_ERROR_UPLOAD_TOO_LARGE);
 			}
 		}
