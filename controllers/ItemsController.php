@@ -739,7 +739,7 @@ class ItemsController extends ApiController {
 			
 			// File viewing
 			if ($this->fileView) {
-				$url = Zotero_Attachments::getTemporaryURL($item, !empty($_GET['int']));
+				$url = Zotero_Attachments::getTemporaryURL($item);
 				if (!$url) {
 					$this->e500();
 				}
