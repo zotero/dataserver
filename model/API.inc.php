@@ -80,7 +80,7 @@ class Zotero_API {
 		// search
 		'fq' => '',
 		'q' => '',
-		'qmode' => 'titleCreatorYear',
+		'qmode' => '',
 		'includeTrashed' => 0,
 		'itemType' => '',
 		'itemKey' => [],
@@ -93,7 +93,7 @@ class Zotero_API {
 		
 		// Tags within items
 		'itemQ' => '',
-		'itemQMode' => 'titleCreatorYear',
+		'itemQMode' => '',
 		'itemTag' => [],
 		
 		'sort' => [
@@ -461,9 +461,16 @@ class Zotero_API {
 				break;
 			
 			case 'qmode':
-				if (!in_array($value, array('titleCreatorYear', 'everything'))) {
+				if ($action == 'tags') {
+					$validModes = ['contains', 'startswith'];
+				}
+				else if ($action == 'items') {
+					$validModes = ['titlecreatoryear', 'everything'];
+				}
+				if (!in_array(strtolower($value), $validModes)) {
 					throw new Exception("Invalid '$key' value '$value'", Z_ERROR_INVALID_INPUT);
 				}
+				$value = strtolower($value);
 				break;
 			
 			case 'collectionKey':

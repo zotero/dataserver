@@ -624,6 +624,31 @@ class TagTests extends APITests {
 	}
 	
 	
+	public function testTagQuery() {
+		$tags = ["a", "abc", "bab"];
+		
+		$itemKey = API::createItem("book", [
+			"tags" => array_map(function ($tag) {
+				return ["tag" => $tag];
+			}, $tags)
+		], $this, 'key');
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"tags?q=ab"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(2, $response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"tags?q=ab&qmode=startswith"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+	}
+	
+	
 	public function testOrphanedTag() {
 		$json = API::createItem("book", array(
 			"tags" => [["tag" => "a"]]

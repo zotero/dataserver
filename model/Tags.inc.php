@@ -181,7 +181,12 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 			}
 			foreach ($params['q'] as $q) {
 				$sql .= "AND name LIKE ? ";
-				$sqlParams[] = "%$q%";
+				if ($params['qmode'] == 'startswith') {
+					$sqlParams[] = "$q%";
+				}
+				else {
+					$sqlParams[] = "%$q%";
+				}
 			}
 		}
 		
