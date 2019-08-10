@@ -70,6 +70,7 @@ class ApiController extends Controller {
 	
 	public function init($extra) {
 		$this->startTime = microtime(true);
+		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		
 		if (!Z_CONFIG::$API_ENABLED) {
 			$this->e503(Z_CONFIG::$MAINTENANCE_MESSAGE);
@@ -301,8 +302,6 @@ class ApiController extends Controller {
 		
 		// Request limiter needs initialized authentication parameters
 		$this->initRequestLimiter();
-		
-		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		
 		// Get object user
 		if (isset($this->objectUserID)) {
