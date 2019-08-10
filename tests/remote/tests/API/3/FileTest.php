@@ -469,7 +469,7 @@ class FileTests extends APITests {
 		);
 		$this->assert302($response);
 		$location = $response->getHeader("Location");
-		$this->assertRegExp('/^https:\/\/[^\/]+\/[0-9]+\//', $location);
+		$this->assertRegExp('#^https://[^/]+/[a-zA-Z0-9%]+/[a-f0-9]{64}/test_#', $location);
 		$filenameEncoded = rawurlencode($filename);
 		$this->assertEquals($filenameEncoded, substr($location, -1 * strlen($filenameEncoded)));
 		
