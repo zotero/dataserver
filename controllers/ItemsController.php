@@ -738,10 +738,15 @@ class ItemsController extends ApiController {
 			}
 			
 			// File viewing
-			if ($this->fileView) {
+			if ($this->fileView || $this->fileViewURL) {
 				$url = Zotero_Attachments::getTemporaryURL($item);
 				if (!$url) {
 					$this->e500();
+				}
+				if ($this->fileViewURL) {
+					header('Content-Type: text/plain');
+					echo $url . "\n";
+					$this->end();
 				}
 				StatsD::increment("storage.view", 1);
 				$this->redirect($url);

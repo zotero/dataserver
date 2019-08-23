@@ -420,6 +420,7 @@ class ApiController extends Controller {
 							? (!empty($_GET['info']) ? 'info' : 'download')
 							: false;
 		$this->fileView = !empty($extra['view']);
+		$this->fileViewURL = !empty($extra['viewurl']);
 		
 		$this->singleObject = $this->objectKey && !$this->subset;
 		

@@ -27,6 +27,7 @@ $router->map('/storagepurge', array('controller' => 'Storage', 'action' => 'stor
 $router->map('/users/i:objectUserID/removestoragefiles', array('controller' => 'Storage', 'action' => 'removestoragefiles', 'extra' => array('allowHTTP' => true)));
 $router->map('/users/i:objectUserID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
 $router->map('/users/i:objectUserID/items/:objectKey/file/view', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true, 'view' => true)));
+$router->map('/users/i:objectUserID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
 $router->map('/users/i:objectUserID/publications/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'publications' => true]]);
 $router->map('/users/i:objectUserID/publications/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'view' => true, 'publications' => true]]);
 $router->map('/groups/i:objectGroupID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
