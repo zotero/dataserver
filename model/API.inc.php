@@ -88,8 +88,8 @@ class Zotero_API {
 		'searchKey' => [],
 		'tag' => '',
 		'tagType' => '',
-		'since' => null,
-		'sincetime' => null,
+		'since' => 0,
+		'sincetime' => 0,
 		
 		// Tags within items
 		'itemQ' => '',

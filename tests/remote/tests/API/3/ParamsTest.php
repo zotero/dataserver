@@ -394,6 +394,34 @@ class ParamsTests extends APITests {
 	}
 	
 	
+	public function test_should_include_since_parameter_in_next_link() {
+		$totalResults = 6;
+		
+		$since = API::createItem("book", false, $this, 'json')['version'];
+		
+		for ($i=0; $i < $totalResults; $i++) {
+			API::createItem("book", false, $this, 'key');
+		}
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?limit=5&since=$since"
+		);
+		
+		$json = API::getJSONFromResponse($response);
+		$linkParams = self::parseLinkHeader($response->getHeader('Link'))['next']['params'];
+		$this->assertEquals(5, $linkParams['limit']);
+		$this->assertArrayHasKey(
+			'since',
+			$linkParams
+		);
+		
+		$this->assertCount(5, $json);
+		$this->assertNumResults(5, $response);
+		$this->assertTotalResults($totalResults, $response);
+	}
+	
+	
 	// Test disabled because it's slow
 	/*public function testPaginationWithItemKey() {
 		$totalResults = 27;
