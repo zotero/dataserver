@@ -1575,6 +1575,90 @@ class FileTests extends APITests {
 	}
 	
 	
+	public function test_should_include_best_attachment_link_on_parent() {
+		$json = API::createItem("book", false, $this, 'json');
+		$this->assertEquals(0, $json['meta']['numChildren']);
+		$parentKey = $json['key'];
+		
+		$json = API::createAttachmentItem("imported_file", [], $parentKey, $this, 'json');
+		$attachmentKey = $json['key'];
+		$version = $json['version'];
+		
+		$filename = "test.pdf";
+		$mtime = time() * 1000;
+		$md5 = "e54589353710950c4b7ff70829a60036";
+		$size = filesize("data/test.pdf");
+		
+		// Create attachment item
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([
+				[
+					"key" => $attachmentKey,
+					"contentType" => "application/pdf",
+				]
+			]),
+			[
+				"Content-Type: application/json",
+				"If-Unmodified-Since-Version: $version"
+			]
+		);
+		$this->assert200ForObject($response);
+		
+		// 'attachment' link shouldn't appear if no uploaded file
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$parentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayNotHasKey('attachment', $json['links']);
+		
+		// Get upload authorization
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$attachmentKey/file",
+			$this->implodeParams([
+				"md5" => $md5,
+				"mtime" => $mtime,
+				"filename" => $filename,
+				"filesize" => $size
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		
+		// If file doesn't exist on S3, upload
+		if (empty($json['exists'])) {
+			$response = HTTP::post(
+				$json['url'],
+				$json['prefix'] . $fileContents . $json['suffix'],
+				[
+					"Content-Type: {$json['contentType']}"
+				]
+			);
+			$this->assert201($response);
+		}
+		self::$toDelete[] = "$md5";
+		
+		// 'attachment' link should now appear
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$parentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayHasKey('attachment', $json['links']);
+		$this->assertArrayHasKey('href', $json['links']['attachment']);
+		$this->assertEquals('application/json', $json['links']['attachment']['type']);
+		$this->assertEquals('application/pdf', $json['links']['attachment']['attachmentType']);
+		$this->assertEquals($size, $json['links']['attachment']['attachmentSize']);
+	}
+	
+	
 	public function testClientV5ShouldRejectFileSizeMismatch() {
 		API::userClear(self::$config['userID']);
 		

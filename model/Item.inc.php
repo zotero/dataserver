@@ -3003,6 +3003,57 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
+	/**
+	 * Looks for attachment in the following order: oldest PDF attachment matching parent URL,
+	 * oldest non-PDF attachment matching parent URL, oldest PDF attachment not matching URL,
+	 * old non-PDF attachment not matching URL
+	 *
+	 * @return {Zotero.Item|FALSE} - Attachment item or FALSE if none
+	 */
+	public function getBestAttachment() {
+		if (!$this->isRegularItem()) {
+			throw new Exception("getBestAttachment() can only be called on regular items");
+		}
+		$attachments = $this->getBestAttachments();
+		return $attachments ? $attachments[0] : false;
+	}
+	
+	
+	/**
+	 * Looks for attachment in the following order: oldest PDF attachment matching parent URL,
+	 * oldest PDF attachment not matching parent URL, oldest non-PDF attachment matching parent URL,
+	 * old non-PDF attachment not matching parent URL
+	 *
+	 * Unlike the client, this doesn't include linked-file attachments.
+	 *
+	 * @return {Zotero.Item[]} - An array of Zotero items
+	 */
+	public function getBestAttachments() {
+		if (!$this->isRegularItem()) {
+			throw new Exception("getBestAttachments() can only be called on regular items");
+		}
+		
+		$url = $this->getField('url');
+		$urlFieldID = Zotero_ItemFields::getID('url');
+		$linkedURLLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_url');
+		$linkedFileLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_file');
+		
+		$sql = "SELECT IA.itemID FROM itemAttachments IA NATURAL JOIN items I "
+			. "LEFT JOIN itemData ID ON (IA.itemID=ID.itemID AND fieldID=$urlFieldID) "
+			. "WHERE sourceItemID=? AND linkMode NOT IN ($linkedURLLinkMode, $linkedFileLinkMode) "
+			. "AND IA.itemID NOT IN (SELECT itemID FROM deletedItems) "
+			. "ORDER BY mimeType='application/pdf' DESC, value=? DESC, dateAdded ASC";
+		$itemIDs = Zotero_DB::columnQuery(
+			$sql,
+			[
+				$this->id,
+				$url
+			],
+			Zotero_Shards::getByLibraryID($this->libraryID)
+		);
+		return $itemIDs ? Zotero_Items::get($this->libraryID, $itemIDs) : [];
+	}
+	
 	
 	//
 	// Methods dealing with tags
@@ -3375,14 +3426,8 @@ class Zotero_Item extends Zotero_DataObject {
 	public function getUncachedResponseProps($requestParams, Zotero_Permissions $permissions) {
 		$parent = $this->getSource();
 		$isRegularItem = !$parent && $this->isRegularItem();
+		$bestAttachmentDetails = false;
 		$downloadDetails = false;
-		if ($requestParams['publications'] || $permissions->canAccess($this->libraryID, 'files')) {
-			$downloadDetails = Zotero_Storage::getDownloadDetails($this);
-			// Link to publications download URL in My Publications
-			if ($downloadDetails && $requestParams['publications']) {
-				$downloadDetails['url'] = str_replace("/items/", "/publications/items/", $downloadDetails['url']);
-			}
-		}
 		if ($isRegularItem) {
 			if ($requestParams['publications']) {
 				$numChildren = $this->numPublicationsChildren();
@@ -3393,14 +3438,38 @@ class Zotero_Item extends Zotero_DataObject {
 			else {
 				$numChildren = $this->numAttachments();
 			}
+			
+			if ($requestParams['publications'] || $permissions->canAccess($this->libraryID, 'files')) {
+				$bestAttachment = $this->getBestAttachment();
+				if ($bestAttachment) {
+					$dd = Zotero_Storage::getDownloadDetails($bestAttachment);
+					if ($dd) {
+						$bestAttachmentDetails = [
+							'key' => Zotero_API::getItemURI($bestAttachment),
+							'type' => 'application/json',
+							'attachmentType' => $bestAttachment->attachmentContentType,
+							'attachmentSize' => $dd['size']
+						];
+					}
+				}
+			}
 		}
 		else {
 			$numChildren = false;
+			
+			if ($requestParams['publications'] || $permissions->canAccess($this->libraryID, 'files')) {
+				$downloadDetails = Zotero_Storage::getDownloadDetails($this);
+				// Link to publications download URL in My Publications
+				if ($downloadDetails && $requestParams['publications']) {
+					$downloadDetails['url'] = str_replace("/items/", "/publications/items/", $downloadDetails['url']);
+				}
+			}
 		}
 		
 		return [
-			"downloadDetails" => $downloadDetails,
-			"numChildren" => $numChildren
+			"bestAttachmentDetails" => $bestAttachmentDetails,
+			"numChildren" => $numChildren,
+			"downloadDetails" => $downloadDetails
 		];
 	}
 	
@@ -3422,6 +3491,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$isPublications = $requestParams['publications'];
 		
 		$props = $this->getUncachedResponseProps($requestParams, $permissions);
+		$bestAttachmentDetails = $props['bestAttachmentDetails'];
 		$downloadDetails = $props['downloadDetails'];
 		$numChildren = $props['numChildren'];
 		
@@ -3443,7 +3513,8 @@ class Zotero_Item extends Zotero_DataObject {
 			. md5(
 				$version
 				. json_encode($cachedParams)
-				. ($downloadDetails ? 'hasFile' : '')
+				. ($bestAttachmentDetails ? json_encode($bestAttachmentDetails) : '')
+				. ($downloadDetails ? json_encode($downloadDetails) : '')
 				// For groups, include the group WWW URL, which can change
 				. ($libraryType == 'group' ? Zotero_URI::getItemURI($this, true) : '')
 			)
@@ -3497,6 +3568,22 @@ class Zotero_Item extends Zotero_DataObject {
 				'type' => 'text/html'
 			]
 		];
+		
+		if ($bestAttachmentDetails) {
+			$details = $bestAttachmentDetails;
+			$json['links']['attachment'] = [
+				'href' => $details['key']
+			];
+			if (!empty($details['type'])) {
+				$json['links']['attachment']['type'] = $details['type'];
+			}
+			if (!empty($details['attachmentType'])) {
+				$json['links']['attachment']['attachmentType'] = $details['attachmentType'];
+			}
+			if (!empty($details['attachmentSize'])) {
+				$json['links']['attachment']['attachmentSize'] = $details['attachmentSize'];
+			}
+		}
 		
 		if ($parent) {
 			$parentItem = Zotero_Items::get($this->libraryID, $parent);
