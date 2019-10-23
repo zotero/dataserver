@@ -3035,8 +3035,8 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		$url = $this->getField('url');
 		$urlFieldID = Zotero_ItemFields::getID('url');
-		$linkedURLLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_url');
-		$linkedFileLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_file');
+		$linkedURLLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_url') + 1;
+		$linkedFileLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_file') + 1;
 		
 		$sql = "SELECT IA.itemID FROM itemAttachments IA NATURAL JOIN items I "
 			. "LEFT JOIN itemData ID ON (IA.itemID=ID.itemID AND fieldID=$urlFieldID) "
@@ -3447,9 +3447,9 @@ class Zotero_Item extends Zotero_DataObject {
 						$bestAttachmentDetails = [
 							'key' => Zotero_API::getItemURI($bestAttachment),
 							'type' => 'application/json',
-							'attachmentType' => $bestAttachment->attachmentContentType,
-							'attachmentSize' => $dd['size']
+							'attachmentType' => $bestAttachment->attachmentContentType
 						];
+						$bestAttachmentDetails['attachmentSize'] = $dd['size'] ?? false;
 					}
 				}
 			}

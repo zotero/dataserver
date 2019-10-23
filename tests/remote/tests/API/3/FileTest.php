@@ -1575,7 +1575,7 @@ class FileTests extends APITests {
 	}
 	
 	
-	public function test_should_include_best_attachment_link_on_parent() {
+	public function test_should_include_best_attachment_link_on_parent_for_imported_file() {
 		$json = API::createItem("book", false, $this, 'json');
 		$this->assertEquals(0, $json['meta']['numChildren']);
 		$parentKey = $json['key'];
@@ -1588,6 +1588,7 @@ class FileTests extends APITests {
 		$mtime = time() * 1000;
 		$md5 = "e54589353710950c4b7ff70829a60036";
 		$size = filesize("data/test.pdf");
+		$fileContents = file_get_contents("data/test.pdf");
 		
 		// Create attachment item
 		$response = API::userPost(
@@ -1642,6 +1643,18 @@ class FileTests extends APITests {
 				]
 			);
 			$this->assert201($response);
+			
+			// Post-upload file registration
+			$response = API::userPost(
+				self::$config['userID'],
+				"items/$attachmentKey/file",
+				"upload=" . $json['uploadKey'],
+				[
+					"Content-Type: application/x-www-form-urlencoded",
+					"If-None-Match: *"
+				]
+			);
+			$this->assert204($response);
 		}
 		self::$toDelete[] = "$md5";
 		
@@ -1656,6 +1669,107 @@ class FileTests extends APITests {
 		$this->assertEquals('application/json', $json['links']['attachment']['type']);
 		$this->assertEquals('application/pdf', $json['links']['attachment']['attachmentType']);
 		$this->assertEquals($size, $json['links']['attachment']['attachmentSize']);
+	}
+	
+	
+	public function test_should_include_best_attachment_link_on_parent_for_imported_url() {
+		$json = API::createItem("book", false, $this, 'json');
+		$this->assertEquals(0, $json['meta']['numChildren']);
+		$parentKey = $json['key'];
+		
+		$json = API::createAttachmentItem("imported_url", [], $parentKey, $this, 'json');
+		$attachmentKey = $json['key'];
+		$version = $json['version'];
+		
+		$filename = "test.html";
+		$mtime = time() * 1000;
+		$md5 = "af625b88d74e98e33b78f6cc0ad93ed0";
+		$size = filesize("data/test.html.zip");
+		$zipMD5 = "f56e3080d7abf39019a9445d7aab6b24";
+		$zipFilename = "$attachmentKey.zip";
+		$fileContents = file_get_contents("data/test.html.zip");
+		
+		// Create attachment item
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([
+				[
+					"key" => $attachmentKey,
+					"contentType" => "text/html",
+				]
+			]),
+			[
+				"Content-Type: application/json",
+				"If-Unmodified-Since-Version: $version"
+			]
+		);
+		$this->assert200ForObject($response);
+		
+		// 'attachment' link shouldn't appear if no uploaded file
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$parentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayNotHasKey('attachment', $json['links']);
+		
+		// Get upload authorization
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$attachmentKey/file",
+			$this->implodeParams([
+				"md5" => $md5,
+				"mtime" => $mtime,
+				"filename" => $filename,
+				"filesize" => $size,
+				"zipMD5" => $zipMD5,
+				"zipFilename" => $zipFilename,
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		
+		// If file doesn't exist on S3, upload
+		if (empty($json['exists'])) {
+			$response = HTTP::post(
+				$json['url'],
+				$json['prefix'] . $fileContents . $json['suffix'],
+				[
+					"Content-Type: {$json['contentType']}"
+				]
+			);
+			$this->assert201($response);
+			
+			// Post-upload file registration
+			$response = API::userPost(
+				self::$config['userID'],
+				"items/$attachmentKey/file",
+				"upload=" . $json['uploadKey'],
+				[
+					"Content-Type: application/x-www-form-urlencoded",
+					"If-None-Match: *"
+				]
+			);
+			$this->assert204($response);
+		}
+		self::$toDelete[] = "$md5";
+		
+		// 'attachment' link should now appear
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$parentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayHasKey('attachment', $json['links']);
+		$this->assertArrayHasKey('href', $json['links']['attachment']);
+		$this->assertEquals('application/json', $json['links']['attachment']['type']);
+		$this->assertEquals('text/html', $json['links']['attachment']['attachmentType']);
+		$this->assertArrayNotHasKey('attachmentSize', $json['links']['attachment']);
 	}
 	
 	
