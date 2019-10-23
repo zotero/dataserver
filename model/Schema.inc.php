@@ -92,7 +92,7 @@ class Schema {
 				return -1;
 			}
 			if (substr($b, 0, 2) == strtolower(substr($b, 3, 2))) {
-				return -1;
+				return 1;
 			}
 			return strcmp(substr($a, 3, 2), substr($b, 3, 2));
 		});

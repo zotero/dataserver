@@ -18,8 +18,8 @@ class SchemaTests extends \PHPUnit\Framework\TestCase {
 		$locale = \Zotero\Schema::resolveLocale("ar");
 		$this->assertEquals("ar", $locale);
 		
-		$locale = \Zotero\Schema::resolveLocale("ar");
-		$this->assertEquals("ar", $locale);
+		$locale = \Zotero\Schema::resolveLocale("pt");
+		$this->assertEquals("pt-PT", $locale);
 		
 		$locale = \Zotero\Schema::resolveLocale("zh-CN");
 		$this->assertEquals("zh-CN", $locale);
