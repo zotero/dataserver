@@ -30,8 +30,10 @@ $router->map('/users/i:objectUserID/items/:objectKey/file/view', array('controll
 $router->map('/users/i:objectUserID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
 $router->map('/users/i:objectUserID/publications/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'publications' => true]]);
 $router->map('/users/i:objectUserID/publications/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'view' => true, 'publications' => true]]);
+$router->map('/users/i:objectUserID/publications/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true, 'publications' => true]]);
 $router->map('/groups/i:objectGroupID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
 $router->map('/groups/i:objectGroupID/items/:objectKey/file/view', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true, 'view' => true)));
+$router->map('/groups/i:objectGroupID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
 
 // Full-text content
 $router->map('/users/i:objectUserID/items/:objectKey/fulltext', array('controller' => 'FullText', 'action' => 'itemContent'));
