@@ -199,13 +199,23 @@ class ObjectTests extends APITests {
 		// Request second and third deleted objects
 		$response = API::userGet(
 			self::$config['userID'],
-			"deleted?key=" . self::$config['apiKey'] . "&newer=$libraryVersion2"
+			"deleted?key=" . self::$config['apiKey'] . "&since=$libraryVersion2"
 		);
 		$this->assert200($response);
 		$json = json_decode($response->getBody(), true);
 		$version = $response->getHeader("Last-Modified-Version");
 		$this->assertNotNull($version);
 		$this->assertContentType("application/json", $response);
+		
+		// Make sure 'newer' is equivalent
+		$responseNewer = API::userGet(
+			self::$config['userID'],
+			"deleted?key=" . self::$config['apiKey'] . "&newer=$libraryVersion2"
+		);
+		$this->assertEquals($response->getStatus(), $responseNewer->getStatus());
+		$this->assertEquals($response->getBody(), $responseNewer->getBody());
+		$this->assertEquals($response->getHeader('Last-Modified-Version'), $responseNewer->getHeader('Last-Modified-Version'));
+		$this->assertEquals($response->getHeader('Content-Type'), $responseNewer->getHeader('Content-Type'));
 		
 		// Verify keys
 		$func = function ($json, $objectType, $objectKeys) use ($self) {
