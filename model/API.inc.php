@@ -88,8 +88,8 @@ class Zotero_API {
 		'searchKey' => [],
 		'tag' => '',
 		'tagType' => '',
-		'since' => 0,
-		'sincetime' => 0,
+		'since' => false,
+		'sincetime' => false,
 		
 		// Tags within items
 		'itemQ' => '',
@@ -206,18 +206,12 @@ class Zotero_API {
 			unset($queryParams['order']);
 		}
 		
-		// Handle deprecated (in v3) 'newer' and 'newertime' parameters
+		// Handle deprecated (in v3) 'newer' parameter
 		if (isset($queryParams['newer'])) {
 			if (!isset($queryParams['since'])) {
 				$queryParams['since'] = $queryParams['newer'];
 			}
 			unset($queryParams['newer']);
-		}
-		if (isset($queryParams['newertime'])) {
-			if (!isset($queryParams['sincetime'])) {
-				$queryParams['sincetime'] = $queryParams['newertime'];
-			}
-			unset($queryParams['newertime']);
 		}
 		
 		foreach (self::resolveDefaultParams($action, self::$defaultParams, $queryParams) as $key => $value) {
