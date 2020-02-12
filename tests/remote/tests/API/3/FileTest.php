@@ -1369,6 +1369,23 @@ class FileTests extends APITests {
 		$this->assert412($response, "ETag does not match current version of file");
 		$this->assertNotNull($response->getHeader("Last-Modified-Version"));
 		
+		// Error if wrong file size given for existing file
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => $hash,
+				"mtime" => $mtime + 1000,
+				"filename" => $filename,
+				"filesize" => $size - 1
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-Match: $hash"
+			]
+		);
+		$this->assert400($response, "Specified file size incorrect for known file");
+		
 		// File exists
 		$response = API::userPost(
 			self::$config['userID'],
@@ -1572,6 +1589,147 @@ class FileTests extends APITests {
 		$this->assertArrayHasKey("exists", $json);
 		$version = $response->getHeader("Last-Modified-Version");
 		$this->assertGreaterThan($newVersion, $version);
+	}
+	
+	
+	public function test_replace_file_with_new_file() {
+		API::userClear(self::$config['userID']);
+		
+		$file = "work/file";
+		$fileContents = self::getRandomUnicodeString();
+		$contentType = "text/html";
+		$charset = "utf-8";
+		file_put_contents($file, $fileContents);
+		$hash = md5_file($file);
+		$filename = "test_" . $fileContents;
+		$mtime = filemtime($file) * 1000;
+		$size = filesize($file);
+		
+		$json = API::createAttachmentItem("imported_file", [
+			'contentType' => $contentType,
+			'charset' => $charset
+		], false, $this, 'jsonData');
+		$key = $json['key'];
+		$originalVersion = $json['version'];
+		
+		// Get authorization
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => $hash,
+				"mtime" => $mtime,
+				"filename" => $filename,
+				"filesize" => $size
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		
+		self::$toDelete[] = $hash;
+		
+		// Upload to S3
+		$response = HTTP::post(
+			$json['url'],
+			$json['prefix'] . $fileContents . $json['suffix'],
+			[
+				"Content-Type: {$json['contentType']}"
+			]
+		);
+		$this->assert201($response);
+		
+		// Successful registration
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			"upload=" . $json['uploadKey'],
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert204($response);
+		
+		// Verify attachment item metadata
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key"
+		);
+		$json = API::getJSONFromResponse($response)['data'];
+		$this->assertEquals($hash, $json['md5']);
+		$this->assertEquals($mtime, $json['mtime']);
+		$this->assertEquals($filename, $json['filename']);
+		$this->assertEquals($contentType, $json['contentType']);
+		$this->assertEquals($charset, $json['charset']);
+		
+		//
+		// Update file
+		//
+		
+		$fileContents = self::getRandomUnicodeString() . self::getRandomUnicodeString();
+		file_put_contents($file, $fileContents);
+		$newHash = md5_file($file);
+		$filename = "test_" . $fileContents;
+		$mtime = filemtime($file) * 1000;
+		clearstatcache();
+		$size = filesize($file);
+		
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => $newHash,
+				"mtime" => $mtime,
+				"filename" => $filename,
+				"filesize" => $size
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-Match: $hash"
+			]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		
+		self::$toDelete[] = $newHash;
+		
+		// Upload to S3
+		$response = HTTP::post(
+			$json['url'],
+			$json['prefix'] . $fileContents . $json['suffix'],
+			[
+				"Content-Type: {$json['contentType']}"
+			]
+		);
+		$this->assert201($response);
+		
+		// Successful registration
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			"upload=" . $json['uploadKey'],
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-Match: $hash"
+			]
+		);
+		$this->assert204($response);
+		
+		// Verify new attachment item metadata
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key"
+		);
+		$json = API::getJSONFromResponse($response)['data'];
+		$this->assertEquals($newHash, $json['md5']);
+		$this->assertEquals($mtime, $json['mtime']);
+		$this->assertEquals($filename, $json['filename']);
+		$this->assertEquals($contentType, $json['contentType']);
+		$this->assertEquals($charset, $json['charset']);
 	}
 	
 	
@@ -2095,6 +2253,8 @@ class FileTests extends APITests {
 	
 	
 	private function getRandomUnicodeString() {
-		return "Âéìøü 这是一个测试。 " . uniqid();
+		return "Âéìøü 这是一个测试。 "
+			// Vary the length
+			. \Zotero_Utilities::randomString(rand(10, 20), 'mixed');
 	}
 }

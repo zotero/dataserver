@@ -931,11 +931,10 @@ class ItemsController extends ApiController {
 					
 					// Verify file size
 					if ($localInfo['size'] != $info->size) {
-						throw new Exception(
-							"Specified file size incorrect for existing file "
-								. $info->hash . "/" . $info->filename
-								. " ({$localInfo['size']} != {$info->size})"
-						);
+						error_log("Specified file size incorrect for existing file "
+							. $info->hash . "/" . $info->filename
+							. " ({$localInfo['size']} != {$info->size})");
+						$this->e400("Specified file size incorrect for known file");
 					}
 				}
 				// If not found, see if there's a copy with a different name
@@ -945,11 +944,12 @@ class ItemsController extends ApiController {
 						// Verify file size
 						$localInfo = Zotero_Storage::getFileInfoByID($oldStorageFileID);
 						if ($localInfo['size'] != $info->size) {
-							throw new Exception(
+							error_log(
 								"Specified file size incorrect for duplicated file "
 								. $info->hash . "/" . $info->filename
 								. " ({$localInfo['size']} != {$info->size})"
 							);
+							$this->e400("Specified file size incorrect for known file");
 						}
 						
 						// Create new file on S3 with new name
