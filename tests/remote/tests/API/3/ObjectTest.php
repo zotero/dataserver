@@ -296,7 +296,7 @@ class ObjectTests extends APITests {
 		);
 		$this->assert200($response);
 		$json = json_decode($response->getBody());
-		$this->assertInternalType('object', $json);
+		$this->assertIsObject($json);
 		$this->assertCount(0, get_object_vars($json));
 	}
 	

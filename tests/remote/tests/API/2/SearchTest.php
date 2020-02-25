@@ -67,7 +67,7 @@ class SearchTests extends APITests {
 		$data = API::parseDataFromAtomEntry($xml);
 		$json = json_decode($data['content']);
 		$this->assertEquals($name, (string) $json->name);
-		$this->assertInternalType('array', $json->conditions);
+		$this->assertIsArray($json->conditions);
 		$this->assertCount(sizeOf($conditions), $json->conditions);
 		foreach ($conditions as $i => $condition) {
 			foreach ($condition as $key => $val) {
@@ -108,7 +108,7 @@ class SearchTests extends APITests {
 		$data = API::parseDataFromAtomEntry($xml);
 		$json = json_decode($data['content']);
 		$this->assertEquals($name, (string) $json->name);
-		$this->assertInternalType('array', $json->conditions);
+		$this->assertIsArray($json->conditions);
 		$this->assertCount(sizeOf($conditions), $json->conditions);
 		foreach ($conditions as $i => $condition) {
 			foreach ($condition as $key => $val) {

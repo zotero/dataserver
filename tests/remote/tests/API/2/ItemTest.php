@@ -1364,13 +1364,13 @@ class ItemTests extends APITests {
 			self::$config['userID'],
 			"items/$key?key=" . self::$config['apiKey'] . "&content=json"
 		);
-		$this->assertContains('"title": "Tést"', $response->getBody());
+		$this->assertStringContainsString('"title": "Tést"', $response->getBody());
 		
 		// Test feed
 		$response = API::userGet(
 			self::$config['userID'],
 			"items?key=" . self::$config['apiKey'] . "&content=json"
 		);
-		$this->assertContains('"title": "Tést"', $response->getBody());
+		$this->assertStringContainsString('"title": "Tést"', $response->getBody());
 	}
 }

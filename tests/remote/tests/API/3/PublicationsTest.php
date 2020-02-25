@@ -80,7 +80,7 @@ class PublicationsTests extends APITests {
 		$response = API::get("users/" . self::$config['userID'] . "/publications/items");
 		$this->assert200($response);
 		$this->assertNoResults($response);
-		$this->assertInternalType("numeric", $response->getHeader('Last-Modified-Version'));
+		$this->assertIsNumeric($response->getHeader('Last-Modified-Version'));
 	}
 	
 	
@@ -89,7 +89,7 @@ class PublicationsTests extends APITests {
 		$response = API::get("users/" . self::$config['userID'] . "/publications/items");
 		$this->assert200($response);
 		$this->assertNoResults($response);
-		$this->assertInternalType("numeric", $response->getHeader('Last-Modified-Version'));
+		$this->assertIsNumeric($response->getHeader('Last-Modified-Version'));
 	}
 	
 	
@@ -97,7 +97,7 @@ class PublicationsTests extends APITests {
 		$response = API::get("users/" . self::$config['userID'] . "/publications/items?format=atom");
 		$this->assert200($response);
 		$this->assertNoResults($response);
-		$this->assertInternalType("numeric", $response->getHeader('Last-Modified-Version'));
+		$this->assertIsNumeric($response->getHeader('Last-Modified-Version'));
 	}
 	
 	
