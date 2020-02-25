@@ -2511,6 +2511,22 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_should_return_409_if_a_note_references_a_note_as_a_parent_item() {
+		$parentKey = API::createNoteItem("<p>Parent</p>", null, $this, 'key');
+		$json = API::createNoteItem("<p>Parent</p>", $parentKey, $this);
+		$this->assert409ForObject($json, "Parent item cannot be a note or attachment");
+		$this->assertEquals($parentKey, $json['failed'][0]['data']['parentItem']);
+	}
+	
+	
+	public function test_should_return_409_if_an_attachment_references_a_note_as_a_parent_item() {
+		$parentKey = API::createNoteItem("<p>Parent</p>", null, $this, 'key');
+		$json = API::createAttachmentItem("imported_file", [], $parentKey, $this, 'responseJSON');
+		$this->assert409ForObject($json, "Parent item cannot be a note or attachment");
+		$this->assertEquals($parentKey, $json['failed'][0]['data']['parentItem']);
+	}
+	
+	
 	public function test_should_allow_emoji_in_title() {
 		$title = "🐶"; // 4-byte character
 		

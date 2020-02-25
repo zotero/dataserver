@@ -140,6 +140,15 @@ class Zotero_Errors {
 				$error['log'] = true;
 				break;
 			
+			case Z_ERROR_INVALID_ITEM_PARENT:
+				preg_match("/Parent item \d+\/([^ ]+) /", $msg, $matches);
+				if ($matches) {
+					$error['code'] = 409;
+					$error['message'] = "Parent item cannot be a note or attachment";
+					$error['data']['parentItem'] = $matches[1];
+				}
+				break;
+			
 			case Z_ERROR_UPLOAD_TOO_LARGE:
 				$error['code'] = 413;
 				$error['log'] = true;

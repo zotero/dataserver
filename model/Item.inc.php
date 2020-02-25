@@ -1290,6 +1290,19 @@ class Zotero_Item extends Zotero_DataObject {
 							(itemID, sourceItemID, note, noteSanitized, title, hash)
 							VALUES (?,?,?,?,?,?)";
 					$parent = $this->isNote() ? $this->getSource() : null;
+					if ($parent) {
+						$parentItem = Zotero_Items::get($this->_libraryID, $parent);
+						if (!$parentItem) {
+							throw new Exception("Parent item $parent not found");
+						}
+						if (!$parentItem->isRegularItem()) {
+							throw new Exception(
+								// Keep in sync with Errors.inc.php
+								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
+								Z_ERROR_INVALID_ITEM_PARENT
+							);
+						}
+					}
 					
 					$hash = $this->noteText ? md5($this->noteText) : '';
 					$bindParams = array(
@@ -1329,6 +1342,13 @@ class Zotero_Item extends Zotero_DataObject {
 						if ($parentItem->getSource()) {
 							$parentKey = $parentItem->key;
 							throw new Exception("=Parent item $parentKey cannot be a child attachment", Z_ERROR_INVALID_INPUT);
+						}
+						if (!$parentItem->isRegularItem()) {
+							throw new Exception(
+								// Keep in sync with Errors.inc.php
+								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
+								Z_ERROR_INVALID_ITEM_PARENT
+							);
 						}
 					}
 					
