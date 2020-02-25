@@ -236,7 +236,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!Zotero_ItemTypes::isCustomType($this->itemTypeID)
 				&& !Zotero_ItemFields::isCustomField($fieldID)
 				&& !array_key_exists($fieldID, $this->itemData)) {
-			$msg = "Field '$field' doesn't exist for item $this->id of type {$this->itemTypeID}";
+			$msg = "Field '$field' doesn't exist for item $this->libraryID/$this->key of type {$this->itemTypeID}";
 			if (!$skipValidation) {
 				throw new Exception($msg);
 			}
@@ -3053,7 +3053,7 @@ class Zotero_Item extends Zotero_DataObject {
 			throw new Exception("getBestAttachments() can only be called on regular items");
 		}
 		
-		$url = $this->getField('url');
+		$url = $this->getField('url', false, false, true);
 		$urlFieldID = Zotero_ItemFields::getID('url');
 		$linkedURLLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_url') + 1;
 		$linkedFileLinkMode = Zotero_Attachments::linkModeNameToNumber('linked_file') + 1;
