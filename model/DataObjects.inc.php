@@ -621,7 +621,10 @@ trait Zotero_DataObjects {
 			// deleting subcollections first, starting with the most recent, which isn't foolproof
 			// but will probably almost always do the trick.
 			if ($type == 'collection'
-					&& strpos($e->getMessage(), "Cannot delete or update a parent row") !== false) {
+					// Newer MySQL
+					&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth")
+					// Older MySQL
+					|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
 				$deleted = self::deleteSubcollections($libraryID, $key);
 			}
 			else {

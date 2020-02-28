@@ -465,7 +465,10 @@ class Zotero_Libraries {
 				// deleting subcollections first, starting with the most recent, which isn't foolproof
 				// but will probably almost always do the trick.
 				if ($table == 'collections'
-						&& strpos($e->getMessage(), "Cannot delete or update a parent row") !== false) {
+						// Newer MySQL
+						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth")
+						// Older MySQL
+						|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
 					$sql = "DELETE FROM collections WHERE libraryID=? "
 						. "ORDER BY parentCollectionID IS NULL, collectionID DESC";
 					Zotero_DB::query($sql, $libraryID, $shardID);
