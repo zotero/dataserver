@@ -2039,13 +2039,9 @@ class ItemTests extends APITests {
 			"collections/$collectionKey/items/top?q=$childTitleSearch"
 		);
 		$this->assert200($response);
-		$this->assertNumResults(0, $response);
-		// Not currently possible
-		/*$this->assertNumResults(1, $response);
-		$xml = API::getXMLFromResponse($response);
-		$xpath = $xml->xpath('//atom:entry/zapi:key');
-		$this->assertCount(1, $xpath);
-		$this->assertContains($parentKeys[0], $xpath);*/
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($parentKeys[0], $json[0]['key']);
 		
 		// /top, Atom, in collection, with q for child item
 		$response = API::userGet(
@@ -2053,13 +2049,11 @@ class ItemTests extends APITests {
 			"collections/$collectionKey/items/top?content=json&q=$childTitleSearch"
 		);
 		$this->assert200($response);
-		$this->assertNumResults(0, $response);
-		// Not currently possible
-		/*$this->assertNumResults(1, $response);
+		$this->assertNumResults(1, $response);
 		$xml = API::getXMLFromResponse($response);
 		$xpath = $xml->xpath('//atom:entry/zapi:key');
 		$this->assertCount(1, $xpath);
-		$this->assertContains($parentKeys[0], $xpath);*/
+		$this->assertContains($parentKeys[0], $xpath);
 		
 		// /top, JSON, with q for all items, ordered by title
 		$response = API::userGet(

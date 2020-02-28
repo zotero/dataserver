@@ -266,8 +266,16 @@ class FullTextTests extends APITests {
 	
 	
 	public function testSearchItemContent() {
-		$key = API::createItem("book", false, $this, 'key');
-		$json = API::createAttachmentItem("imported_url", [], $key, $this, 'jsonData');
+		$collectionKey = API::createCollection('Test', false, $this, 'key');
+		$parentKey = API::createItem(
+			"book",
+			[
+				'collections' => [$collectionKey]
+			],
+			$this,
+			'key'
+		);
+		$json = API::createAttachmentItem("imported_url", [], $parentKey, $this, 'jsonData');
 		$attachmentKey = $json['key'];
 		
 		$response = API::userGet(
@@ -294,34 +302,55 @@ class FullTextTests extends APITests {
 		$this->assert204($response);
 		
 		// Wait for indexing via Lambda
-		sleep(3);
-		
-		// Search for a word
-		$response = API::userGet(
-			self::$config['userID'],
-			"items?q=unique&qmode=everything&format=keys"
-			. "&key=" . self::$config['apiKey']
-		);
-		$this->assert200($response);
-		$this->assertEquals($json['key'], trim($response->getBody()));
-		
-		// Search for a phrase
-		$response = API::userGet(
-			self::$config['userID'],
-			"items?q=unique%20full-text&qmode=everything&format=keys"
-			. "&key=" . self::$config['apiKey']
-		);
-		$this->assert200($response);
-		$this->assertEquals($attachmentKey, trim($response->getBody()));
+		sleep(6);
 		
 		// Search for nonexistent word
 		$response = API::userGet(
 			self::$config['userID'],
 			"items?q=nothing&qmode=everything&format=keys"
-			. "&key=" . self::$config['apiKey']
 		);
 		$this->assert200($response);
 		$this->assertEquals("", trim($response->getBody()));
+		
+		// Search for a word
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?q=unique&qmode=everything&format=keys"
+		);
+		$this->assert200($response);
+		$this->assertEquals($attachmentKey, trim($response->getBody()));
+		
+		// Search for a phrase
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?q=unique%20full-text&qmode=everything&format=keys"
+		);
+		$this->assert200($response);
+		$this->assertEquals($attachmentKey, trim($response->getBody()));
+		
+		// Search for a phrase in /top
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?q=unique%20full-text&qmode=everything&format=keys"
+		);
+		$this->assert200($response);
+		$this->assertEquals($parentKey, trim($response->getBody()));
+		
+		// Search for a phrase in a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items?q=unique%20full-text&qmode=everything&format=keys"
+		);
+		$this->assert200($response);
+		$this->assertEquals($attachmentKey, trim($response->getBody()));
+		
+		// Search for a phrase in a collection
+		$response = API::userGet(
+			self::$config['userID'],
+			"collections/$collectionKey/items/top?q=unique%20full-text&qmode=everything&format=keys"
+		);
+		$this->assert200($response);
+		$this->assertEquals($parentKey, trim($response->getBody()));
 	}
 	
 	

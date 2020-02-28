@@ -615,7 +615,7 @@ class ItemsController extends ApiController {
 				}
 				$results = Zotero_Items::search(
 					$this->objectLibraryID,
-					false,
+					$this->subset == 'top',
 					$this->queryParams,
 					$this->permissions
 				);
