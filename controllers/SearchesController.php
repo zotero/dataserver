@@ -82,6 +82,7 @@ class SearchesController extends ApiController {
 			
 			case 'json':
 				$json = $search->toResponseJSON($this->queryParams, $this->permissions);
+				$this->checkObjectsForLegacySchema('search', [$json]);
 				echo Zotero_Utilities::formatJSON($json);
 				break;
 			
@@ -137,7 +138,8 @@ class SearchesController extends ApiController {
 				'permissions' => $this->permissions,
 				'head' => $this->method == 'HEAD'
 			];
-			switch ($this->queryParams['format']) {
+			$format = $this->queryParams['format'];
+			switch ($format) {
 			case 'atom':
 				$this->responseXML = Zotero_API::multiResponse(array_merge($options, [
 					'title' => $this->getFeedNamePrefix($this->objectLibraryID) . $title
@@ -148,7 +150,16 @@ class SearchesController extends ApiController {
 			case 'keys':
 			case 'versions':
 			case 'writereport':
-				Zotero_API::multiResponse($options);
+				if ($format == 'json') {
+					$options['asObject'] = true;
+				}
+				
+				$response = Zotero_API::multiResponse($options);
+				
+				if ($format == 'json') {
+					$this->checkObjectsForLegacySchema('search', $response);
+					echo Zotero_Utilities::formatJSON($response);
+				}
 				break;
 			
 			default:

@@ -24,6 +24,8 @@
     ***** END LICENSE BLOCK *****
 */
 
+declare(strict_types=1);
+
 class ApiController extends Controller {
 	protected $writeTokenCacheTime = 43200; // 12 hours
 	
@@ -63,6 +65,7 @@ class ApiController extends Controller {
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
+	protected $isLegacySchemaClient = false;
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -361,6 +364,14 @@ class ApiController extends Controller {
 		if (!$apiVersion && !empty($_SERVER['HTTP_USER_AGENT'])
 				&& strpos($_SERVER['HTTP_USER_AGENT'], 'ZotPad 1') === 0) {
 			$apiVersion = 1;
+		}
+		
+		$this->isLegacySchemaClient = false;
+		if (strpos($_SERVER['HTTP_X_ZOTERO_VERSION'] ?? '', '5.0') === 0) {
+			require_once '../model/ToolkitVersionComparator.inc.php';
+			$this->isLegacySchemaClient = ToolkitVersionComparator::compare(
+				$_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78"
+			) < 0;
 		}
 		
 		if (!empty($extra['publications'])) {
@@ -1023,6 +1034,29 @@ class ApiController extends Controller {
 			$this->e400("Write token cannot be used without an API key");
 		}
 		return "writeToken_" . md5($this->apiKey . "_" . $_SERVER['HTTP_ZOTERO_WRITE_TOKEN']);
+	}
+	
+	
+	protected function checkObjectsForLegacySchema($objectType, $jsonObjects) {
+		if (!$this->isLegacySchemaClient) return;
+		
+		foreach ($jsonObjects as $jsonObject) {
+			if (!\Zotero\DataObjectUtilities::isLegacySchema($objectType, $jsonObject['data'])) {
+				// TEMP: Disabled during testing
+				//$this->outdatedClientError($this->objectLibraryID);
+			}
+		}
+	}
+	
+	
+	protected function outdatedClientError(int $libraryID) {
+		if (!Z_ENV_TESTING_SITE) return;
+		
+		$type = Zotero_Libraries::getType($libraryID);
+		$libraryName = $type == 'user' ? 'My Library' : Zotero_Libraries::getName($libraryID);
+		$msg = "Some data in “{$libraryName}” was created in a newer version of Zotero and could not "
+			. "be downloaded. Upgrade Zotero to continue syncing this library.";
+		$this->e400($msg);
 	}
 	
 	

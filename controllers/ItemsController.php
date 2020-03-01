@@ -246,6 +246,7 @@ class ItemsController extends ApiController {
 				
 				case 'json':
 					$json = $item->toResponseJSON($this->queryParams, $this->permissions);
+					$this->checkObjectsForLegacySchema('item', [$json]);
 					echo Zotero_Utilities::formatJSON($json);
 					break;
 				
@@ -672,7 +673,16 @@ class ItemsController extends ApiController {
 			case 'keys':
 			case 'versions':
 			case 'writereport':
-				Zotero_API::multiResponse($options);
+				if ($format == 'json') {
+					$options['asObject'] = true;
+				}
+				
+				$response = Zotero_API::multiResponse($options);
+				
+				if ($format == 'json') {
+					$this->checkObjectsForLegacySchema('item', $response);
+					echo Zotero_Utilities::formatJSON($response);
+				}
 				break;
 			
 			default:

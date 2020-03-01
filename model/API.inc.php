@@ -1013,6 +1013,9 @@ class Zotero_API {
 	}
 	
 	
+	/**
+	 * @param {Boolean} $options['asObject'] - Return response object instead of echoing
+	 */
 	public static function multiResponse($options, $overrideFormat=false) {
 		$format = $overrideFormat ? $overrideFormat : $options['requestParams']['format'];
 		$isExportFormat = in_array($format, Zotero_Translate::$exportFormats);
@@ -1071,7 +1074,11 @@ class Zotero_API {
 				break;
 			
 			case 'json':
-				echo Zotero_API::createJSONResponse($options['results'], $options['requestParams'], $options['permissions']);
+				$json = Zotero_API::createJSONResponse($options['results'], $options['requestParams'], $options['permissions']);
+				if ($options['asObject'] ?? false) {
+					return $json;
+				}
+				echo Zotero_Utilities::formatJSON($json);
 				break;
 			
 			case 'keys':
@@ -1112,7 +1119,7 @@ class Zotero_API {
 		foreach ($entries as $entry) {
 			$json[] = $entry->toResponseJSON($queryParams, $permissions);
 		}
-		return Zotero_Utilities::formatJSON($json);
+		return $json;
 	}
 	
 	

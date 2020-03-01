@@ -87,6 +87,7 @@ class CollectionsController extends ApiController {
 				
 			case 'json':
 				$json = $collection->toResponseJSON($this->queryParams, $this->permissions);
+				$this->checkObjectsForLegacySchema('collection', [$json]);
 				echo Zotero_Utilities::formatJSON($json);
 				break;
 			
@@ -200,7 +201,8 @@ class CollectionsController extends ApiController {
 				'permissions' => $this->permissions,
 				'head' => $this->method == 'HEAD'
 			];
-			switch ($this->queryParams['format']) {
+			$format = $this->queryParams['format'];
+			switch ($format) {
 			case 'atom':
 				$this->responseXML = Zotero_API::multiResponse(array_merge($options, [
 					'title' => $this->getFeedNamePrefix($this->objectLibraryID) . $title
@@ -211,7 +213,16 @@ class CollectionsController extends ApiController {
 			case 'keys':
 			case 'versions':
 			case 'writereport':
-				Zotero_API::multiResponse($options);
+				if ($format == 'json') {
+					$options['asObject'] = true;
+				}
+				
+				$response = Zotero_API::multiResponse($options);
+				
+				if ($format == 'json') {
+					$this->checkObjectsForLegacySchema('collection', $response);
+					echo Zotero_Utilities::formatJSON($response);
+				}
 				break;
 			
 			default:

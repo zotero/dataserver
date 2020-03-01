@@ -28,6 +28,7 @@ namespace Zotero;
 
 abstract class DataObjectUtilities {
 	public static $allowedKeyChars = "23456789ABCDEFGHIJKLMNPQRSTUVWXYZ";
+	private static $legacySchema = null;
 	
 	public static function getTypeFromObject($object) {
 		if (!preg_match("/(Item|Collection|Search|Setting)$/", get_class($object), $matches)) {
@@ -61,5 +62,126 @@ abstract class DataObjectUtilities {
 	
 	public static function isValidKey($key) {
 		return !!preg_match('/^[' . self::$allowedKeyChars . ']{8}$/', $key);
+	}
+	
+	public static function isLegacySchema($objectType, $json) {
+		// TEMP
+		try { \Z_Core::$debug = true;
+		
+		if (!self::$legacySchema) {
+			self::$legacySchema = json_decode(
+				file_get_contents(Z_ENV_BASE_PATH . 'misc/legacy-schema.json'),
+				true
+			);
+		}
+		if ($objectType == 'collection') {
+			foreach ($json as $key => $val) {
+				switch ($key) {
+					case 'key':
+					case 'version':
+					case 'name':
+					case 'parentCollection':
+					case 'relations':
+						break;
+					
+					default:
+						\Z_Core::debug("'$key' is not a valid collection property in the classic schema");
+						return false;
+				}
+			}
+			return true;
+		}
+		
+		if ($objectType == 'search') {
+			foreach ($json as $key => $val) {
+				switch ($key) {
+					case 'key':
+					case 'version':
+					case 'name':
+					case 'conditions':
+						break;
+					
+					default:
+						\Z_Core::debug("'$key' is not a valid search property in the classic schema");
+						return false;
+				}
+			}
+			return true;
+		}
+		
+		if ($objectType == 'item') {
+			if (empty($json['itemType'])) {
+				throw new \Exception("No 'itemType' property in JSON");
+			}
+			$itemType = $json['itemType'];
+			$data = null;
+			foreach (self::$legacySchema['itemTypes'] as $itemTypeData) {
+				if ($itemTypeData['itemType'] == $itemType) {
+					$data = $itemTypeData;
+					break;
+				}
+			}
+			// If item type not found, it's not the legacy schema
+			if (!$data) {
+				return false;
+			}
+			$fields = new \Ds\Set(
+				array_map(function ($x) { return $x['field']; }, $data['fields'])
+			);
+			$creatorTypes = new \Ds\Set(
+				array_map(function ($x) { return $x['creatorType']; }, $data['creatorTypes'])
+			);
+			
+			foreach ($json as $key => $val) {
+				switch ($key) {
+					case 'key':
+					case 'version':
+					case 'itemType':
+					case 'collections':
+					case 'relations':
+					case 'tags':
+					case 'dateAdded':
+					case 'dateModified':
+					
+					// Attachment
+					case 'linkMode':
+					case 'contentType':
+					case 'charset':
+					case 'filename':
+					case 'md5':
+					case 'mtime':
+					
+					// Note
+					case 'note':
+						break;
+						
+					case 'creators':
+						foreach ($val as $creator) {
+							if (!isset($creator['creatorType'])) {
+								throw new \Exception("No 'creatorType' property in JSON creator");
+							}
+							if (!$creatorTypes->contains($creator['creatorType'])) {
+								\Z_Core::debug("'${$creator['creatorType']}' is not a valid creator "
+									. "type for item type '$itemType' in the classic schema");
+								return false;
+							}
+						}
+						break;
+					
+					default:
+						if (!$fields->contains($key)) {
+							\Z_Core::debug("'$key' is not a valid field for item type '$itemType' in the classic schema");
+							return false;
+						}
+					}
+			}
+			
+			return true;
+		}
+		
+		throw new \Exception("Unimplemented");
+		
+		// TEMP
+		} finally { \Z_Core::$debug = false; }
 	}
 }
