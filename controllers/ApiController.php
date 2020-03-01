@@ -1080,7 +1080,7 @@ class ApiController extends Controller {
 			Zotero_DB::rollback(true);
 		}
 		
-		if (isset($arguments[0])) {
+		if (!empty($arguments[0])) {
 			echo htmlspecialchars($arguments[0]);
 		}
 		else {
