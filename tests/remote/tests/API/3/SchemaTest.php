@@ -179,6 +179,37 @@ class SchemaTests extends APITests {
 		$this->assert200($response);
 	}
 	
+	public function test_should_not_reject_download_from_old_client_for_deleted_item_using_legacy_schema() {
+		$key = API::createItem(
+			"book",
+			[
+				'title' => 'Foo',
+				'deleted' => true
+			],
+			$this,
+			'key'
+		);
+		
+		// Single-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+		// Multi-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+	}
+	
 	public function test_should_not_reject_download_from_old_client_for_attachment_using_legacy_schema() {
 		$key = API::createAttachmentItem("imported_file", [], false, $this, 'key');
 		
@@ -202,8 +233,55 @@ class SchemaTests extends APITests {
 		$this->assert200($response);
 	}
 	
+	public function test_should_not_reject_download_from_old_client_for_linked_file_attachment_using_legacy_schema() {
+		$key = API::createAttachmentItem("linked_file", ['path' => '/home/user/foo.pdf'], false, $this, 'key');
+		
+		// Single-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+		// Multi-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+	}
+	
 	public function test_should_not_reject_download_from_old_client_for_note_using_legacy_schema() {
 		$key = API::createNoteItem("Test", false, $this, 'key');
+		
+		// Single-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+		// Multi-object endpoint
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$key",
+			[
+				'X-Zotero-Version: 5.0.77'
+			]
+		);
+		$this->assert200($response);
+	}
+	
+	public function test_should_not_reject_download_from_old_client_for_child_note_using_legacy_schema() {
+		$parentKey = $key = API::createItem("book", null, $this, 'key');
+		$key = API::createNoteItem("Test", $parentKey, $this, 'key');
 		
 		// Single-object endpoint
 		$response = API::userGet(

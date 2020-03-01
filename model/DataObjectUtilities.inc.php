@@ -137,6 +137,8 @@ abstract class DataObjectUtilities {
 					case 'key':
 					case 'version':
 					case 'itemType':
+					case 'parentItem':
+					case 'deleted':
 					case 'collections':
 					case 'relations':
 					case 'tags':
@@ -150,6 +152,7 @@ abstract class DataObjectUtilities {
 					case 'filename':
 					case 'md5':
 					case 'mtime':
+					case 'path':
 					
 					// Note
 					case 'note':

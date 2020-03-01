@@ -1042,8 +1042,10 @@ class ApiController extends Controller {
 		
 		foreach ($jsonObjects as $jsonObject) {
 			if (!\Zotero\DataObjectUtilities::isLegacySchema($objectType, $jsonObject['data'])) {
-				// TEMP: Disabled during testing
-				//$this->outdatedClientError($this->objectLibraryID);
+				// TEMP: Disabled on production during testing
+				if (Z_ENV_TESTING_SITE) {
+					$this->outdatedClientError($this->objectLibraryID);
+				}
 			}
 		}
 	}
