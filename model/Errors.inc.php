@@ -165,7 +165,7 @@ class Zotero_Errors {
 				if (!($e instanceof HTTPException) || $errorCode == 500) {
 					$error['code'] = 500;
 					if (Z_ENV_TESTING_SITE) {
-						$error['message'] = $e;
+						$error['message'] = (string) $e;
 					}
 					else {
 						$error['message'] = "An error occurred";
