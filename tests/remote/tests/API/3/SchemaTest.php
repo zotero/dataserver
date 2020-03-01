@@ -153,38 +153,9 @@ class SchemaTests extends APITests {
 		$key = API::createItem(
 			"book",
 			[
-				'title' => 'Foo'
-			],
-			$this,
-			'key'
-		);
-		
-		// Single-object endpoint
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/$key",
-			[
-				'X-Zotero-Version: 5.0.77'
-			]
-		);
-		$this->assert200($response);
-		// Multi-object endpoint
-		$response = API::userGet(
-			self::$config['userID'],
-			"items?itemKey=$key",
-			[
-				'X-Zotero-Version: 5.0.77'
-			]
-		);
-		$this->assert200($response);
-	}
-	
-	public function test_should_not_reject_download_from_old_client_for_deleted_item_using_legacy_schema() {
-		$key = API::createItem(
-			"book",
-			[
 				'title' => 'Foo',
-				'deleted' => true
+				'deleted' => true,
+				'inPublications' => true
 			],
 			$this,
 			'key'
@@ -199,6 +170,10 @@ class SchemaTests extends APITests {
 			]
 		);
 		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals(1, $json['data']['deleted']);
+		$this->assertTrue($json['data']['inPublications']);
+		
 		// Multi-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],

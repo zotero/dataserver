@@ -139,6 +139,7 @@ abstract class DataObjectUtilities {
 					case 'itemType':
 					case 'parentItem':
 					case 'deleted':
+					case 'inPublications':
 					case 'collections':
 					case 'relations':
 					case 'tags':
