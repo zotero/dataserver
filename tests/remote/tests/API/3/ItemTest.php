@@ -44,9 +44,12 @@ class ItemTests extends APITests {
 	
 	
 	public function testNewEmptyBookItem() {
-		$json = API::createItem("book", false, $this, 'jsonData');
+		$json = API::createItem("book", false, $this);
+		$json = $json['successful'][0]['data'];
 		$this->assertEquals("book", (string) $json['itemType']);
-		$this->assertTrue("" === $json['title']);
+		$this->assertSame("", $json['title']);
+		$this->assertSame("", $json['date']);
+		$this->assertSame("", $json['place']);
 		return $json;
 	}
 	

@@ -3805,8 +3805,10 @@ class Zotero_Item extends Zotero_DataObject {
 			// Get 'title' or the equivalent base-mapped field
 			$titleFieldID = Zotero_ItemFields::getFieldIDFromTypeAndBase($this->itemTypeID, 'title');
 			$titleFieldName = Zotero_ItemFields::getName($titleFieldID);
-			if ($includeEmpty || $this->itemData[$titleFieldID] !== false) {
-				$arr[$titleFieldName] = $this->itemData[$titleFieldID] !== false ? $this->itemData[$titleFieldID] : "";
+			$value = $this->itemData[$titleFieldID];
+			$isEmpty = ($value !== false && $value !== null && $value !== "");
+			if ($includeEmpty || !$isEmpty) {
+				$arr[$titleFieldName] = $isEmpty ? $value : "";
 			}
 			
 			// Creators
@@ -3849,7 +3851,7 @@ class Zotero_Item extends Zotero_DataObject {
 				$value = $this->getField($field);
 			}
 			
-			if (!$includeEmpty && ($value === false || $value === "")) {
+			if (!$includeEmpty && ($value === false || $value === null && $value === "")) {
 				continue;
 			}
 			
@@ -3861,11 +3863,11 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 			}
 			else if ($fieldName == 'accessDate') {
-				if ($requestParams['v'] >= 3 && $value !== false && $value !== "") {
+				if ($requestParams['v'] >= 3 && $value !== false && $value !== null && $value !== "") {
 					$value = Zotero_Date::sqlToISO8601($value);
 				}
 			}
-			$arr[$fieldName] = ($value !== false && $value !== "") ? $value : "";
+			$arr[$fieldName] = ($value !== false && $value !== null && $value !== "") ? $value : "";
 		}
 		
 		// Embedded note for notes and attachments
@@ -3878,7 +3880,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$arr['linkMode'] = $this->attachmentLinkMode;
 			
 			$val = $this->attachmentMIMEType;
-			if ($includeEmpty || ($val !== false && $val !== "")) {
+			if ($includeEmpty || ($val !== false && $val !== null && $val !== "")) {
 				$arr['contentType'] = $val;
 			}
 			
