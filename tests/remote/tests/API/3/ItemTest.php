@@ -1141,6 +1141,45 @@ class ItemTests extends APITests {
 	}
 	
 	
+	/**
+	 * If null is passed for a value, it should be treated the same as an empty string, not create
+	 * a NULL in the database.
+	 *
+	 * TODO: Since we don't have direct access to the database, our test for this is changing the
+	 * item type and then trying to retrieve it, which isn't ideal. Some way of checking the DB
+	 * state would be useful.
+	 */
+	public function test_should_treat_null_value_as_empty_string() {
+		$json = [
+			'itemType' => 'book',
+			'numPages' => null
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json])
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$key = $json['successful'][0]['key'];
+		$json = API::getItem($key, $this, 'json');
+		
+		// Change the item type to a type without the field
+		$json = [
+			'version' => $json['version'],
+			'itemType' => 'journalArticle'
+		];
+		API::userPatch(
+			self::$config['userID'],
+			"items/$key",
+			json_encode($json)
+		);
+		
+		$json = API::getItem($key, $this, 'json');
+		$this->assertArrayNotHasKey('numPages', $json);
+	}
+	
+	
 	public function testNewEmptyAttachmentFields() {
 		$key = API::createItem("book", false, $this, 'key');
 		$json = API::createAttachmentItem("imported_url", [], $key, $this, 'jsonData');

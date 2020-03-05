@@ -726,12 +726,13 @@ class Zotero_Item extends Zotero_DataObject {
 			throw new Exception("'$field' is not a valid itemData field.", Z_ERROR_INVALID_INPUT);
 		}
 		
-		if ($value === "") {
+		if ($value === "" || $value === null) {
 			$value = false;
 		}
 		
 		if ($value !== false && !Zotero_ItemFields::isValidForType($fieldID, $this->_itemTypeID)) {
-			throw new Exception("'$field' is not a valid field for type '"
+			$fieldName = Zotero_ItemFields::getName($fieldID);
+			throw new Exception("'$fieldName' is not a valid field for type '"
 				. Zotero_ItemTypes::getName($this->_itemTypeID) . "'", Z_ERROR_INVALID_INPUT);
 		}
 		
