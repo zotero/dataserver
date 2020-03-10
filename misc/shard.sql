@@ -68,7 +68,8 @@ CREATE TABLE `creators` (
   `serverDateModifiedMS` smallint(4) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`creatorID`),
   UNIQUE KEY `key` (`libraryID`,`key`),
-  KEY `hash` (`libraryID`,`creatorDataHash`(5))
+  KEY `hash` (`libraryID`,`creatorDataHash`(5)),
+  KEY `name` (`libraryID`,`lastName(7)`,`firstName(6)`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

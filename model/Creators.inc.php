@@ -82,16 +82,16 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 	
 	
 	public static function getCreatorsWithData($libraryID, $creator, $sortByItemCountDesc=false) {
-		$sql = "SELECT creatorID FROM creators ";
+		$sql = "SELECT creatorID, firstName, lastName FROM creators ";
 		if ($sortByItemCountDesc) {
 			$sql .= "LEFT JOIN itemCreators USING (creatorID) ";
 		}
-		$sql .= "WHERE libraryID=? AND firstName COLLATE utf8mb4_bin = ? "
-			. "AND lastName COLLATE utf8mb4_bin = ? AND fieldMode=?";
+		$sql .= "WHERE libraryID=? AND firstName = ? "
+			. "AND lastName = ? AND fieldMode=?";
 		if ($sortByItemCountDesc) {
 			$sql .= " GROUP BY creatorID ORDER BY IFNULL(COUNT(*), 0) DESC";
 		}
-		$ids = Zotero_DB::columnQuery(
+		$rows = Zotero_DB::query(
 			$sql,
 			array(
 				$libraryID,
@@ -101,7 +101,14 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 			),
 			Zotero_Shards::getByLibraryID($libraryID)
 		);
-		return $ids;
+		
+		// Case-sensitive filter, since the DB columns use a case-insensitive collation and we want
+		// it to use an index
+		$rows = array_filter($rows, function ($row) use ($creator) {
+			return $row['lastName'] == $creator->lastName && $row['firstName'] == $creator->firstName;
+		});
+		
+		return array_column($rows, 'creatorID');
 	}
 	
 	

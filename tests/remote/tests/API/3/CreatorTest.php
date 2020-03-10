@@ -41,6 +41,34 @@ class CreatorTests extends APITests {
 	}
 	
 	
+	public function test_should_add_creator_with_correct_case() {
+		// Create two items with lowercase
+		$data = [
+			"creators" => [
+				[
+					"creatorType" => "author",
+					"name" => "test"
+				]
+			]
+		];
+		API::createItem("book", $data);
+		API::createItem("book", $data);
+		
+		// Create capitalized
+		$json = API::createItem("book", [
+			"creators" => [
+				[
+					"creatorType" => "author",
+					"name" => "Test"
+				]
+			]
+		], $this, 'json');
+		$itemKey = $json['key'];
+		
+		$this->assertEquals("Test", $json['data']['creators'][0]['name']);
+	}
+	
+	
 	public function testCreatorSummaryJSON() {
 		$json = API::createItem("book", array(
 			"creators" => array(
