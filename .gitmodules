@@ -1,3 +1,3 @@
 [submodule "htdocs/zotero-schema"]
 	path = htdocs/zotero-schema
-	url = git@github.com:zotero/zotero-schema.git
+	url = https://github.com/zotero/zotero-schema.git
