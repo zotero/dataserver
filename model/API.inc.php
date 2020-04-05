@@ -390,6 +390,7 @@ class Zotero_API {
 					case 'libraryCatalog':
 					case 'callNumber':
 					case 'rights':
+					case 'extra':
 					case 'dateAdded':
 					case 'dateModified':
 					//case 'numChildren':
