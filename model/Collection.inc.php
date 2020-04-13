@@ -652,28 +652,28 @@ class Zotero_Collection extends Zotero_DataObject {
 	public function toResponseJSON($requestParams=[]) {
 		$t = microtime(true);
 		
+		$libraryData = Zotero_Libraries::toJSON($this->libraryID);
 		// Child collections and items can't be cached (easily)
 		$numCollections = $this->numCollections();
 		$numItems = $this->numItems();
 		
-		if (!$requestParams['uncached']) {
-			$cacheKey = $this->getCacheKey($requestParams);
-			$cached = Z_Core::$MC->get($cacheKey);
-			if ($cached) {
-				Z_Core::debug("Using cached JSON for $this->libraryKey");
-				$cached['meta']->numCollections = $numCollections;
-				$cached['meta']->numItems = $numItems;
-				
-				StatsD::timing("api.collections.toResponseJSON.cached", (microtime(true) - $t) * 1000);
-				StatsD::increment("memcached.collections.toResponseJSON.hit");
-				return $cached;
-			}
+		$cacheKey = $this->getCacheKey($requestParams);
+		$cached = Z_Core::$MC->get($cacheKey);
+		if ($cached) {
+			Z_Core::debug("Using cached JSON for collection $this->libraryKey");
+			$cached['library'] = $libraryData;
+			$cached['meta']->numCollections = $numCollections;
+			$cached['meta']->numItems = $numItems;
+			
+			StatsD::timing("api.collections.toResponseJSON.cached", (microtime(true) - $t) * 1000);
+			StatsD::increment("memcached.collections.toResponseJSON.hit");
+			return $cached;
 		}
 		
 		$json = [
 			'key' => $this->key,
 			'version' => $this->version,
-			'library' => Zotero_Libraries::toJSON($this->libraryID)
+			'library' => new stdClass()
 		];
 		
 		// 'links'
@@ -711,12 +711,11 @@ class Zotero_Collection extends Zotero_DataObject {
 			}
 		}
 		
-		if (!$requestParams['uncached']) {
-			Z_Core::$MC->set($cacheKey, $json);
-			
-			StatsD::timing("api.collections.toResponseJSON.uncached", (microtime(true) - $t) * 1000);
-			StatsD::increment("memcached.collections.toResponseJSON.miss");
-		}
+		Z_Core::$MC->set($cacheKey, $json);
+		$json['library'] = $libraryData;
+		
+		StatsD::timing("api.collections.toResponseJSON.uncached", (microtime(true) - $t) * 1000);
+		StatsD::increment("memcached.collections.toResponseJSON.miss");
 		
 		return $json;
 	}
@@ -887,14 +886,24 @@ class Zotero_Collection extends Zotero_DataObject {
 	
 	
 	private function getCacheKey($requestParams) {
-		$cacheKey = implode("\n", [
-			$this->libraryID,
-			$this->key,
-			$this->version,
-			implode(',', $requestParams['include']),
-			$requestParams['v']
-		]);
-		return md5($cacheKey);
+		$cacheVersion = 1;
+		$key = "collectionResponseJSON_"
+			. md5(
+				implode("_", [
+					$this->libraryID,
+					$this->key,
+					$this->version,
+					implode(',', $requestParams['include']),
+					$requestParams['v'],
+					// For code-based changes
+					"_" . $cacheVersion,
+					// For data-based changes
+					(isset(Z_CONFIG::$CACHE_VERSION_RESPONSE_JSON_COLLECTION)
+						? "_" . Z_CONFIG::$CACHE_VERSION_RESPONSE_JSON_COLLECTION
+						: ""),
+				])
+			);
+		return $key;
 	}
 	
 	

@@ -26,6 +26,7 @@
 
 class Zotero_Libraries {
 	private static $libraryTypeCache = array();
+	private static $libraryJSONCache = [];
 	private static $originalVersions = array();
 	private static $updatedVersions = array();
 	
@@ -375,7 +376,17 @@ class Zotero_Libraries {
 	
 	
 	public static function toJSON($libraryID) {
-		// TODO: cache
+		if (isset(self::$libraryJSONCache[$libraryID])) {
+			return self::$libraryJSONCache[$libraryID];
+		}
+		
+		$cacheVersion = 1;
+		$cacheKey = "libraryJSON_" . md5($libraryID . '_' . $cacheVersion);
+		$cached = Z_Core::$MC->get($cacheKey);
+		if ($cached) {
+			self::$libraryJSONCache[$libraryID] = $cached;
+			return $cached;
+		}
 		
 		$libraryType = Zotero_Libraries::getType($libraryID);
 		if ($libraryType == 'user') {
@@ -424,6 +435,9 @@ class Zotero_Libraries {
 		else {
 			throw new Exception("Invalid library type '$libraryType'");
 		}
+		
+		self::$libraryJSONCache[$libraryID] = $json;
+		Z_Core::$MC->set($cacheKey, $json, 60);
 		
 		return $json;
 	}
