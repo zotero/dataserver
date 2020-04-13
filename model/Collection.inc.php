@@ -693,7 +693,7 @@ class Zotero_Collection extends Zotero_DataObject {
 			$parentCol = Zotero_Collections::get($this->libraryID, $parentID);
 			$json['links']['up'] = [
 				'href' => Zotero_API::getCollectionURI($parentCol),
-				'type' => "application/atom+xml"
+				'type' => "application/json"
 			];
 		}
 		
@@ -886,7 +886,7 @@ class Zotero_Collection extends Zotero_DataObject {
 	
 	
 	private function getCacheKey($requestParams) {
-		$cacheVersion = 1;
+		$cacheVersion = 2;
 		$key = "collectionResponseJSON_"
 			. md5(
 				implode("_", [
