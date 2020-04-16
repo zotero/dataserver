@@ -57,18 +57,6 @@ class Zotero_Date {
 	private static $dayRE = null;
 	
 	public static function strToDate($string) {
-		// Parse 'yesterday'/'today'/'tomorrow'
-		$lc = strtolower($string);
-		if ($lc == 'yesterday' || $lc == self::getString('date.yesterday')) {
-			$string = date("Y-m-d", strtotime('yesterday'));
-		}
-		else if ($lc == 'today' || $lc == self::getString('date.today')) {
-			$string = date("Y-m-d");
-		}
-		else if ($lc == 'tomorrow' || $lc == self::getString('date.tomorrow')) {
-			$string = date("Y-m-d", strtotime('tomorrow'));
-		}
-		
 		$date = array();
 		
 		// skip empty things
