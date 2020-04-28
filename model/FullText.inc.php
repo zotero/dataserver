@@ -224,9 +224,6 @@ class Zotero_FullText {
 	 * @return {Array<String>|null} An array of item keys, or null if no results
 	 */
 	public static function searchInLibrary($libraryID, $searchText) {
-		// TEMP: For now, strip double-quotes and make everything a phrase search
-		$searchText = str_replace('"', '', $searchText);
-		
 		$params = [
 			'index' => self::$elasticsearchType . "_index",
 			'type' => self::$elasticsearchType,

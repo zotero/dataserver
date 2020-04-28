@@ -304,32 +304,35 @@ class Zotero_Items {
 		
 		// Search on title, creators, and dates
 		if (!empty($params['q'])) {
-			$sql .= "AND (";
-			
-			$sql .= "IDT.value LIKE ? ";
-			$sqlParams[] = '%' . $params['q'] . '%';
-			
-			$sql .= "OR INo.title LIKE ? ";
-			$sqlParams[] = '%' . $params['q'] . '%';
-			
-			$sql .= "OR TRIM(CONCAT(firstName, ' ', lastName)) LIKE ? ";
-			$sqlParams[] = '%' . $params['q'] . '%';
-			
-			$sql .= "OR SUBSTR(IDD.value, 1, 4) = ?";
-			$sqlParams[] = $params['q'];
-			
-			// Full-text search
-			if ($params['qmode'] == 'everything') {
-				$ftKeys = Zotero_FullText::searchInLibrary($libraryID, $params['q']);
-				if ($ftKeys) {
-					$sql .= " OR I.key IN ("
-						. implode(', ', array_fill(0, sizeOf($ftKeys), '?'))
-						. ") ";
-					$sqlParams = array_merge($sqlParams, $ftKeys);
+			$parts = Zotero_Utilities::parseSearchString($params['q']);
+			foreach ($parts as $part) {
+				$sql .= "AND (";
+				
+				$sql .= "IDT.value LIKE ? ";
+				$sqlParams[] = '%' . $part['text'] . '%';
+				
+				$sql .= "OR INo.title LIKE ? ";
+				$sqlParams[] = '%' . $part['text'] . '%';
+				
+				$sql .= "OR TRIM(CONCAT(firstName, ' ', lastName)) LIKE ? ";
+				$sqlParams[] = '%' . $part['text'] . '%';
+				
+				$sql .= "OR SUBSTR(IDD.value, 1, 4) = ?";
+				$sqlParams[] = $part['text'];
+				
+				// Full-text search
+				if ($params['qmode'] == 'everything') {
+					$ftKeys = Zotero_FullText::searchInLibrary($libraryID, $part['text']);
+					if ($ftKeys) {
+						$sql .= " OR I.key IN ("
+							. implode(', ', array_fill(0, sizeOf($ftKeys), '?'))
+							. ") ";
+						$sqlParams = array_merge($sqlParams, $ftKeys);
+					}
 				}
+				
+				$sql .= ") ";
 			}
-			
-			$sql .= ") ";
 		}
 		
 		// Search on itemType

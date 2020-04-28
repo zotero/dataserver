@@ -175,5 +175,36 @@ class Zotero_Utilities {
 		}
 		return $arrayFrom;
 	}
+	
+	
+	public static function parseSearchString($str) {
+		$parts = preg_split(
+			'/\s*("[^"]*")\s*|"\s|\s"|^"|"$|\'\s|\s\'|^\'|\'$|\s/m',
+			$str,
+			null,
+			PREG_SPLIT_DELIM_CAPTURE
+		);
+		$parsed = [];
+		
+		foreach ($parts as $part) {
+			if (!$part) {
+				continue;
+			}
+			
+			if ($part[0] == '"' && $part[mb_strlen($part) - 1] == '"') {
+				$parsed[] = [
+					"text" => mb_substr($part, 1, mb_strlen($part) - 2),
+					"inQuotes" => true
+				];
+			}
+			else {
+				$parsed[] = [
+					"text" => $part,
+					"inQuotes" => false
+				];
+			}
+		}
+		
+		return $parsed;
+	}
 }
-?>

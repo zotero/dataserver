@@ -519,6 +519,51 @@ class ParamsTests extends APITests {
 	}
 	
 	
+	public function test_should_perform_quicksearch_with_multiple_words() {
+		$title1 = "This Is a Great Title";
+		$title2 = "Great, But Is It Better Than This Title?";
+		
+		$keys = [];
+		$keys[] = API::createItem("book", [
+			'title' => $title1
+		], $this, 'key');
+		$keys[] = API::createItem("journalArticle", [
+			'title' => $title2,
+		], $this, 'key');
+		
+		// Search by multiple independent words
+		$q = "better title";
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?q=" . urlencode($q)
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($keys[1], $json[0]['key']);
+		
+		// Search by phrase
+		$q = '"great title"';
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?q=" . urlencode($q)
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($keys[0], $json[0]['key']);
+		
+		// Search by non-matching phrase
+		$q = '"better title"';
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?q=" . urlencode($q)
+		);
+		$this->assert200($response);
+		$this->assertNumResults(0, $response);
+	}
+	
+	
 	public function testItemQuickSearchOrderByDate() {
 		$title1 = "Test Title";
 		$title2 = "Another Title";
