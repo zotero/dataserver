@@ -497,6 +497,12 @@ class Zotero_Users {
 		
 		Zotero_DB::beginTransaction();
 		
+		// No FK constraint on keyAccessLog
+		$keyIDs = Zotero_DB::columnQuery("SELECT keyID FROM `keys` WHERE userID=?", $userID);
+		if ($keyIDs) {
+			Zotero_DB::query("DELETE FROM keyAccessLog WHERE keyID IN (" . implode(",", $keyIDs) . ")");
+		}
+		
 		$libraryID = self::getLibraryIDFromUserID($userID, 'publications');
 		if ($libraryID) {
 			Zotero_Libraries::clearAllData($libraryID);

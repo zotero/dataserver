@@ -364,6 +364,9 @@ class Zotero_Key {
 		
 		Zotero_DB::beginTransaction();
 		
+		// No FK constraint on keyAccessLog
+		Zotero_DB::query("DELETE FROM keyAccessLog WHERE keyID=?", $this->id);
+		
 		$sql = "DELETE FROM `keys` WHERE keyID=?";
 		$deleted = Zotero_DB::query($sql, $this->id);
 		if (!$deleted) {
