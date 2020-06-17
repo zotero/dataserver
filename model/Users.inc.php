@@ -585,7 +585,7 @@ class Zotero_Users {
 	
 	
 	private static function getUsernameFromWWW($userID) {
-		$sql = "SELECT username FROM users WHERE userID=?";
+		$sql = "SELECT username FROM users WHERE userID=? AND role != 'deleted'";
 		try {
 			$username = Zotero_WWW_DB_2::valueQuery($sql, $userID);
 		}
