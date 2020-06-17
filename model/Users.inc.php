@@ -565,7 +565,7 @@ class Zotero_Users {
 		// Remove all data
 		Zotero_Users::clearAllData($userID);
 		
-		// Remove user publications library
+		// Remove old user publications library
 		$libraryID = self::getLibraryIDFromUserID($userID, 'publications');
 		if ($libraryID) {
 			$shardID = Zotero_Shards::getByLibraryID($libraryID);
@@ -580,6 +580,10 @@ class Zotero_Users {
 		Zotero_DB::query("DELETE FROM libraries WHERE libraryID=?", $libraryID);
 		
 		Zotero_DB::commit();
+		
+		Z_Core::$MC->delete('userExists_' . $userID);
+		
+		return true;
 	}
 	
 	

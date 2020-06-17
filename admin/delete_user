@@ -1,5 +1,5 @@
-#!/usr/bin/php
-<?
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
 set_include_path("../include");
 require("header.inc.php");
 
@@ -22,6 +22,10 @@ if (!isset($opts['f']) && !isset($opts['force'])) {
 	}
 }
 
-Zotero_Users::deleteUser($userID);
-
-echo "User '$username' deleted\n";
+$deleted = Zotero_Users::deleteUser($userID);
+if ($deleted) {
+	echo "User '$username' deleted\n";
+}
+else {
+	echo "Not deleted\n";
+}

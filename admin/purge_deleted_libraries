@@ -1,0 +1,29 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../include");
+require("header.inc.php");
+
+$userIDs = Zotero_WWW_DB_1::columnQuery("SELECT userID FROM users WHERE Role='deleted' AND lastUpdated < NOW() - INTERVAL 30 DAY AND lastUpdated > NOW() - INTERVAL 180 DAY ORDER BY userID DESC");
+foreach ($userIDs as $userID) {
+	$sql = "SELECT COUNT(*) FROM users WHERE userID=?";
+	$exists = Zotero_DB::valueQuery($sql, $userID);
+	if (!$exists) {
+		continue;
+	}
+	
+	echo "Deleting user $userID\n";
+	
+	$ownedGroups = Zotero_Groups::getUserOwnedGroups($userID);
+	foreach ($ownedGroups as $groupID) {
+		$group = Zotero_Groups::get($groupID);
+		if (sizeOf($group->getUsers()) > 1) {
+			echo "Skipping user $userID with owned group $groupID with other members\n";
+			continue 2;
+		}
+	}
+	
+	$deleted = Zotero_Users::deleteUser($userID);
+	if (!$deleted) {
+		echo "User not found\n";
+	}
+}
