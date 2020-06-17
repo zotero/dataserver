@@ -534,10 +534,22 @@ class Zotero_Users {
 			throw new Exception("User '$username' has not been deleted in user table");
 		}
 		
+		// Check that user still exists
+		if (!Zotero_DB::valueQuery("SELECT COUNT(*) FROM users WHERE userID=?", $userID)) {
+			return false;
+		}
+		
 		Zotero_DB::beginTransaction();
 		
-		if (Zotero_Groups::getUserOwnedGroups($userID)) {
-			throw new Exception("Cannot delete user '$username' with owned groups");
+		// Delete owned groups without members. Owned groups with members shouldn't exist for
+		// deleted users.
+		$ownedGroups = Zotero_Groups::getUserOwnedGroups($userID);
+		foreach ($ownedGroups as $groupID) {
+			$group = Zotero_Groups::get($groupID);
+			if (sizeOf($group->getUsers()) > 1) {
+				throw new Exception("Cannot delete user '$username' with owned group $groupID with other members");
+			}
+			$group->erase();
 		}
 		
 		// Remove user from any groups they're a member of
