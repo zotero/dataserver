@@ -522,7 +522,7 @@ class Zotero_Users {
 		
 		$username = Zotero_Users::getUsername($userID, true);
 		
-		$sql = "SELECT Deleted FROM GDN_User WHERE UserID=?";
+		$sql = "SELECT role='deleted' FROM users WHERE userID=?";
 		try {
 			$deleted = Zotero_WWW_DB_2::valueQuery($sql, $userID);
 		}
