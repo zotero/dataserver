@@ -164,7 +164,7 @@ class Zotero_DB {
 					// Use a lower connection timeout for read replicas
 					if ($connInfo['host'] != $writerAddress) {
 						$connInfo['driver_options'] = [
-							'MYSQLI_OPT_CONNECT_TIMEOUT' => 2
+							'MYSQLI_OPT_CONNECT_TIMEOUT' => 3
 						];
 					}
 					
