@@ -365,12 +365,14 @@ trait Zotero_DataObjects {
 			$i++;
 		}
 		
+		$report = $results->generateReport();
+		
 		if ($loggableErrors) {
 			$text = mb_substr(Zotero_Utilities::formatJSON($json), 0, 100000);
-			Z_Core::reportErrors($loggableErrors, $text);
+			Z_Core::reportErrors($loggableErrors, $text . "\n\n" . Zotero_Utilities::formatJSON($report));
 		}
 		
-		return $results->generateReport();
+		return $report;
 	}
 	
 	
