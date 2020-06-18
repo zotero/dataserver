@@ -1171,11 +1171,16 @@ class Zotero_DB {
 		}
 	}
 	
-	public static function profileEnd($id="", $appendRandomID=true) {
+	public static function profileEnd($id="", $appendRandomID = true, $url = "") {
 		$instance = self::getInstance();
 		$instance->profilerEnabled = false;
 		
 		$str = "";
+		
+		if ($url) {
+			$str .= "URL: $url\n\n";
+		}
+		
 		$first = true;
 		// TODO: Support replica connections
 		foreach ($instance->connections as $shardID => $conn) {

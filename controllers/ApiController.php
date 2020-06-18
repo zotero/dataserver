@@ -1154,8 +1154,8 @@ class ApiController extends Controller {
 			Z_RequestLimiter::finishConcurrentRequest();
 		}
 		
-		if ($this->profile) {
-			Zotero_DB::profileEnd($this->objectLibraryID, true);
+		if ($this->profile && $this->currentRequestTime() > $this->timeLogThreshold) {
+			Zotero_DB::profileEnd($this->objectLibraryID, true, $this->uri);
 		}
 		
 		switch ($this->responseCode) {
