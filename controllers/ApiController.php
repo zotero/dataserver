@@ -196,6 +196,14 @@ class ApiController extends Controller {
 			
 			if ($username == Z_CONFIG::$API_SUPER_USERNAME
 					&& $password == Z_CONFIG::$API_SUPER_PASSWORD) {
+				if (!IPAddress::isPrivateAddress($_SERVER['REMOTE_ADDR'])) {
+					error_log("Unexpected super-user request from " . $_SERVER['REMOTE_ADDR']);
+					Z_SNS::sendAlert(
+						"Unauthorized API access",
+						"{$_SERVER['REQUEST_METHOD']} {$_SERVER['REQUEST_URI']} from {$_SERVER['REMOTE_ADDR']}"
+					);
+					$this->e401('Invalid login');
+				}
 				$this->userID = 0;
 				$this->permissions = new Zotero_Permissions;
 				$this->permissions->setSuper();

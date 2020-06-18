@@ -23,6 +23,7 @@ class Z_CONFIG {
 	public static $S3_BUCKET = '';
 	public static $S3_BUCKET_CACHE = '';
 	public static $S3_BUCKET_FULLTEXT = '';
+	public static $SNS_ALERT_TOPIC = '';
 
 	public static $REDIS_HOSTS = [
 		'default' => [
