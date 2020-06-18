@@ -116,7 +116,7 @@ class Zotero_Libraries {
 		$sql = "SELECT libraryType FROM libraries WHERE libraryID=?";
 		$libraryType = Zotero_DB::valueQuery($sql, $libraryID);
 		if (!$libraryType) {
-			trigger_error("Library $libraryID does not exist", E_USER_ERROR);
+			throw new Exception("Library $libraryID does not exist");
 		}
 		
 		self::$libraryTypeCache[$libraryID] = $libraryType;

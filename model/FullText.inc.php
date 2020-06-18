@@ -118,7 +118,7 @@ class Zotero_FullText {
 				// This shouldn't happen, since the request uses a library version
 				if (!$item) {
 					throw new Exception(
-						"Item $jsonObject->key not found in library",
+						"Item $libraryID/$jsonObject->key not found in library",
 						Z_ERROR_ITEM_NOT_FOUND
 					);
 				}
