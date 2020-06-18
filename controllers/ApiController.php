@@ -1303,7 +1303,7 @@ class ApiController extends Controller {
 				"Slow API request" . ($point ? " at point " . $point : "")
 				. $shardHostStr . ": "
 				. $time . " sec for "
-				. $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI']
+				. $_SERVER['REQUEST_METHOD'] . " " . Z_Core::getCleanRequestURI()
 			);
 		}
 	}
