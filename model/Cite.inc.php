@@ -140,7 +140,7 @@ class Zotero_Cite {
 				CURLOPT_POSTFIELDS => $json,
 				CURLOPT_HTTPHEADER => array("Expect:"),
 				CURLOPT_CONNECTTIMEOUT => 1,
-				CURLOPT_TIMEOUT => 4,
+				CURLOPT_TIMEOUT => 8,
 				CURLOPT_HEADER => 0, // do not return HTTP headers
 				CURLOPT_RETURNTRANSFER => 1
 			); 
