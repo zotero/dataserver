@@ -897,8 +897,8 @@ class ItemsController extends ApiController {
 					$this->e400("Invalid file size");
 				}
 				// TEMP: Until the client supports multi-part upload
-				if ($info->size > 5000000000) {
-					$this->e400("Files above 5 GB are not currently supported");
+				if ($info->size > 4000000000) {
+					$this->e400("Files above 4 GB are not currently supported");
 				}
 				
 				$info->contentType = isset($_REQUEST['contentType']) ? $_REQUEST['contentType'] : null;
