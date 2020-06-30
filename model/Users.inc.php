@@ -163,7 +163,7 @@ class Zotero_Users {
 			return $username;
 		}
 		
-		if (!$skipAutoAdd) {
+		if (!$skipAutoAdd && !self::isDeletedUser($userID)) {
 			if (!self::exists($userID)) {
 				self::addFromWWW($userID);
 			}
@@ -174,8 +174,10 @@ class Zotero_Users {
 		
 		$sql = "SELECT username FROM users WHERE userID=?";
 		$username = Zotero_DB::valueQuery($sql, $userID);
+		// Fall back to WWW. Deleting accounts currently deletes the dataserver user, so we need to
+		// get the username from WWW.
 		if (!$username) {
-			throw new Exception("Username for userID $userID not found", Z_ERROR_USER_NOT_FOUND);
+			$username = self::getUsernameFromWWW($userID);
 		}
 		
 		self::$usernamesByID[$userID] = $username;
@@ -281,14 +283,18 @@ class Zotero_Users {
 		if (self::exists($userID)) {
 			throw new Exception("User $userID already exists");
 		}
-		// Throws an error if user not found
+		if (self::isDeletedUser($userID)) {
+			throw new Exception("User $userID was deleted", Z_ERROR_USER_NOT_FOUND);
+		}
 		$username = self::getUsernameFromWWW($userID);
 		self::add($userID, $username);
 	}
 	
 	
 	public static function updateFromWWW($userID) {
-		// Throws an error if user not found
+		if (self::isDeletedUser($userID)) {
+			throw new Exception("User $userID was deleted", Z_ERROR_USER_NOT_FOUND);
+		}
 		$username = self::getUsernameFromWWW($userID);
 		self::updateUsername($userID, $username);
 	}
@@ -412,6 +418,35 @@ class Zotero_Users {
 		}
 		
 		return $lastModified;
+	}
+	
+	
+	public static function isDeletedUser($userID) {
+		if (!$userID) {
+			throw new Exception("Invalid user");
+		}
+		
+		$cacheKey = "deletedUser_" . $userID;
+		$valid = Z_Core::$MC->get($cacheKey);
+		if ($valid === 1) {
+			return true;
+		}
+		else if ($valid === 0) {
+			return false;
+		}
+		
+		$sql = "SELECT COUNT(*) FROM users WHERE userID=? AND role = 'deleted'";
+		try {
+			$deleted = Zotero_WWW_DB_2::valueQuery($sql, $userID);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("WARNING: $e -- retrying on primary");
+			$deleted = Zotero_WWW_DB_1::valueQuery($sql, $userID);
+		}
+		
+		Z_Core::$MC->set($cacheKey, $deleted ? 1 : 0);
+		
+		return $deleted;
 	}
 	
 	
@@ -607,7 +642,7 @@ class Zotero_Users {
 	
 	
 	private static function getUsernameFromWWW($userID) {
-		$sql = "SELECT username FROM users WHERE userID=? AND role != 'deleted'";
+		$sql = "SELECT username FROM users WHERE userID=?";
 		try {
 			$username = Zotero_WWW_DB_2::valueQuery($sql, $userID);
 		}
