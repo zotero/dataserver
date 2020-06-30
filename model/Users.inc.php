@@ -538,6 +538,8 @@ class Zotero_Users {
 			Zotero_DB::query("DELETE FROM keyAccessLog WHERE keyID IN (" . implode(",", $keyIDs) . ")");
 		}
 		
+		Zotero_DB::query("DELETE FROM storageUploadQueue WHERE userID=?", $userID);
+		
 		$libraryID = self::getLibraryIDFromUserID($userID, 'publications');
 		if ($libraryID) {
 			Zotero_Libraries::clearAllData($libraryID);
