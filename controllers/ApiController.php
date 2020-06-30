@@ -196,7 +196,8 @@ class ApiController extends Controller {
 			
 			if ($username == Z_CONFIG::$API_SUPER_USERNAME
 					&& $password == Z_CONFIG::$API_SUPER_PASSWORD) {
-				if (!IPAddress::isPrivateAddress($_SERVER['REMOTE_ADDR'])) {
+				if (!Z_ENV_TESTING_SITE
+						&& !IPAddress::isPrivateAddress($_SERVER['REMOTE_ADDR'])) {
 					error_log("Unexpected super-user request from " . $_SERVER['REMOTE_ADDR']);
 					Z_SNS::sendAlert(
 						"Unauthorized API access",
