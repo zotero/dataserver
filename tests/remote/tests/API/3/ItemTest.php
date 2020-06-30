@@ -1730,6 +1730,14 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_createdByUser() {
+		$json = API::groupCreateItem(self::$config['ownedPrivateGroupID'], 'book', [], $this, 'json');
+		$this->assertEquals(self::$config['userID'], $json['meta']['createdByUser']['id']);
+		$this->assertEquals(self::$config['username'], $json['meta']['createdByUser']['username']);
+		// TODO: Name and URI
+	}
+	
+	
 	public function testNumChildrenJSON() {
 		$json = API::createItem("book", false, $this, 'json');
 		$this->assertEquals(0, $json['meta']['numChildren']);
