@@ -996,14 +996,16 @@ class Zotero_DB {
 	}
 	
 	
-/*	// Checks the existence of a table in DB
-	public static function table_exists($table) {
-		$instance = self::getInstance();
-		return $instance->link->tableExists($table);
+	/**
+	 * Check the existence of a table in DB
+	 */
+	public static function tableExists($table, $shardID) {
+		// There are faster ways to do this if we start using this somewhere where performance matters
+		return !!Zotero_DB::valueQuery("SHOW TABLES LIKE '$table'", false, $shardID);
 	}
 	
 	
-	// List fields in table
+/*	// List fields in table
 	public static function list_fields($table, $exclude=array()) {
 		$instance = self::getInstance();
 		

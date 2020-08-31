@@ -798,7 +798,7 @@ class ItemsController extends ApiController {
 		}
 		
 		else if ($this->method == 'POST' || $this->method == 'PATCH') {
-			if (!$item->isImportedAttachment()) {
+			if (!$item->isStoredFileAttachment()) {
 				$this->e400("Cannot upload file for linked file/URL attachment item");
 			}
 			

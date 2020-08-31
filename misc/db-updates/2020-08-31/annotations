@@ -1,0 +1,15 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+$startShard = !empty($argv[1]) ? $argv[1] : 1;
+
+$shardIDs = Zotero_DB::columnQuery("SELECT shardID FROM shards WHERE shardID >= ? ORDER BY shardID", $startShard);
+foreach ($shardIDs as $shardID) {
+	echo "Shard: $shardID\n";
+	
+	Zotero_Admin_DB::query("ALTER TABLE `itemAttachments` CHANGE `linkMode` `linkMode` ENUM( 'IMPORTED_FILE', 'IMPORTED_URL', 'LINKED_FILE', 'LINKED_URL', 'EMBEDDED_IMAGE' )", false, $shardID);
+	Zotero_Admin_DB::query("CREATE TABLE `itemAnnotations` ( `itemID` int(10) unsigned NOT NULL, `parentItemID` int(10) unsigned NOT NULL, `type` enum('highlight','note','image') CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `text` varchar(10000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL, `comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL, `color` char(6) CHARACTER SET ascii NOT NULL, `pageLabel` varchar(50) NOT NULL, `sortIndex` varchar(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `position` varchar(20000) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, PRIMARY KEY (`itemID`), KEY `parentItemID` (`parentItemID`), CONSTRAINT `itemAnnotations_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, CONSTRAINT `itemAnnotations_ibfk_2` FOREIGN KEY (`parentItemID`) REFERENCES `itemAttachments` (`itemID`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", false, $shardID);
+	Zotero_Admin_DB::query("CREATE TABLE `itemTopLevel` ( `itemID` int(10) unsigned NOT NULL, `topLevelItemID` int(10) unsigned NOT NULL, PRIMARY KEY (`itemID`), KEY `itemTopLevel_ibfk_2` (`topLevelItemID`), CONSTRAINT `itemTopLevel_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, CONSTRAINT `itemTopLevel_ibfk_2` FOREIGN KEY (`topLevelItemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", false, $shardID);
+}

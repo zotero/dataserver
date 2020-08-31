@@ -300,6 +300,27 @@ class API3 {
 	}
 	
 	
+	public static function createAnnotationItem($annotationType, $data=[], $parentKey, $context=false, $returnFormat='responseJSON') {
+		$response = self::get("items/new?itemType=annotation&annotationType=$annotationType");
+		$json = json_decode($response->getBody());
+		$json->parentItem = $parentKey;
+		if ($annotationType == 'highlight') {
+			$json->annotationText = 'This is highlighted text.';
+		}
+		$json->annotationColor = '#ff8c19';
+		$json->annotationSortIndex = '00015|002431|00000';
+		$json->annotationPosition = json_encode([
+			'pageIndex' => 123,
+			'rects' => [
+				[314.4, 412.8, 556.2, 609.6]
+			]
+		]);
+		
+		$response = self::postObjects('item', [$json]);
+		return self::handleCreateResponse('item', $response, $returnFormat, $context);
+	}
+	
+	
 	public static function createCollection($name, $data=array(), $context=null, $returnFormat='responseJSON') {
 		if (is_array($data)) {
 			$parent = isset($data['parentCollection']) ? $data['parentCollection'] : false;

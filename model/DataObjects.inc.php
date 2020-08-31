@@ -582,13 +582,23 @@ trait Zotero_DataObjects {
 		
 		// Delete child items
 		if ($type == 'item') {
+			$children = [];
 			if ($obj->isRegularItem()) {
 				$children = array_merge($obj->getNotes(), $obj->getAttachments());
-				if ($children) {
-					$children = Zotero_Items::get($libraryID, $children);
-					foreach ($children as $child) {
-						self::delete($child->libraryID, $child->key);
-					}
+			}
+			else if ($obj->isImportedAttachment()) {
+				$children = $obj->getAnnotations();
+			}
+			else if ($obj->isNote()) {
+				$children = $obj->getAttachments();
+			}
+			else if ($obj->isImageAnnotation()) {
+				$children = $obj->getAttachments();
+			}
+			if ($children) {
+				$children = Zotero_Items::get($libraryID, $children);
+				foreach ($children as $child) {
+					self::delete($child->libraryID, $child->key);
 				}
 			}
 			
@@ -607,7 +617,7 @@ trait Zotero_DataObjects {
 		if ($type == 'item' && $obj->isAttachment()) {
 			Zotero_FullText::deleteItemContent($obj);
 			
-			if ($obj->isImportedAttachment()) {
+			if ($obj->isStoredFileAttachment()) {
 				// Get storageFileID while it still exists in storageFileItems table
 				$info = Zotero_Storage::getLocalFileItemInfo($obj);
 				$storageFileID = $info['storageFileID'];

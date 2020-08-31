@@ -156,7 +156,7 @@ class Zotero_Collection extends Zotero_DataObject {
 			if (!empty($this->changed['parentKey'])) {
 				$objectsClass = $this->objectsClass;
 				
-				// Add this item to the parent's cached item lists after commit,
+				// Add this to the parent's cached collection lists after commit,
 				// if the parent was loaded
 				if ($this->_parentKey) {
 					$parentCollectionID = $objectsClass::getIDFromLibraryAndKey(

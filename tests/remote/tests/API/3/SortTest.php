@@ -211,6 +211,23 @@ class SortTests extends APITests {
 	}
 	
 	
+	// Sort by item type
+	public function test_sort_top_level_items_by_item_type() {
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?sort=itemType"
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$itemTypes = array_map(function ($arr) {
+			return $arr['data']['itemType'];
+		}, $json);
+		$sorted = array_values($itemTypes);
+		sort($sorted);
+		$this->assertEquals($sorted, $itemTypes);
+	}
+	
+	
 	//
 	//
 	// Test below here do their own clears

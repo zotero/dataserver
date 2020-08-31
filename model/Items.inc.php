@@ -62,6 +62,9 @@ class Zotero_Items {
 	
 	
 	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
+		// TEMP
+		$ITL = true;
+		
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
@@ -85,17 +88,25 @@ class Zotero_Items {
 		$itemKeys = $params['itemKey'];
 		
 		$titleSort = !empty($params['sort']) && $params['sort'] == 'title';
-		$parentItemSort = !empty($params['sort'])
+		$topLevelItemSort = !empty($params['sort'])
 			&& in_array($params['sort'], ['itemType', 'dateAdded', 'dateModified', 'serverDateModified', 'addedBy']);
 		
 		$sql = "SELECT SQL_CALC_FOUND_ROWS DISTINCT ";
 		
-		// In /top mode, use the parent item's values for most joins
+		// In /top mode, use the top-level item's values for most joins
 		if ($onlyTopLevel) {
-			$itemIDSelector = "COALESCE(IA.sourceItemID, INo.sourceItemID, I.itemID)";
-			$itemKeySelector = "COALESCE(IP.key, I.key)";
-			$itemVersionSelector = "COALESCE(IP.version, I.version)";
-			$itemTypeIDSelector = "COALESCE(IP.itemTypeID, I.itemTypeID)";
+			if ($ITL) {
+				$itemIDSelector = "COALESCE(ITL.topLevelItemID, I.itemID)";
+				$itemKeySelector = "COALESCE(ITLI.key, I.key)";
+				$itemVersionSelector = "COALESCE(ITLI.version, I.version)";
+				$itemTypeIDSelector = "COALESCE(ITLI.itemTypeID, I.itemTypeID)";
+			}
+			else {
+				$itemIDSelector = "COALESCE(IA.sourceItemID, INo.sourceItemID, I.itemID)";
+				$itemKeySelector = "COALESCE(IP.key, I.key)";
+				$itemVersionSelector = "COALESCE(IP.version, I.version)";
+				$itemTypeIDSelector = "COALESCE(IP.itemTypeID, I.itemTypeID)";
+			}
 		}
 		else {
 			$itemIDSelector = "I.itemID";
@@ -118,20 +129,35 @@ class Zotero_Items {
 		$sql .= " FROM items I ";
 		$sqlParams = array($libraryID);
 		
-		// For /top, we need the parent itemID
+		// For /top, we need the top-level item's itemID
 		if ($onlyTopLevel) {
-			$sql .= "LEFT JOIN itemAttachments IA ON (IA.itemID=I.itemID) ";
+			if ($ITL) {
+				$sql .= "LEFT JOIN itemTopLevel ITL ON (ITL.itemID=I.itemID) ";
+				
+				// For some /top requests, pull in the top-level item's items row
+				if ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort) {
+					$sql .= "LEFT JOIN items ITLI ON (ITLI.itemID=$itemIDSelector) ";
+				}
+			}
+			else {
+				$sql .= "LEFT JOIN itemAttachments IA ON (IA.itemID=I.itemID) ";
+			}
 		}
 		
-		// For /top, we need the parent itemID; for 'q' we need the note; for sorting by title,
-		// we need the note title
-		if ($onlyTopLevel || !empty($params['q']) || $titleSort) {
-			$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
+		// For 'q' we need the note; for sorting by title, we need the note title
+		if ($ITL) {
+			if (!empty($params['q']) || $titleSort) {
+				$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
+			}
 		}
-		
-		// For some /top requests, pull in the parent item's items row
-		if ($onlyTopLevel && ($params['format'] == 'keys' || $params['format'] == 'versions' || $parentItemSort)) {
-			$sql .= "LEFT JOIN items IP ON ($itemIDSelector=IP.itemID) ";
+		else {
+			if ($onlyTopLevel || !empty($params['q']) || $titleSort) {
+				$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
+			}
+			
+			if ($onlyTopLevel && ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort)) {
+				$sql .= "LEFT JOIN items IP ON ($itemIDSelector=IP.itemID) ";
+			}
 		}
 		
 		// Pull in titles
@@ -467,7 +493,12 @@ class Zotero_Items {
 				case 'dateModified':
 				case 'serverDateModified':
 					if ($onlyTopLevel) {
-						$orderSQL = "IP." . $params['sort'];
+						if ($ITL) {
+							$orderSQL = "ITLI." . $params['sort'];
+						}
+						else {
+							$orderSQL = "IP." . $params['sort'];
+						}
 					}
 					else {
 						$orderSQL = "I." . $params['sort'];
@@ -523,7 +554,12 @@ class Zotero_Items {
 						$orderSQL = "TCBU.username";
 					}
 					else {
-						$orderSQL = ($onlyTopLevel ? "IP" : "I") . ".dateAdded";
+						if ($ITL) {
+							$orderSQL = ($onlyTopLevel ? "ITLI" : "I") . ".dateAdded";
+						}
+						else {
+							$orderSQL = ($onlyTopLevel ? "IP" : "I") . ".dateAdded";
+						}
 					}
 					break;
 				
@@ -705,6 +741,44 @@ class Zotero_Items {
 			
 			Zotero_Notifier::trigger('modify', 'item', $libraryKeys);
 		}
+	}
+	
+	
+	/**
+	 * Set the top-level item for a set of items
+	 *
+	 * @param {Integer[]} $itemIDs
+	 * @param {Integer} $topLevelItemID
+	 */
+	public static function setTopLevelItem($itemIDs, $topLevelItemID, $shardID) {
+		if (!$itemIDs) return;
+		
+		// TEMP
+		if (!Zotero_DB::tableExists('itemTopLevel', $shardID)) {
+			return;
+		}
+		
+		$params = [];
+		$sql = "INSERT INTO itemTopLevel (itemID, topLevelItemID) "
+			. "VALUES " . implode(", ", array_fill(0, sizeOf($itemIDs), "(?, ?)")) . " "
+			. "ON DUPLICATE KEY UPDATE topLevelItemID=VALUES(topLevelItemID)";
+		$stmt = Zotero_DB::getStatement($sql, false, $shardID);
+		foreach ($itemIDs as $itemID) {
+			$params[] = $itemID;
+			$params[] = $topLevelItemID;
+		}
+		$stmt->execute($params);
+	}
+	
+	
+	public static function clearTopLevelItem($itemID, $shardID) {
+		// TEMP
+		if (!Zotero_DB::tableExists('itemTopLevel', $shardID)) {
+			return;
+		}
+		
+		$sql = "DELETE FROM itemTopLevel WHERE itemID=?";
+		Zotero_DB::query($sql, $itemID, $shardID);
 	}
 	
 	
@@ -1747,7 +1821,9 @@ class Zotero_Items {
 					$item->setNote($val);
 					break;
 				
+				//
 				// Attachment properties
+				//
 				case 'linkMode':
 					$item->attachmentLinkMode = Zotero_Attachments::linkModeNameToNumber($val, true);
 					break;
@@ -1777,6 +1853,19 @@ class Zotero_Items {
 						continue;
 					}
 					$item->attachmentStorageModTime = $val;
+					break;
+				
+				//
+				// Annotation properties
+				//
+				case 'annotationType':
+				case 'annotationText':
+				case 'annotationComment':
+				case 'annotationColor':
+				case 'annotationPageLabel':
+				case 'annotationSortIndex':
+				case 'annotationPosition':
+					$item->$key = $val;
 					break;
 				
 				case 'dateModified':
@@ -1874,6 +1963,18 @@ class Zotero_Items {
 	}
 	
 	
+	/**
+	 * Check for problems in the provided JSON
+	 *
+	 * Most checks should be performed in the data layer, either when setting property values or
+	 * at save time, but these checks are helpful for 1) bailing quickly on obvious problems and
+	 * 2) checking for problems that can't easily be detected in the data layer but that might
+	 * indicate the API client is doing something wrong (e.g., an empty property that shouldn't be
+	 * present, even if it would be ignored when saving).
+	 *
+	 * The catch here is that updates can be partial with POST/PATCH, so checks that depend on
+	 * other values have to check values on both the JSON and, if it's an update, the existing item.
+	 */
 	private static function validateJSONItem($json, $libraryID, Zotero_Item $item=null, $isChild, $requestParams, $partialUpdate=false) {
 		$isNew = !$item || !$item->version;
 		
@@ -1922,10 +2023,7 @@ class Zotero_Items {
 			$requiredProps = [];
 		}
 		else if (isset($json->itemType) && $json->itemType == "attachment") {
-			$requiredProps = array('linkMode', 'tags');
-		}
-		else if (isset($json->itemType) && $json->itemType == "attachment") {
-			$requiredProps = array('tags');
+			$requiredProps = ['linkMode'];
 		}
 		else if ($isNew) {
 			$requiredProps = array('itemType');
@@ -1995,10 +2093,11 @@ class Zotero_Items {
 						switch ($val) {
 							case 'note':
 							case 'attachment':
+							case 'annotation':
 								break;
 							
 							default:
-								throw new Exception("Child item must be note or attachment", Z_ERROR_INVALID_INPUT);
+								throw new Exception("Child item must be note, attachment, or annotation", Z_ERROR_INVALID_INPUT);
 						}
 					}
 					break;
@@ -2175,6 +2274,15 @@ class Zotero_Items {
 						default:
 							throw new Exception("'note' property is valid only for note and attachment items", Z_ERROR_INVALID_INPUT);
 					}
+					
+					if ($itemType == 'attachment') {
+						$linkMode = isset($json->linkMode)
+							? strtolower($json->linkMode)
+							: $item->attachmentLinkMode;
+						if ($linkMode == 'embedded_image' && $val !== '') {
+							throw new Exception("'note' property is not valid for embedded images", Z_ERROR_INVALID_INPUT);
+						}
+					}
 					break;
 				
 				case 'attachments':
@@ -2278,8 +2386,8 @@ class Zotero_Items {
 						case 'filename':
 						case 'md5':
 						case 'mtime':
-							if (strpos($linkMode, 'imported_') !== 0) {
-								throw new Exception("'$key' is valid only for imported attachment items", Z_ERROR_INVALID_INPUT);
+							if (strpos($linkMode, 'imported_') !== 0 && $linkMode != 'embedded_image') {
+								throw new Exception("'$key' is valid only for imported and embedded-image attachments", Z_ERROR_INVALID_INPUT);
 							}
 							break;
 						
@@ -2307,6 +2415,16 @@ class Zotero_Items {
 							break;
 					}
 					
+					if ($linkMode == 'embedded_image') {
+						switch ($key) {
+							case 'charset':
+								if ($val !== '') {
+									throw new Exception("'$key' is not valid for embedded images", Z_ERROR_INVALID_INPUT);
+								}
+								break;
+						}
+					}
+					
 					if ($key == 'mtime' || $key == 'md5') {
 						if ($item && $item->$propName !== $val && is_null($val)) {
 							//throw new Exception("Cannot change existing '$key' to null", Z_ERROR_INVALID_INPUT);
@@ -2316,6 +2434,26 @@ class Zotero_Items {
 						if ($val && !preg_match("/^[a-f0-9]{32}$/", $val)) {
 							throw new Exception("'$val' is not a valid MD5 hash", Z_ERROR_INVALID_INPUT);
 						}
+					}
+					break;
+				
+				// Annotation properties
+				case 'annotationType':
+				case 'annotationText':
+				case 'annotationComment':
+				case 'annotationColor':
+				case 'annotationPageLabel':
+				case 'annotationSortIndex':
+				case 'annotationPosition':
+					if ($itemType != 'annotation') {
+						throw new Exception("'$key' is valid only for annotation items", Z_ERROR_INVALID_INPUT);
+					}
+					if ($key == 'annotationText'
+							&& ($isNew ? $json->annotationType != 'highlight' : $item->annotationType != 'highlight')) {
+						throw new Exception(
+							"'$key' can only be set for highlight annotations",
+							Z_ERROR_INVALID_INPUT
+						);
 					}
 					break;
 				

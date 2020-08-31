@@ -107,7 +107,7 @@ class Zotero_ItemTypes {
 	public static function getAll($locale=false) {
 		$sql = "SELECT itemTypeID AS id, itemTypeName AS name FROM itemTypes";
 		// TEMP - skip attachment and nsfReviewer
-		$sql .= " WHERE itemTypeName NOT IN ('attachment') AND itemTypeID < 10000";
+		$sql .= " WHERE itemTypeName NOT IN ('attachment', 'annotation') AND itemTypeID < 10000";
 		$rows = Zotero_DB::query($sql);
 		
 		// TODO: cache

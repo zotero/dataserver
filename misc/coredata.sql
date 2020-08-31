@@ -65,6 +65,7 @@ INSERT INTO `itemTypes` (`itemTypeID`, `itemTypeName`, `custom`) VALUES
 (34, 'document', 0),
 (35, 'encyclopediaArticle', 0),
 (36, 'dictionaryEntry', 0),
+(37, 'annotation', 0),
 (10001, 'nsfReviewer', 1);
 
 INSERT INTO `creatorTypes` (`creatorTypeID`, `creatorTypeName`, `custom`) VALUES

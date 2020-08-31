@@ -23,7 +23,7 @@
 
 
 --
--- IMPORTANT: All tables added here must be added to Zotero_Shards::moveLibrary()!
+-- IMPORTANT: All tables added here must be added to Zotero_Shards::copyLibrary()!
 --
 
 CREATE TABLE `collectionItems` (
@@ -114,7 +114,7 @@ CREATE TABLE `publicationsItems` (
 CREATE TABLE `itemAttachments` (
   `itemID` int(10) unsigned NOT NULL,
   `sourceItemID` int(10) unsigned DEFAULT NULL,
-  `linkMode` enum('IMPORTED_FILE','IMPORTED_URL','LINKED_FILE','LINKED_URL') NOT NULL,
+  `linkMode` enum('IMPORTED_FILE','IMPORTED_URL','LINKED_FILE','LINKED_URL','EMBEDDED_IMAGE'),
   `mimeType` varchar(255) NOT NULL,
   `charsetID` tinyint(3) unsigned DEFAULT NULL,
   `path` blob NOT NULL,
@@ -125,6 +125,20 @@ CREATE TABLE `itemAttachments` (
   KEY `charsetID` (`charsetID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
+CREATE TABLE `itemAnnotations` (
+  `itemID` int(10) unsigned NOT NULL,
+  `parentItemID` int(10) unsigned NOT NULL,
+  `type` enum('highlight','note','image') CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `text` varchar(10000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
+  `comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
+  `color` char(6) CHARACTER SET ascii NOT NULL,
+  `pageLabel` varchar(50) NOT NULL,
+  `sortIndex` varchar(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `position` varchar(20000) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`itemID`),
+  KEY `parentItemID` (`parentItemID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 CREATE TABLE `itemCreators` (
@@ -213,6 +227,14 @@ CREATE TABLE `itemTags` (
   PRIMARY KEY (`itemID`,`tagID`),
   KEY `tagID` (`tagID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+CREATE TABLE `itemTopLevel` (
+  `itemID` int(10) unsigned NOT NULL,
+  `topLevelItemID` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`itemID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 
@@ -376,6 +398,10 @@ ALTER TABLE `groupItems`
 ALTER TABLE `publicationsItems`
   ADD CONSTRAINT `publicationsItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;
 
+ALTER TABLE `itemAnnotations`
+  ADD CONSTRAINT `itemAnnotations_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `itemAnnotations_ibfk_2` FOREIGN KEY (`parentItemID`) REFERENCES `itemAttachments` (`itemID`);
+
 ALTER TABLE `itemAttachments`
   ADD CONSTRAINT `itemAttachments_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE,
   ADD CONSTRAINT `itemAttachments_ibfk_2` FOREIGN KEY (`sourceItemID`) REFERENCES `items` (`itemID`) ON DELETE SET NULL;
@@ -407,6 +433,10 @@ ALTER TABLE `items`
 ALTER TABLE `itemTags`
   ADD CONSTRAINT `itemTags_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE,
   ADD CONSTRAINT `itemTags_ibfk_2` FOREIGN KEY (`tagID`) REFERENCES `tags` (`tagID`) ON DELETE CASCADE;
+
+ALTER TABLE `itemTopLevel`
+  ADD CONSTRAINT `itemTopLevel_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `itemTopLevel_ibfk_2` FOREIGN KEY (`topLevelItemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;
 
 ALTER TABLE `relations`
   ADD CONSTRAINT `relations_ibfk_1` FOREIGN KEY (`libraryID`) REFERENCES `shardLibraries` (`libraryID`) ON DELETE CASCADE;

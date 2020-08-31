@@ -31,7 +31,8 @@ class Zotero_Attachments {
 		0 => "imported_file",
 		1 => "imported_url",
 		2 => "linked_file",
-		3 => "linked_url"
+		3 => "linked_url",
+		4 => "embedded_image"
 	);
 	
 	public static function linkModeNumberToName($number) {

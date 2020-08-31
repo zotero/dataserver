@@ -43,7 +43,7 @@ class MappingsController extends ApiController {
 			$itemType = $_GET['itemType'];
 			
 			$itemTypeID = Zotero_ItemTypes::getID($itemType);
-			if (!$itemTypeID) {
+			if (!$itemTypeID || $itemType == 'annotation') {
 				$this->e400("Invalid item type '$itemType'");
 			}
 		}
@@ -56,7 +56,7 @@ class MappingsController extends ApiController {
 			$itemType = $_GET['itemType'];
 			
 			$itemTypeID = Zotero_ItemTypes::getID($itemType);
-			if (!$itemTypeID) {
+			if (!$itemTypeID || $itemType == 'annotation') {
 				$this->e400("Invalid item type '$itemType'");
 			}
 			
@@ -158,7 +158,22 @@ class MappingsController extends ApiController {
 				$linkMode = Zotero_Attachments::linkModeNameToNumber($linkModeName);
 			}
 			catch (Exception $e) {
-				$this->e400("Invalid linkMode '$linkModeName'");
+				$this->e400("Invalid linkMode '$linkModeName'", Z_ERROR_INVALID_INPUT);
+			}
+		}
+		else if ($itemType == 'annotation') {
+			if (empty($_GET['annotationType'])) {
+				throw new Exception("annotationType required for itemType=annotation", Z_ERROR_INVALID_INPUT);
+			}
+			$annotationType = $_GET['annotationType'];
+			switch ($annotationType) {
+				case 'highlight':
+				case 'note':
+				case 'image':
+					break;
+				
+				default:
+					throw new Exception("Invalid annotationType '$annotationType'", Z_ERROR_INVALID_INPUT);
 			}
 		}
 		
@@ -177,6 +192,9 @@ class MappingsController extends ApiController {
 		if ($itemType == 'attachment') {
 			$cacheKey .= "_" . $linkMode;
 		}
+		else if ($itemType == 'annotation') {
+			$cacheKey .= "_" . $annotationType;
+		}
 		$cacheKey .= '_' . $this->apiVersion;
 		$ttl = 60;
 		$json = Z_Core::$MC->get($cacheKey);
@@ -194,6 +212,7 @@ class MappingsController extends ApiController {
 		if ($itemType == 'attachment') {
 			$json['linkMode'] = $linkModeName;
 		}
+		$isEmbeddedImage = $itemType == 'attachment' && $json['linkMode'] == 'embedded_image';
 		
 		$fieldIDs = Zotero_ItemFields::getItemTypeFields($itemTypeID);
 		$first = true;
@@ -225,6 +244,31 @@ class MappingsController extends ApiController {
 			}
 		}
 		
+		if ($isEmbeddedImage) {
+			$json['parentItem'] = '';
+		}
+		else if ($itemType == 'annotation') {
+			$json['parentItem'] = '';
+			$json['annotationType'] = $annotationType;
+			
+			if ($annotationType == 'highlight') {
+				$json['annotationText'] = '';
+			}
+			
+			$json['annotationComment'] = '';
+			$json['annotationColor'] = '';
+			$json['annotationPageLabel'] = '';
+			$json['annotationSortIndex'] = '00000|000000|00000';
+			$json['annotationPosition'] = [
+				'pageIndex' => 0,
+				'rects' => []
+			];
+			if ($annotationType == 'image') {
+				$json['annotationPosition']['width'] = 0;
+				$json['annotationPosition']['height'] = 0;
+			}
+		}
+		
 		if ($itemType == 'note' || $itemType == 'attachment') {
 			$json['note'] = '';
 		}
@@ -250,12 +294,25 @@ class MappingsController extends ApiController {
 				$json['path'] = '';
 			}
 			
-			if (preg_match('/^imported_/', $linkModeName)) {
+			if (preg_match('/^imported_/', $linkModeName) || $isEmbeddedImage) {
 				$json['filename'] = '';
 				$json['md5'] = null;
 				$json['mtime'] = null;
 				//$json['zip'] = false;
 			}
+			
+			if ($isEmbeddedImage) {
+				$toRemove = [
+					'title', 'url', 'accessDate', 'tags', 'collections', 'relations', 'note', 'charset'
+				];
+				foreach ($toRemove as $prop) {
+					unset($json[$prop]);
+				}
+			}
+		}
+		else if ($itemType == 'annotation') {
+			unset($json['collections']);
+			unset($json['relations']);
 		}
 		
 		header("Content-Type: application/json");

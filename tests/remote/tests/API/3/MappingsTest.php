@@ -41,24 +41,103 @@ class MappingsTests extends APITests {
 		$this->assertEquals('book', $json->itemType);
 	}
 	
-	public function testNewItemAttachment() {
-		$response = API::get("items/new?itemType=attachment");
-		$this->assert400($response);
-		
-		$response = API::get("items/new?itemType=attachment&linkMode=invalidLinkMode");
-		$this->assert400($response);
-		
-		$response = API::get("items/new?itemType=attachment&linkMode=linked_url");
+	public function test_should_return_a_note_template() {
+		$response = API::get("items/new?itemType=note");
 		$this->assert200($response);
+		$this->assertContentType('application/json', $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals('note', $json['itemType']);
+		$this->assertArrayHasKey('note', $json);
+	}
+	
+	public function test_should_return_attachment_fields() {
+		$response = API::get("items/new?itemType=attachment&linkMode=linked_url");
 		$json = json_decode($response->getBody());
-		$this->assertNotNull($json);
-		$this->assertObjectHasAttribute('url', $json);
+		$this->assertSame('', $json->url);
+		$this->assertObjectNotHasAttribute('filename', $json);
+		$this->assertObjectNotHasAttribute('path', $json);
 		
 		$response = API::get("items/new?itemType=attachment&linkMode=linked_file");
-		$this->assert200($response);
 		$json = json_decode($response->getBody());
-		$this->assertNotNull($json);
+		$this->assertSame('', $json->path);
+		$this->assertObjectNotHasAttribute('filename', $json);
 		$this->assertObjectNotHasAttribute('url', $json);
+		
+		$response = API::get("items/new?itemType=attachment&linkMode=imported_url");
+		$json = json_decode($response->getBody());
+		$this->assertSame('', $json->filename);
+		$this->assertSame('', $json->url);
+		$this->assertObjectNotHasAttribute('path', $json);
+		
+		$response = API::get("items/new?itemType=attachment&linkMode=imported_file");
+		$json = json_decode($response->getBody());
+		$this->assertSame('', $json->filename);
+		$this->assertObjectNotHasAttribute('path', $json);
+		$this->assertObjectNotHasAttribute('url', $json);
+		
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
+		$json = json_decode($response->getBody());
+		$this->assertObjectNotHasAttribute('title', $json);
+		$this->assertObjectNotHasAttribute('url', $json);
+		$this->assertObjectNotHasAttribute('accessDate', $json);
+		$this->assertObjectNotHasAttribute('tags', $json);
+		$this->assertObjectNotHasAttribute('collections', $json);
+		$this->assertObjectNotHasAttribute('relations', $json);
+		$this->assertObjectNotHasAttribute('note', $json);
+		$this->assertObjectNotHasAttribute('charset', $json);
+		$this->assertObjectNotHasAttribute('path', $json);
+	}
+	
+	//
+	// Annotations
+	//
+	public function test_should_reject_missing_annotation_type() {
+		$response = API::get("items/new?itemType=annotation");
+		$this->assert400($response);
+	}
+	
+	public function test_should_reject_unknown_annotation_type() {
+		$response = API::get("items/new?itemType=annotation&annotationType=foo");
+		$this->assert400($response);
+	}
+	
+	public function test_should_return_fields_for_all_annotation_types() {
+		foreach (['highlight', 'note', 'image'] as $type) {
+			$response = API::get("items/new?itemType=annotation&annotationType=$type");
+			$json = API::getJSONFromResponse($response);
+			
+			$this->assertArrayHasKey('annotationComment', $json);
+			$this->assertEquals('', $json['annotationComment']);
+			$this->assertEquals('', $json['annotationColor']);
+			$this->assertEquals('', $json['annotationPageLabel']);
+			$this->assertEquals('00000|000000|00000', $json['annotationSortIndex']);
+			$this->assertArrayHasKey('annotationPosition', $json);
+			$this->assertEquals(0, $json['annotationPosition']['pageIndex']);
+			$this->assertIsArray($json['annotationPosition']['rects']);
+			$this->assertArrayNotHasKey('collections', $json);
+			$this->assertArrayNotHasKey('relations', $json);
+		}
+	}
+	
+	public function test_should_return_fields_for_highlight_annotations() {
+		$response = API::get("items/new?itemType=annotation&annotationType=highlight");
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayHasKey('annotationText', $json);
+		$this->assertEquals('', $json['annotationText']);
+	}
+	
+	public function test_should_return_fields_for_note_annotations() {
+		$response = API::get("items/new?itemType=annotation&annotationType=highlight");
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayHasKey('annotationText', $json);
+		$this->assertEquals('', $json['annotationText']);
+	}
+	
+	public function test_should_return_fields_for_image_annotations() {
+		$response = API::get("items/new?itemType=annotation&annotationType=image");
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals(0, $json['annotationPosition']['width']);
+		$this->assertEquals(0, $json['annotationPosition']['height']);
 	}
 	
 	public function testComputerProgramVersion() {

@@ -1592,6 +1592,89 @@ class FileTests extends APITests {
 	}
 	
 	
+	public function test_add_embedded_image_attachment() {
+		API::userClear(self::$config['userID']);
+		
+		$noteKey = API::createNoteItem("", null, $this, 'key');
+		
+		$file = "work/file";
+		$fileContents = self::getRandomUnicodeString();
+		$contentType = "image/png";
+		file_put_contents($file, $fileContents);
+		$hash = md5($fileContents);
+		$filename = "image.png";
+		$mtime = filemtime($file) * 1000;
+		$size = filesize($file);
+		
+		$json = API::createAttachmentItem("embedded_image", [
+			'parentItem' => $noteKey,
+			'contentType' => $contentType
+		], false, $this, 'jsonData');
+		$key = $json['key'];
+		$originalVersion = $json['version'];
+		
+		// Get authorization
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => $hash,
+				"mtime" => $mtime,
+				"filename" => $filename,
+				"filesize" => $size
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		
+		self::$toDelete[] = "$hash";
+		
+		//
+		// Upload to S3
+		//
+		$response = HTTP::post(
+			$json['url'],
+			$json['prefix'] . $fileContents . $json['suffix'],
+			[
+				"Content-Type: {$json['contentType']}"
+			]
+		);
+		$this->assert201($response);
+		
+		//
+		// Register upload
+		//
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			"upload=" . $json['uploadKey'],
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert204($response);
+		$newVersion = $response->getHeader('Last-Modified-Version');
+		$this->assertGreaterThan($originalVersion, $newVersion);
+		
+		// Verify attachment item metadata
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key"
+		);
+		$json = API::getJSONFromResponse($response)['data'];
+		$this->assertEquals($hash, $json['md5']);
+		$this->assertEquals($mtime, $json['mtime']);
+		$this->assertEquals($filename, $json['filename']);
+		$this->assertEquals($contentType, $json['contentType']);
+		$this->assertArrayNotHasKey('charset', $json);
+	}
+	
+	
 	public function test_replace_file_with_new_file() {
 		API::userClear(self::$config['userID']);
 		

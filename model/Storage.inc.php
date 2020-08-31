@@ -32,7 +32,7 @@ class Zotero_Storage {
 	
 	public static function getDownloadDetails($item) {
 		// TODO: get attachment link mode value from somewhere
-		if (!$item->isAttachment() || !$item->isImportedAttachment()) {
+		if (!$item->isAttachment() || !$item->isStoredFileAttachment()) {
 			return false;
 		}
 		$sql = "SELECT storageFileID FROM storageFileItems WHERE itemID=?";
@@ -582,7 +582,7 @@ class Zotero_Storage {
 	
 	
 	public static function updateFileItemInfo($item, $storageFileID, Zotero_StorageFileInfo $info, $client=false) {
-		if (!$item->isImportedAttachment()) {
+		if (!$item->isStoredFileAttachment()) {
 			throw new Exception("Cannot add storage file for linked file/URL");
 		}
 		
@@ -714,6 +714,7 @@ class Zotero_Storage {
 		switch ($linkMode) {
 		case "imported_file":
 		case "imported_url":
+		case "embedded_image":
 			break;
 		
 		default:

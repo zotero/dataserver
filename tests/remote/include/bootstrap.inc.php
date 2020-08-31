@@ -5,6 +5,7 @@ require 'include/config.inc.php';
 mb_language('uni');
 mb_internal_encoding('UTF-8');
 date_default_timezone_set('UTC');
+ini_set('serialize_precision', -1);
 require '../../model/Date.inc.php';
 require '../../model/Utilities.inc.php';
 

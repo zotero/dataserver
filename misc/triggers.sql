@@ -74,9 +74,10 @@ CREATE TRIGGER fki_itemAttachments
     SELECT not_an_attachment INTO @failure FROM items;
     END IF;
     
-    -- Make sure parent is a regular item
-    IF (NEW.sourceItemID IS NOT NULL AND (SELECT itemTypeID FROM items WHERE itemID = NEW.sourceItemID) IN (1,14)) THEN
-    SELECT parent_not_regular_item INTO @failure FROM items;
+    -- If there's a parent, reject if it's an attachment or it's a note and this isn't an embedded-image attachment
+    SET @parentItemTypeID = IF(NEW.sourceItemID IS NULL, NULL, (SELECT itemTypeID FROM items WHERE itemID = NEW.sourceItemID));
+    IF (@parentItemTypeID = 14 OR (@parentItemTypeID = 1 AND NEW.linkMode != 'EMBEDDED_IMAGE')) THEN
+    SELECT invalid_parent INTO @failure FROM items;
     END IF;
     
     -- If child, make sure attachment is not in a collection
@@ -93,9 +94,10 @@ CREATE TRIGGER fku_itemAttachments_libraryID
     SELECT libraryIDs_do_not_match INTO @failure FROM itemAttachments;
     END IF;
     
-    -- Make sure parent is a regular item
-    IF (NEW.sourceItemID IS NOT NULL AND (SELECT itemTypeID FROM items WHERE itemID = NEW.sourceItemID) IN (1,14)) THEN
-    SELECT parent_not_regular_item INTO @failure FROM items;
+    -- If there's a parent, reject if it's an attachment or it's a note and this isn't an embedded-image attachment
+    SET @parentItemTypeID = IF(NEW.sourceItemID IS NULL, NULL, (SELECT itemTypeID FROM items WHERE itemID = NEW.sourceItemID));
+    IF (@parentItemTypeID = 14 OR (@parentItemTypeID = 1 AND NEW.linkMode != 'EMBEDDED_IMAGE')) THEN
+    SELECT invalid_parent INTO @failure FROM items;
     END IF;
     
     -- If child, make sure attachment is not in a collection

@@ -825,7 +825,7 @@ class ItemTests extends APITests {
 			)),
 			array("Content-Type: application/json")
 		);
-		$this->assert400ForObject($response, "'md5' is valid only for imported attachment items");
+		$this->assert400ForObject($response, "'md5' is valid only for imported and embedded-image attachments");
 	}
 	
 	
@@ -848,39 +848,7 @@ class ItemTests extends APITests {
 			)),
 			array("Content-Type: application/json")
 		);
-		$this->assert400ForObject($response, "'mtime' is valid only for imported attachment items");
-	}
-	
-	
-	public function test_should_not_allow_changing_storage_properties_in_group_libraries() {
-		$key = API::groupCreateItem(
-			self::$config['ownedPrivateGroupID'], "book", $this, 'key'
-		);
-		$xml = API::groupCreateAttachmentItem(
-			self::$config['ownedPrivateGroupID'], "imported_url", [], $key, $this
-		);
-		$newItemData = API::parseDataFromAtomEntry($xml);
-		
-		$key = $newItemData['key'];
-		$version = $newItemData['version'];
-		$json = json_decode($newItemData['content']);
-		
-		$props = ["md5", "mtime"];
-		foreach ($props as $prop) {
-			$json2 = clone $json;
-			$json2->$prop = "new" . ucwords($prop);
-			$response = API::groupPut(
-				self::$config['ownedPrivateGroupID'],
-				"items/$key?key=" . self::$config['apiKey'],
-				json_encode($json2),
-				array(
-					"Content-Type: application/json",
-					"If-Unmodified-Since-Version: $version"
-				)
-			);
-			$this->assert400($response);
-			$this->assertEquals("Cannot change '$prop' directly in group library", $response->getBody());
-		}
+		$this->assert400ForObject($response, "'mtime' is valid only for imported and embedded-image attachments");
 	}
 	
 	

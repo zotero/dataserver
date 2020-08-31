@@ -62,8 +62,20 @@ class Zotero_Item extends Zotero_DataObject {
 		'filename' => null
 	);
 	
+	private $annotationData = [
+		'type' => null,
+		'text' => null,
+		'comment' => null,
+		'color' => null,
+		'pageLabel' => null,
+		'sortIndex' => null,
+		'position' => null
+	];
+	private $annotationTitle = null;
+	
 	private $numNotes;
 	private $numAttachments;
+	private $numAnnotations;
 	
 	protected $collections = [];
 	protected $tags = [];
@@ -143,6 +155,18 @@ class Zotero_Item extends Zotero_DataObject {
 			case 'attachmentStorageHash':
 				return $this->getAttachmentStorageHash();
 			
+			case 'annotationType':
+			case 'annotationText':
+			case 'annotationComment':
+			case 'annotationColor':
+			case 'annotationPageLabel':
+			case 'annotationSortIndex':
+			case 'annotationPosition':
+				// Strip 'annotation'
+				$field = substr($field, 10);
+				$field[0] = strtolower($field[0]);
+				return $this->getAnnotationField($field);
+			
 			case 'relatedItems':
 				return $this->getRelatedItems();
 			
@@ -189,6 +213,17 @@ class Zotero_Item extends Zotero_DataObject {
 			case 'attachmentMIMEType':
 				return $this->setAttachmentField('mimeType', $val);
 			
+			case 'annotationType':
+			case 'annotationText':
+			case 'annotationComment':
+			case 'annotationColor':
+			case 'annotationPageLabel':
+			case 'annotationSortIndex':
+			case 'annotationPosition':
+				$field = substr($field, 10);
+				$field[0] = strtolower($field[0]);
+				return $this->setAnnotationField($field, $val);
+			
 			case 'relatedItems':
 				return $this->setRelatedItems($val);
 		}
@@ -216,6 +251,12 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				default:
 					return '';
+			}
+		}
+		else if ($this->isAnnotation()) {
+			switch ($field) {
+				case 'title':
+					return $this->getAnnotationTitle();
 			}
 		}
 		
@@ -697,7 +738,6 @@ class Zotero_Item extends Zotero_DataObject {
 		//
 		// itemData field
 		//
-		
 		if ($field == 'accessDate' && Zotero_Date::isISO8601($value)) {
 			$value = Zotero_Date::iso8601ToSQL($value);
 		}
@@ -784,12 +824,41 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
+	public function isFileAttachment() {
+		if (!$this->isAttachment()) return false;
+		$name = $this->attachmentLinkMode;
+		return $name != "linked_url";
+	}
+	
+	
 	public function isImportedAttachment() {
-		if (!$this->isAttachment()) {
-			return false;
-		}
+		if (!$this->isAttachment()) return false;
 		$name = $this->attachmentLinkMode;
 		return $name == "imported_file" || $name == "imported_url";
+	}
+	
+	
+	public function isStoredFileAttachment() {
+		if (!$this->isAttachment()) return false;
+		$name = $this->attachmentLinkMode;
+		return $name == "imported_file" || $name == "imported_url" || $name == "embedded_image";
+	}
+	
+	
+	public function isEmbeddedImageAttachment() {
+		if (!$this->isAttachment()) return false;
+		$name = $this->attachmentLinkMode;
+		return $name == "embedded_image";
+	}
+	
+	
+	public function isAnnotation() {
+		return Zotero_ItemTypes::getName($this->getField('itemTypeID')) == 'annotation';
+	}
+	
+	
+	public function isImageAnnotation() {
+		return $this->isAnnotation() && $this->annotationType == 'image';
 	}
 	
 	
@@ -1205,6 +1274,13 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Note
 				if ($this->isNote() || !empty($this->changed['note'])) {
+					if (!$this->isNote() && !$this->isAttachment()) {
+						throw new Exception("Only notes and attachments can have notes");
+					}
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception("Embedded image attachments cannot have notes");
+					}
+					
 					if (!is_string($this->noteText)) {
 						$this->noteText = '';
 					}
@@ -1272,6 +1348,7 @@ class Zotero_Item extends Zotero_DataObject {
 					$sql = "INSERT INTO itemAttachments
 							(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash)
 							VALUES (?,?,?,?,?,?,?,?)";
+					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
 					$parent = $this->getSource();
 					if ($parent) {
 						$parentItem = Zotero_Items::get($this->_libraryID, $parent);
@@ -1279,16 +1356,31 @@ class Zotero_Item extends Zotero_DataObject {
 							throw new Exception("Parent item $parent not found");
 						}
 						if ($parentItem->getSource()) {
-							$parentKey = $parentItem->key;
-							throw new Exception("=Parent item $parentKey cannot be a child attachment", Z_ERROR_INVALID_INPUT);
+							// Only embedded-image attachments can have child items as parents
+							if (!$isEmbeddedImage) {
+								$parentKey = $parentItem->key;
+								throw new Exception("=Parent item $parentKey cannot be a child item", Z_ERROR_INVALID_INPUT);
+							}
 						}
-						if (!$parentItem->isRegularItem()) {
+						// Parent item must be a regular item, or, if this is an embedded image, an
+						// image annotation or note
+						if (!($parentItem->isRegularItem()
+								|| ($isEmbeddedImage &&
+									($parentItem->isImageAnnotation() || $parentItem->isNote())))) {
 							throw new Exception(
 								// Keep in sync with Errors.inc.php
 								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
 								Z_ERROR_INVALID_ITEM_PARENT
 							);
 						}
+					}
+					else if ($isEmbeddedImage) {
+						throw new Exception("Embedded-image attachment must have a parent item", Z_ERROR_INVALID_INPUT);
+					}
+					
+					$contentType = $this->attachmentContentType;
+					if ($isEmbeddedImage && strpos($contentType, 'image/') !== 0) {
+						throw new Exception("Embedded-image attachment must have an image content type", Z_ERROR_INVALID_INPUT);
 					}
 					
 					$linkMode = Zotero_Attachments::linkModeNameToNumber($this->attachmentLinkMode);
@@ -1308,6 +1400,61 @@ class Zotero_Item extends Zotero_DataObject {
 						$storageHash ? $storageHash : null
 					);
 					Zotero_DB::query($sql, $bindParams, $shardID);
+				}
+				
+				// Annotation
+				if ($this->isAnnotation()) {
+					$parent = $this->getSource();
+					if (!$parent) {
+						throw new Exception("Annotation item must have a parent item", Z_ERROR_INVALID_INPUT);
+					}
+					$parentItem = Zotero_Items::get($this->_libraryID, $parent);
+					if (!$parentItem) {
+						throw new Exception("Parent item $this->_libraryID/$parent not found");
+					}
+					if (!$parentItem->isFileAttachment()) {
+						throw new Exception(
+							"Parent item $parentItem->libraryKey of annotation must be a file attachment",
+							Z_ERROR_INVALID_INPUT
+						);
+					}
+					if ($parentItem->attachmentContentType != 'application/pdf') {
+						throw new Exception(
+							"Parent item $parentItem->libraryKey of annotation must be a PDF",
+							Z_ERROR_INVALID_INPUT
+						);
+					}
+					if (!empty($this->annotationText) && $this->annotationType != 'highlight') {
+						throw new Exception(
+							"'annotationText' can only be set for highlight annotations",
+							Z_ERROR_INVALID_INPUT
+						);
+					}
+					
+					$color = $this->annotationColor;
+					if ($color) {
+						// Strip '#' from hex color
+						if (!preg_match('/^#[0-9a-f]{6}$/', $color)) {
+							trigger_error("Invalid annotationColor", E_USER_ERROR);
+						}
+						$color = substr($color, 1);
+					}
+					
+					$sql = "INSERT INTO itemAnnotations "
+						. "(itemID, parentItemID, `type`, text, comment, color, pageLabel, sortIndex, position) "
+						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+					$params = [
+						$itemID,
+						$parent,
+						$this->annotationType,
+						$this->annotationText,
+						$this->annotationComment,
+						$color,
+						$this->annotationPageLabel,
+						$this->annotationSortIndex,
+						$this->annotationPosition,
+					];
+					Zotero_DB::query($sql, $params, $shardID);
 				}
 				
 				// Sort fields
@@ -1337,11 +1484,27 @@ class Zotero_Item extends Zotero_DataObject {
 						case 'attachment':
 							$newSourceItem->incrementAttachmentCount();
 							break;
+						case 'annotation':
+							$newSourceItem->incrementAnnotationCount();
+							break;
 					}
+					
+					// Set the top-level item id, which is used in searches
+					$topLevelItemID = $sourceItemID;
+					$topLevelItem = $newSourceItem;
+					while ($nextID = $topLevelItem->getSource()) {
+						$topLevelItemID = $nextID;
+						$topLevelItem = Zotero_Items::get($this->_libraryID, $topLevelItemID);
+					}
+					Zotero_Items::setTopLevelItem([$itemID], $topLevelItemID, $shardID);
 				}
 				
 				// Collections
 				if (!empty($this->changed['collections'])) {
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception("Embedded image attachments cannot be assigned to collections");
+					}
+					
 					foreach ($this->collections as $collectionKey) {
 						$collection = Zotero_Collections::getByLibraryAndKey($this->_libraryID, $collectionKey);
 						if (!$collection) {
@@ -1356,6 +1519,10 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Tags
 				if (!empty($this->changed['tags'])) {
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception("Embedded image attachments cannot have tags");
+					}
+					
 					foreach ($this->tags as $tag) {
 						$tagID = Zotero_Tags::getID($this->libraryID, $tag->name, $tag->type);
 						if ($tagID) {
@@ -1374,6 +1541,10 @@ class Zotero_Item extends Zotero_DataObject {
  				
 				// Related items
 				if (!empty($this->changed['relations'])) {
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception("Embedded image attachments cannot have relations");
+					}
+					
 					$uri = Zotero_URI::getItemURI($this);
 					
 					$sql = "INSERT IGNORE INTO relations "
@@ -1624,6 +1795,13 @@ class Zotero_Item extends Zotero_DataObject {
 				// Note or attachment note
 				//
 				if (!empty($this->changed['note'])) {
+					if (!$this->isNote() && !$this->isAttachment()) {
+						throw new Exception("Only notes and attachments can have notes");
+					}
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception("Embedded image attachments cannot have notes");
+					}
+					
 					// If we don't have a sanitized note, generate one
 					if (is_null($this->noteTextSanitized)) {
 						$noteTextSanitized = Zotero_Notes::sanitize($this->noteText);
@@ -1646,13 +1824,17 @@ class Zotero_Item extends Zotero_DataObject {
 					}
 					$sourceItemID = !empty($sourceItemID) ? $sourceItemID : null;
 					$hash = $this->noteText ? md5($this->noteText) : '';
-					$sql = "INSERT INTO itemNotes
-							(itemID, sourceItemID, note, noteSanitized, title, hash)
-							VALUES (?,?,?,?,?,?)
-							ON DUPLICATE KEY UPDATE sourceItemID=?, note=?, noteSanitized=?, title=?, hash=?";
+					$sql = "INSERT INTO itemNotes "
+						. "(itemID, sourceItemID, note, noteSanitized, title, hash) "
+						. "VALUES (?,?,?,?,?,?) "
+						. "ON DUPLICATE KEY UPDATE "
+							. "sourceItemID=VALUES(sourceItemID), "
+							. "note=VALUES(note), "
+							. "noteSanitized=VALUES(noteSanitized), "
+							. "title=VALUES(title), "
+							. "hash=VALUES(hash)";
 					$bindParams = array(
 						$this->_id,
-						$sourceItemID, $this->noteText, $this->noteTextSanitized, $this->noteTitle, $hash,
 						$sourceItemID, $this->noteText, $this->noteTextSanitized, $this->noteTitle, $hash
 					);
 					Zotero_DB::query($sql, $bindParams, $shardID);
@@ -1665,6 +1847,12 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Attachment
 				if (!empty($this->changed['attachmentData'])) {
+					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
+					
+					if ($isEmbeddedImage && !empty($this->changed['source'])) {
+						throw new Exception("Cannot change parent item of embedded-image attachment", Z_ERROR_INVALID_INPUT);
+					}
+					
 					$sql = "INSERT INTO itemAttachments
 						(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash)
 						VALUES (?,?,?,?,?,?,?,?)
@@ -1683,8 +1871,22 @@ class Zotero_Item extends Zotero_DataObject {
 							throw new Exception("Parent item $parent not found");
 						}
 						if ($parentItem->getSource()) {
-							$parentKey = $parentItem->key;
-							throw new Exception("=Parent item $parentKey cannot be a child attachment", Z_ERROR_INVALID_INPUT);
+							// Only embedded-image attachments can have child items as parents
+							if (!$isEmbeddedImage) {
+								$parentKey = $parentItem->key;
+								throw new Exception("=Parent item $parentKey cannot be a child attachment", Z_ERROR_INVALID_INPUT);
+							}
+						}
+						// Parent item must be a regular item, or, if this is an embedded image, an
+						// image annotation or note
+						if (!($parentItem->isRegularItem()
+								|| ($isEmbeddedImage &&
+									($parentItem->isImageAnnotation() || $parentItem->isNote())))) {
+							throw new Exception(
+								// Keep in sync with Errors.inc.php
+								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
+								Z_ERROR_INVALID_ITEM_PARENT
+							);
 						}
 					}
 					
@@ -1712,6 +1914,52 @@ class Zotero_Item extends Zotero_DataObject {
 					if (!empty($this->changed['attachmentData']['storageHash'])) {
 						Zotero_Storage::deleteFileItemInfo($this);
 					}
+				}
+				
+				// Annotation
+				if (!empty($this->changed['annotationData'])) {
+					if (!empty($this->changed['source'])) {
+						throw new Exception("Cannot change parent item of annotation", Z_ERROR_INVALID_INPUT);
+					}
+					
+					if (!empty($this->annotationText) && $this->annotationType != 'highlight') {
+						throw new Exception(
+							"'annotationText' can only be set for highlight annotations",
+							Z_ERROR_INVALID_INPUT
+						);
+					}
+					
+					$color = $this->annotationColor;
+					if ($color) {
+						// Strip '#' from hex color
+						if (!preg_match('/^#[0-9a-f]{6}$/', $color)) {
+							throw new Exception("Invalid annotationColor");
+						}
+						$color = substr($color, 1);
+					}
+					
+					$sql = "INSERT INTO itemAnnotations "
+						. "(itemID, parentItemID, `type`, text, comment, color, pageLabel, sortIndex, position) "
+						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+						. "ON DUPLICATE KEY UPDATE "
+						. "text=VALUES(text), "
+						. "comment=VALUES(comment), "
+						. "color=VALUES(color), "
+						. "pageLabel=VALUES(pageLabel), "
+						. "sortIndex=VALUES(sortIndex), "
+						. "position=VALUES(position)";
+					$params = [
+						$this->_id,
+						$this->getSource(),
+						$this->annotationType,
+						$this->annotationText,
+						$this->annotationComment,
+						$color,
+						$this->annotationPageLabel,
+						$this->annotationSortIndex,
+						$this->annotationPosition,
+					];
+					Zotero_DB::query($sql, $params, $shardID);
 				}
 				
 				// Sort fields
@@ -1746,15 +1994,45 @@ class Zotero_Item extends Zotero_DataObject {
 					$type = Zotero_ItemTypes::getName($this->_itemTypeID);
 					$Type = ucwords($type);
 					
-					// Update DB, if not a note or attachment we already changed above
-					if (empty($this->changed['attachmentData']) && (empty($this->changed['note']) || !$this->isNote())) {
+					$parent = $this->getSource();
+					
+					// Update DB, if not a note, attachment, or annotation we already changed above
+					if ((empty($this->changed['note']) || !$this->isNote())
+							&& empty($this->changed['attachmentData'])
+							&& empty($this->changed['annotationData'])) {
+						if ($this->isEmbeddedImageAttachment()) {
+							throw new Exception("Cannot change parent item of embedded-image attachment", Z_ERROR_INVALID_INPUT);
+						}
+						else if ($this->isAnnotation()) {
+							throw new Exception("Cannot change parent item of annotation", Z_ERROR_INVALID_INPUT);
+						}
 						$sql = "UPDATE item" . $Type . "s SET sourceItemID=? WHERE itemID=?";
-						$parent = $this->getSource();
 						$bindParams = array(
 							$parent ? $parent : null,
 							$this->_id
 						);
 						Zotero_DB::query($sql, $bindParams, $shardID);
+					}
+					
+					$descendantItemIDs = $this->getDescendants();
+					// If there's a parent item, find the top-level item and set it for this and any
+					// descendant items
+					if ($parent) {
+						$descendantItemIDs[] = $this->_id;
+						$topLevelItemID = $parent;
+						$topLevelItem = Zotero_Items::get($this->_libraryID, $topLevelItemID);
+						while ($nextID = $topLevelItem->getSource()) {
+							$topLevelItemID = $nextID;
+							$topLevelItem = Zotero_Items::get($this->_libraryID, $topLevelItemID);
+						}
+						
+						Zotero_Items::setTopLevelItem($descendantItemIDs, $topLevelItemID, $shardID);
+					}
+					// If no parent, clear this item's top-level item and set this item as the
+					// top-level item for any descendant items
+					else {
+						Zotero_Items::clearTopLevelItem($this->_id, $shardID);
+						Zotero_Items::setTopLevelItem($descendantItemIDs, $this->_id, $shardID);
 					}
 				}
 				
@@ -2148,7 +2426,7 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	
 	public function isRegularItem() {
-		return !($this->isNote() || $this->isAttachment());
+		return !($this->isNote() || $this->isAttachment() || $this->isAnnotation());
 	}
 	
 	
@@ -2158,7 +2436,16 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	
 	public function numChildren($includeTrashed=false) {
-		return $this->numNotes($includeTrashed) + $this->numAttachments($includeTrashed);
+		if ($this->isRegularItem()) {
+			return $this->numNotes($includeTrashed) + $this->numAttachments($includeTrashed);
+		}
+		if ($this->isNote() || $this->isImageAnnotation()) {
+			return $this->numAttachments($includeTrashed);
+		}
+		if ($this->isImportedAttachment()) {
+			return $this->numAnnotations($includeTrashed);
+		}
+		throw new Exception("Invalid item type");
 	}
 	
 	// TODO: Cache
@@ -2194,6 +2481,53 @@ class Zotero_Item extends Zotero_DataObject {
 	// Child item methods
 	//
 	//
+	public function getDescendants() {
+		$isRegularItem = $this->isRegularItem();
+		$isNote = $this->isNote();
+		$isFileAttachment = $this->isFileAttachment() && !$this->isEmbeddedImageAttachment();
+		$isImageAnnotation = $this->isImageAnnotation();
+		
+		if (!($isRegularItem || $isNote || $isFileAttachment || $isImageAnnotation)) {
+			return [];
+		}
+		
+		$id = $this->id;
+		$shardID = Zotero_Shards::getByLibraryID($this->_libraryID);
+		
+		// Get child items
+		$sqlParts = [];
+		$sqlParams = [];
+		if ($isRegularItem || $isNote || $isImageAnnotation) {
+			$sqlParts[] = "SELECT itemID FROM itemAttachments WHERE sourceItemID=?";
+			$sqlParams[] = $id;
+		}
+		if ($isRegularItem) {
+			$sqlParts[] = "SELECT itemID FROM itemNotes WHERE sourceItemID=?";
+			$sqlParams[] = $id;
+		}
+		if ($isFileAttachment) {
+			$sqlParts[] = "SELECT itemID FROM itemAnnotations WHERE parentItemID=?";
+			$sqlParams[] = $id;
+		}
+		$itemIDs = Zotero_DB::columnQuery(implode(" UNION ", $sqlParts), $sqlParams, $shardID);
+		if (!$itemIDs) {
+			return [];
+		}
+		
+		// Get descendant items of child items, recursively
+		foreach ($itemIDs as $itemID) {
+			$item = Zotero_Items::get($this->_libraryID, $itemID);
+			$descendentItemIDs = $item->getDescendants();
+			// TODO: Remove conditional after upgrade to PHP 7.3 -- 7.2 logs warning on empty array
+			if ($descendentItemIDs) {
+				array_push($itemIDs, ...$descendentItemIDs);
+			}
+		}
+		
+		return $itemIDs;
+	}
+	
+	
 	/**
 	* Get the itemID of the source item for a note or file
 	**/
@@ -2225,6 +2559,9 @@ class Zotero_Item extends Zotero_DataObject {
 		else if ($this->isAttachment()) {
 			$Type = 'Attachment';
 		}
+		else if ($this->isAnnotation()) {
+			$Type = 'Annotation';
+		}
 		else {
 			return false;
 		}
@@ -2243,7 +2580,8 @@ class Zotero_Item extends Zotero_DataObject {
 			$sourceItemID = false;
 		}
 		if ($sourceItemID === false) {
-			$sql = "SELECT sourceItemID FROM item{$Type}s WHERE itemID=?";
+			$col = $Type == 'Annotation' ? 'parentItemID' : 'sourceItemID';
+			$sql = "SELECT $col FROM item{$Type}s WHERE itemID=?";
 			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 			$sourceItemID = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
 			
@@ -2283,11 +2621,15 @@ class Zotero_Item extends Zotero_DataObject {
 		else if ($this->isAttachment()) {
 			$Type = 'Attachment';
 		}
+		else if ($this->isAnnotation()) {
+			$Type = 'Annotation';
+		}
 		else {
 			return false;
 		}
 		
-		$sql = "SELECT `key` FROM item{$Type}s A JOIN items B ON (A.sourceItemID=B.itemID) WHERE A.itemID=?";
+		$col = $Type == 'Annotation' ? 'parentItemID' : 'sourceItemID';
+		$sql = "SELECT `key` FROM item{$Type}s A JOIN items B ON (A.$col=B.itemID) WHERE A.itemID=?";
 		$key = Zotero_DB::valueQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
 		if (!$key) {
 			$key = false;
@@ -2306,8 +2648,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$type = 'attachment';
 			$Type = 'Attachment';
 		}
+		else if ($this->isAnnotation()) {
+			$type = 'annotation';
+			$Type = 'Annotation';
+		}
 		else {
-			throw new Exception("setSource() can be called only on notes and attachments");
+			throw new Exception("setSource() can be called only on notes, attachments, and annotations");
 		}
 		
 		$this->sourceItem = $sourceItemID;
@@ -2324,8 +2670,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$type = 'attachment';
 			$Type = 'Attachment';
 		}
+		else if ($this->isAnnotation()) {
+			$type = 'annotation';
+			$Type = 'Annotation';
+		}
 		else {
-			throw new Exception("setSourceKey() can be called only on notes and attachments");
+			throw new Exception("setSourceKey() can be called only on notes, attachments, and annotations");
 		}
 		
 		$oldSourceItemID = $this->getSource();
@@ -2355,8 +2705,8 @@ class Zotero_Item extends Zotero_DataObject {
 	 * @return	{Integer}
 	 */
 	public function numAttachments($includeTrashed=false) {
-		if (!$this->isRegularItem()) {
-			trigger_error("numAttachments() can only be called on regular items", E_USER_ERROR);
+		if (!$this->isRegularItem() && !$this->isNote() && !$this->isImageAnnotation()) {
+			throw new Exception("numAttachments() can only be called on regular items and notes");
 		}
 		
 		if (!$this->id) {
@@ -2502,10 +2852,6 @@ class Zotero_Item extends Zotero_DataObject {
 	* Note: This can only be called on notes and attachments
 	**/
 	public function setNote($text) {
-		if (!$this->isNote() && !$this->isAttachment()) {
-			trigger_error("setNote() can only be called on notes and attachments", E_USER_ERROR);
-		}
-		
 		if (!is_string($text)) {
 			$text = '';
 		}
@@ -2767,7 +3113,7 @@ class Zotero_Item extends Zotero_DataObject {
 			throw new Exception("attachmentFilename can only be retrieved for attachment items");
 		}
 		
-		if (!$this->isImportedAttachment()) {
+		if (!$this->isStoredFileAttachment()) {
 			throw new Exception("attachmentFilename cannot be retrieved for linked attachments");
 		}
 		
@@ -3015,6 +3361,217 @@ class Zotero_Item extends Zotero_DataObject {
 			Zotero_Shards::getByLibraryID($this->libraryID)
 		);
 		return $itemIDs ? Zotero_Items::get($this->libraryID, $itemIDs) : [];
+	}
+	
+	//
+	// Annotation methods
+	//
+	private function getAnnotationField($field) {
+		if (!$this->isAnnotation()) {
+			throw new Exception("getAnnotationField() can only called on annotation items");
+		}
+		
+		$fieldFull = 'annotation' . ucwords($field);
+		
+		if ($this->annotationData[$field] !== null) {
+			return $this->annotationData[$field];
+		}
+		
+		if (!$this->id) {
+			return null;
+		}
+		
+		$sql = "SELECT $field FROM itemAnnotations WHERE itemID=?";
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
+		$value = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
+		if (!$value) {
+			$value = '';
+		}
+		
+		switch ($field) {
+			case 'color':
+				// Add '#' to hex color
+				if (preg_match('/^[0-9a-z]{6}$/', $value)) {
+					$value = '#' . $value;
+				}
+				break;
+			
+			/*case 'position':
+				$value = json_decode($value, true);
+				break;*/
+		}
+		
+		$this->annotationData[$field] = $value;
+		return $value;
+	}
+	
+	private function setAnnotationField($field, $val) {
+		$fieldFull = 'annotation' . ucwords($field);
+		
+		Z_Core::debug("Setting annotation field $field to " . json_encode($val));
+		switch ($field) {
+			case 'type':
+				switch ($val) {
+					case 'highlight':
+					case 'note':
+					case 'image':
+						break;
+					
+					default:
+						throw new Exception(
+							"annotationType must be 'highlight', 'note', or 'image'",
+							Z_ERROR_INVALID_INPUT
+						);
+				}
+				break;
+			
+			case 'color':
+				if ($val && !preg_match('/^#[0-9a-z]{6}$/', $val)) {
+					throw new Exception(
+						"annotationColor must be a hex color (e.g., '#FF0000')",
+						Z_ERROR_INVALID_INPUT
+					);
+				}
+				break;
+			
+			case 'sortIndex':
+				if (!preg_match('/^\d{5}\|\d{6}\|\d{5}$/', $val)) {
+					throw new Exception("Invalid sortIndex '$val'", Z_ERROR_INVALID_INPUT);
+				}
+				break;
+			
+			case 'text':
+			case 'comment':
+			case 'pageLabel':
+			case 'position':
+				if (!is_string($val)) {
+					throw new Exception("$fieldFull must be a string", Z_ERROR_INVALID_INPUT);
+				}
+				if (!$val) {
+					$val = '';
+				}
+				break;
+				
+			default:
+				trigger_error("Invalid annotation field '$field'", E_USER_ERROR);
+		}
+		
+		if (!$this->isAnnotation()) {
+			trigger_error("$fieldFull can only be set for annotation items", E_USER_ERROR);
+		}
+		
+		$current = $this->$fieldFull;
+		
+		if ($val === $current) {
+			return;
+		}
+		
+		if ($field == 'type') {
+			if ($current && $val !== $current) {
+				throw new Exception(
+					"Cannot change existing annotationType for item $this->libraryKey",
+					Z_ERROR_INVALID_INPUT
+				);
+			}
+		}
+		
+		$this->changed['annotationData'][$field] = true;
+		$this->annotationData[$field] = $val;
+	}
+	
+	
+	/**
+	 * Get the first line of the annotation for display in the items list
+	 *
+	 * Note: Annotation titles can also come from Zotero.Items.cacheFields()!
+	 * TODO: Implement caching
+	 *
+	 * @return	{String}
+	 */
+	public function getAnnotationTitle() {
+		if (!$this->isAnnotation()) {
+			throw ("getAnnotationTitle() can only be called on annotations");
+		}
+		
+		if ($this->annotationTitle !== null) {
+			return $this->annotationTitle;
+		}
+		
+		if (!$this->id) {
+			return '';
+		}
+		
+		$sql = "SELECT COALESCE(NULLIF(text, ''), comment) FROM itemAnnotations WHERE itemID=?";
+		$title = Zotero_DB::valueQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
+		
+		$this->annotationTitle = $title ? $title : '';
+		return $this->annotationTitle;
+	}
+	
+	
+	/**
+	 * Returns an array of annotation itemIDs that have this item as a parent or FALSE if none
+	 */
+	public function getAnnotations() {
+		if (!$this->isImportedAttachment()) {
+			throw new Exception("getAnnotations() can only be called on imported attachment items");
+		}
+		
+		if (!$this->id) {
+			return false;
+		}
+		
+		$sql = "SELECT itemID FROM items NATURAL JOIN itemAnnotations WHERE parentItemID=?";
+		$itemIDs = Zotero_DB::columnQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
+		if (!$itemIDs) {
+			return [];
+		}
+		return $itemIDs;
+	}
+	
+	
+	/**
+	 * Returns number of child annotations of an attachment
+	 *
+	 * @param	{Boolean}	includeTrashed		Include trashed child items in count
+	 * @return	{Integer}
+	 */
+	public function numAnnotations($includeTrashed=false) {
+		if (!$this->isAttachment()) {
+			throw new Exception("numAnnotations() can only be called on attachment items");
+		}
+		
+		if (!$this->id) {
+			return 0;
+		}
+		
+		if (!isset($this->numAnnotations)) {
+			$sql = "SELECT COUNT(*) FROM itemAnnotations WHERE parentItemID=?";
+			$this->numAnnotations = (int) Zotero_DB::valueQuery(
+				$sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID)
+			);
+		}
+		
+		$deleted = 0;
+		if ($includeTrashed) {
+			$sql = "SELECT COUNT(*) FROM itemAnnotations WHERE parentItemID=? AND
+					itemID IN (SELECT itemID FROM deletedItems)";
+			$deleted = (int) Zotero_DB::valueQuery(
+				$sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID)
+			);
+		}
+		
+		return $this->numAnnotations + $deleted;
+	}
+	
+	
+	public function incrementAnnotationCount() {
+		$this->numAnnotations++;
+	}
+	
+	
+	public function decrementAnnotationCount() {
+		$this->numAnnotations--;
 	}
 	
 	
@@ -3418,7 +3975,15 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		else {
-			$numChildren = false;
+			if ($this->isNote()
+					|| $this->isImageAnnotation()
+					// Annotations depend on note permissions
+					|| ($this->isImportedAttachment() && $permissions->canAccess($this->libraryID, 'notes'))) {
+				$numChildren = $this->numChildren();
+			}
+			else {
+				$numChildren = false;
+			}
 			
 			if ($requestParams['publications'] || $permissions->canAccess($this->libraryID, 'files')) {
 				$downloadDetails = Zotero_Storage::getDownloadDetails($this);
@@ -3496,8 +4061,10 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		$cached = Z_Core::$MC->get($cacheKey);
 		if (false && $cached) {
-			// Make sure numChildren reflects the current permissions
-			if ($isRegularItem) {
+			if ($isRegularItem
+					|| $this->isNote()
+					|| $this->isImportedAttachment()
+					|| $this->isImageAnnotation()) {
 				$cached['meta']->numChildren = $numChildren;
 			}
 			
@@ -3623,7 +4190,12 @@ class Zotero_Item extends Zotero_DataObject {
 					$json['meta']->parsedDate = Zotero_Date::sqlToISO8601($sqlDate);
 				}
 			}
-			
+		}
+		
+		if ($isRegularItem
+				|| $this->isNote()
+				|| $this->isImportedAttachment()
+				|| $this->isImageAnnotation()) {
 			$json['meta']->numChildren = $numChildren;
 		}
 		
@@ -3720,6 +4292,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$regularItem = $this->isRegularItem();
+		$embeddedImage = $this->isEmbeddedImageAttachment();
 		
 		$arr = array();
 		if ($requestParams['v'] >= 2) {
@@ -3813,8 +4386,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$arr[$fieldName] = ($value !== false && $value !== null && $value !== "") ? $value : "";
 		}
 		
+		if ($embeddedImage) {
+			unset($arr['title'], $arr['url'], $arr['accessDate']);
+		}
+		
 		// Embedded note for notes and attachments
-		if (!$regularItem) {
+		if ($this->isNote() || ($this->isAttachment() && !$embeddedImage)) {
 			// Use sanitized version
 			$arr['note'] = $this->getNote(true);
 		}
@@ -3827,16 +4404,18 @@ class Zotero_Item extends Zotero_DataObject {
 				$arr['contentType'] = $val;
 			}
 			
-			$val = $this->attachmentCharset;
-			if ($includeEmpty || $val) {
-				if ($val) {
-					// TODO: Move to CharacterSets::getName() after classic sync removal
-					$val = Zotero_CharacterSets::toCanonical($val);
+			if (!$embeddedImage) {
+				$val = $this->attachmentCharset;
+				if ($includeEmpty || $val) {
+					if ($val) {
+						// TODO: Move to CharacterSets::getName() after classic sync removal
+						$val = Zotero_CharacterSets::toCanonical($val);
+					}
+					$arr['charset'] = $val;
 				}
-				$arr['charset'] = $val;
 			}
 			
-			if ($this->isImportedAttachment()) {
+			if ($this->isStoredFileAttachment()) {
 				$arr['filename'] = $this->attachmentFilename;
 				
 				$val = $this->attachmentStorageHash;
@@ -3857,6 +4436,17 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		
+		if ($this->isAnnotation()) {
+			$props = ['type', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
+			foreach ($props as $prop) {
+				if ($prop == 'text' && $this->annotationType != 'highlight') {
+					continue;
+				}
+				$fullProp = 'annotation' . ucwords($prop);
+				$arr[$fullProp] = $this->$fullProp;
+			}
+		}
+		
 		// Non-field properties, which don't get shown for publications endpoints
 		if (!$isPublications) {
 			if ($this->getDeleted()) {
@@ -3868,32 +4458,36 @@ class Zotero_Item extends Zotero_DataObject {
 				$arr['inPublications'] = true;
 			}
 			
-			// Tags
-			$arr['tags'] = array();
-			$tags = $this->getTags();
-			if ($tags) {
-				foreach ($tags as $tag) {
-					// Skip empty tags that are still in the database
-					if (!trim($tag->name)) {
-						continue;
+			if (!$embeddedImage) {
+				// Tags
+				$arr['tags'] = array();
+				$tags = $this->getTags();
+				if ($tags) {
+					foreach ($tags as $tag) {
+						// Skip empty tags that are still in the database
+						if (!trim($tag->name)) {
+							continue;
+						}
+						$t = array(
+							'tag' => $tag->name
+						);
+						if ($tag->type != 0) {
+							$t['type'] = $tag->type;
+						}
+						$arr['tags'][] = $t;
 					}
-					$t = array(
-						'tag' => $tag->name
-					);
-					if ($tag->type != 0) {
-						$t['type'] = $tag->type;
-					}
-					$arr['tags'][] = $t;
-				}
-			}
-			
-			if ($requestParams['v'] >= 2) {
-				if ($this->isTopLevelItem()) {
-					$collections = $this->getCollections(true);
-					$arr['collections'] = $collections;
 				}
 				
-				$arr['relations'] = $this->getRelations();
+				if ($requestParams['v'] >= 2) {
+					// Collections
+					if ($this->isTopLevelItem()) {
+						$collections = $this->getCollections(true);
+						$arr['collections'] = $collections;
+					}
+					
+					// Relations
+					$arr['relations'] = $this->getRelations();
+				}
 			}
 			
 			if ($requestParams['v'] >= 3) {

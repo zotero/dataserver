@@ -464,9 +464,16 @@ class Zotero_Libraries {
 		Zotero_FullText::deleteByLibraryMySQL($libraryID);
 		
 		foreach ($tables as $table) {
-			// Delete notes and attachments first (since they may be child items)
+			// For items, delete annotations first, then notes and attachments, then items after
 			if ($table == 'items') {
-				$sql = "DELETE FROM $table WHERE libraryID=? AND itemTypeID IN (1,14)";
+				$itemTypeIDs = Zotero_DB::columnQuery(
+					"SELECT itemTypeID FROM itemTypes "
+					. "WHERE itemTypeName IN ('note', 'attachment', 'annotation') "
+					. "ORDER BY itemTypeName = 'annotation' DESC"
+				);
+				$sql = "DELETE FROM $table "
+					. "WHERE libraryID=? AND itemTypeID IN (" . implode(",", $itemTypeIDs) . ") "
+					. "ORDER BY itemTypeID = {$itemTypeIDs[0]} DESC";
 				Zotero_DB::query($sql, $libraryID, $shardID);
 			}
 			

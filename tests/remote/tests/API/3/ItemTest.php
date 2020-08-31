@@ -1202,30 +1202,125 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function testNewItemTemplateAttachmentFields() {
-		$response = API::get("items/new?itemType=attachment&linkMode=linked_url");
+	//
+	// Embedded-image attachments
+	//
+	public function test_should_create_embedded_image_attachment_for_note() {
+		$noteKey = API::createNoteItem("Test", null, $this, 'key');
+		$imageKey = API::createAttachmentItem(
+			'embedded_image', ['contentType' => 'image/png'], $noteKey, $this, 'key'
+		);
+		// Keys tested in AnnotationTest
+	}
+	
+	
+	public function test_should_reject_embedded_image_attachment_without_parent() {
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
 		$json = json_decode($response->getBody());
-		$this->assertSame('', $json->url);
-		$this->assertObjectNotHasAttribute('filename', $json);
-		$this->assertObjectNotHasAttribute('path', $json);
+		$json->parentItem = false;
+		$json->contentType = 'image/png';
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert400ForObject($response, "Embedded-image attachment must have a parent item");
+	}
+	
+	
+	public function test_should_reject_changing_parent_of_embedded_image_attachment() {
+		$note1Key = API::createNoteItem("Test 1", null, $this, 'key');
+		$note2Key = API::createNoteItem("Test 2", null, $this, 'key');
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
+		$json = json_decode($response->getBody());
+		$json->parentItem = $note1Key;
+		$json->contentType = 'image/png';
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$key = $json['successful'][0]['key'];
+		$json = API::getItem($key, $this, 'json');
 		
-		$response = API::get("items/new?itemType=attachment&linkMode=linked_file");
+		// Change the parent item
+		$json = [
+			'version' => $json['version'],
+			'parentItem' => $note2Key
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/$key",
+			json_encode($json)
+		);
+		$this->assert400($response, "Cannot change parent item of embedded-image attachment");
+	}
+	
+	
+	public function test_should_reject_clearing_parent_of_embedded_image_attachment() {
+		$noteKey = API::createNoteItem("Test", null, $this, 'key');
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
 		$json = json_decode($response->getBody());
-		$this->assertSame('', $json->path);
-		$this->assertObjectNotHasAttribute('filename', $json);
-		$this->assertObjectNotHasAttribute('url', $json);
+		$json->parentItem = $noteKey;
+		$json->contentType = 'image/png';
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$key = $json['successful'][0]['key'];
+		$json = API::getItem($key, $this, 'json');
 		
-		$response = API::get("items/new?itemType=attachment&linkMode=imported_url");
+		// Clear the parent item
+		$json = [
+			'version' => $json['version'],
+			'parentItem' => false
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/$key",
+			json_encode($json)
+		);
+		$this->assert400($response, "Cannot change parent item of embedded-image attachment");
+	}
+	
+	
+	public function test_should_reject_invalid_content_type_for_embedded_image_attachment() {
+		$noteKey = API::createNoteItem("Test", null, $this, 'key');
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
 		$json = json_decode($response->getBody());
-		$this->assertSame('', $json->filename);
-		$this->assertSame('', $json->url);
-		$this->assertObjectNotHasAttribute('path', $json);
-		
-		$response = API::get("items/new?itemType=attachment&linkMode=imported_file");
+		$json->parentItem = $noteKey;
+		$json->contentType = 'application/pdf';
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert400ForObject($response, "Embedded-image attachment must have an image content type");
+	}
+	
+	
+	public function test_should_reject_embedded_note_for_embedded_image_attachment() {
+		$noteKey = API::createNoteItem("Test", null, $this, 'key');
+		$response = API::get("items/new?itemType=attachment&linkMode=embedded_image");
 		$json = json_decode($response->getBody());
-		$this->assertSame('', $json->filename);
-		$this->assertObjectNotHasAttribute('path', $json);
-		$this->assertObjectNotHasAttribute('url', $json);
+		$json->parentItem = $noteKey;
+		$json->note = '<p>Foo</p>';
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert400ForObject($response, "'note' property is not valid for embedded images");
 	}
 	
 	
@@ -1630,7 +1725,7 @@ class ItemTests extends APITests {
 			json_encode([$json]),
 			array("Content-Type: application/json")
 		);
-		$this->assert400ForObject($response, "'md5' is valid only for imported attachment items");
+		$this->assert400ForObject($response, "'md5' is valid only for imported and embedded-image attachments");
 	}
 	
 	
@@ -1651,7 +1746,7 @@ class ItemTests extends APITests {
 			json_encode([$json]),
 			array("Content-Type: application/json")
 		);
-		$this->assert400ForObject($response, "'mtime' is valid only for imported attachment items");
+		$this->assert400ForObject($response, "'mtime' is valid only for imported and embedded-image attachments");
 	}
 	
 	
@@ -1853,6 +1948,15 @@ class ItemTests extends APITests {
 			'date' => $dates[1]
 		], $this, 'key');
 		$childKeys[] = API::createNoteItem($noteText, $parentKeys[1], $this, 'key');
+		$childKeys[] = API::createAttachmentItem(
+			'embedded_image',
+			[
+				'contentType' => 'image/png'
+			],
+			$childKeys[sizeOf($childKeys) - 1],
+			$this,
+			'key'
+		);
 		
 		// Create item with deleted child that matches child title search
 		$parentKeys[] = API::createItem($itemTypes[2], [
@@ -2300,6 +2404,60 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_top_should_return_top_level_item_for_four_level_hierarchy() {
+		API::userClear(self::$config['userID']);
+		
+		// Create parent item, PDF attachment, image annotation, and embedded-image attachment
+		$itemKey = API::createItem("book", ['title' => 'aaa'], $this, 'key');
+		$attachmentKey = API::createAttachmentItem(
+			"imported_url", [
+				'contentType' => 'application/pdf',
+				'title' => 'bbb'
+			], $itemKey, $this, 'key'
+		);
+		$annotationKey = API::createAnnotationItem(
+			'image',
+			['annotationComment' => 'ccc'],
+			$attachmentKey,
+			$this,
+			'key'
+		);
+		$imageKey = API::createAttachmentItem(
+			'embedded_image', ['contentType' => 'image/png'], $annotationKey, $this, 'key'
+		);
+		
+		//
+		// Search for three descendant items in /top mode
+		//
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?q=bbb"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals("aaa", $json[0]['data']['title']);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemType=annotation" // TEMP: Until we can search comment
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals("aaa", $json[0]['data']['title']);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemKey=$imageKey" // Only way to search for an embedded image?
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals("aaa", $json[0]['data']['title']);
+	}
+	
+	
 	public function testIncludeTrashed() {
 		API::userClear(self::$config['userID']);
 		
@@ -2508,6 +2666,214 @@ class ItemTests extends APITests {
 		$this->assert204($response);
 		$json = API::getItem($childKey, $this, 'json')['data'];
 		$this->assertArrayNotHasKey('parentItem', $json);
+	}
+	
+	
+	public function test_should_move_attachment_with_annotation_under_regular_item() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		
+		// Create standalone attachment to start
+		$json = API::createAttachmentItem(
+			"imported_file", ['contentType' => 'application/pdf'], null, $this, 'jsonData'
+		);
+		$attachmentKey = $json['key'];
+		
+		// Create image annotation
+		$annotationKey = API::createAnnotationItem('highlight', null, $attachmentKey, $this, 'key');
+		
+		// /top for the annotation key should return the attachment
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemKey=$annotationKey"
+		);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($attachmentKey, $json[0]['key']);
+		
+		// Move attachment under regular item
+		$json[0]['data']['parentItem'] = $itemKey;
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json[0]['data']])
+		);
+		$this->assert200ForObject($response);
+		
+		// /top for the annotation key should now return the regular item
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemKey=$annotationKey"
+		);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($itemKey, $json[0]['key']);
+	}
+	
+	
+	public function test_should_move_attachment_with_annotation_out_from_under_regular_item() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		
+		// Create standalone attachment to start
+		$attachmentJSON = API::createAttachmentItem(
+			"imported_file", ['contentType' => 'application/pdf'], $itemKey, $this, 'jsonData'
+		);
+		$attachmentKey = $attachmentJSON['key'];
+		
+		// Create image annotation
+		$annotationKey = API::createAnnotationItem('highlight', null, $attachmentKey, $this, 'key');
+		
+		// /top for the annotation key should return the item
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemKey=$annotationKey"
+		);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($itemKey, $json[0]['key']);
+		
+		// Move attachment under regular item
+		$attachmentJSON['parentItem'] = false;
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$attachmentJSON])
+		);
+		$this->assert200ForObject($response);
+		
+		// /top for the annotation key should now return the attachment item
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?itemKey=$annotationKey"
+		);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals($attachmentKey, $json[0]['key']);
+	}
+	
+	
+	public function test_deleting_parent_item_should_delete_child_linked_file_attachment() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$parentKey = $json['key'];
+		$parentVersion = $json['version'];
+		
+		$json = API::createAttachmentItem("linked_file", [], $parentKey, $this, 'jsonData');
+		$childKey = $json['key'];
+		$childVersion = $json['version'];
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$parentKey,$childKey"
+		);
+		$this->assertNumResults(2, $response);
+		
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items/$parentKey",
+			["If-Unmodified-Since-Version: " . $parentVersion]
+		);
+		$this->assert204($response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$parentKey,$childKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertNumResults(0, $response);
+	}
+	
+	
+	public function test_should_reject_changing_parent_item_of_annotation() {
+		$attachment1Key = API::createAttachmentItem(
+			"imported_url",
+			['contentType' => 'application/pdf'],
+			null,
+			$this,
+			'key'
+		);
+		$attachment2Key = API::createAttachmentItem(
+			"imported_url",
+			['contentType' => 'application/pdf'],
+			null,
+			$this,
+			'key'
+		);
+		$jsonData = API::createAnnotationItem('highlight', null, $attachment1Key, $this, 'jsonData');
+		
+		// Change the parent item
+		$json = [
+			'version' => $jsonData['version'],
+			'parentItem' => $attachment2Key
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/{$jsonData['key']}",
+			json_encode($json)
+		);
+		$this->assert400($response, "Cannot change parent item of annotation");
+	}
+	
+	
+	public function test_deleting_parent_item_should_delete_attachment_image_annotation_and_embedded_image_attachment() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		$itemVersion = $json['version'];
+		
+		$json = API::createAttachmentItem(
+			"imported_file", ['contentType' => 'application/pdf'], $itemKey, $this, 'jsonData'
+		);
+		$attachmentKey = $json['key'];
+		$attachmentVersion = $json['version'];
+		
+		// Create image annotation
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => $attachmentKey,
+			'annotationType' => 'image',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			array("Content-Type: application/json")
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$annotationKey = $json['successful'][0]['key'];
+		
+		// Create embedded-image attachment
+		$imageKey = API::createAttachmentItem(
+			'embedded_image', ['contentType' => 'image/png'], $annotationKey, $this, 'key'
+		);
+		
+		// Check that all items can be found
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey,$imageKey"
+		);
+		$this->assertNumResults(4, $response);
+		
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items/$itemKey",
+			["If-Unmodified-Since-Version: " . $itemVersion]
+		);
+		$this->assert204($response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey,$imageKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertNumResults(0, $response);
 	}
 	
 	

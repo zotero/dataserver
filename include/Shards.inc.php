@@ -246,6 +246,7 @@ class Zotero_Shards {
 			'collectionItems',
 			'deletedItems',
 			'groupItems',
+			'itemAnnotations',
 			'itemAttachments',
 			'itemCreators',
 			'itemData',
@@ -253,6 +254,7 @@ class Zotero_Shards {
 			'itemRelated',
 			'itemSortFields',
 			'itemTags',
+			'itemTopLevel',
 			'publicationsItems',
 			'savedSearchConditions',
 			'storageFileItems',
@@ -283,6 +285,7 @@ class Zotero_Shards {
 				case 'collectionItems':
 				case 'deletedItems':
 				case 'groupItems':
+				case 'itemAnnotations':
 				case 'itemAttachments':
 				case 'itemCreators':
 				case 'itemData':
@@ -290,6 +293,7 @@ class Zotero_Shards {
 				case 'itemRelated':
 				case 'itemSortFields':
 				case 'itemTags':
+				case 'itemTopLevel':
 				case 'publicationsItems':
 				case 'storageFileItems':
 					$sql = "SELECT T.* FROM $table T JOIN items USING (itemID) WHERE libraryID=?";
