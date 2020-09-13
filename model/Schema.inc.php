@@ -100,6 +100,13 @@ class Schema {
 	}
 	
 	
+	public static function readFromFile() {
+		$schema = file_get_contents(Z_ENV_BASE_PATH . 'htdocs/zotero-schema/schema.json');
+		$schema = json_decode($schema, true);
+		return $schema;
+	}
+	
+	
 	/**
 	 * Update the item-type/field/creator mapping tables based on the passed schema
 	 */
@@ -116,7 +123,7 @@ class Schema {
 		);
 		
 		if ($dbVersion >= $data['version']) {
-			\Zotero_DB::executeTransaction();
+			\Zotero_DB::commit();
 			\Z_Core::debug("DB schema is up to date ($dbVersion >= {$data['version']})");
 			return false;
 		}
@@ -272,18 +279,12 @@ class Schema {
 		
 		if ($dryRun) {
 			echo "Not committing\n";
+			\Zotero_DB::rollback();
 			exit;
 		}
 		
 		\Zotero_DB::commit();
 		
 		return true;
-	}
-	
-	
-	private static function readFromFile() {
-		$schema = file_get_contents(Z_ENV_BASE_PATH . 'htdocs/zotero-schema/schema.json');
-		$schema = json_decode($schema, true);
-		return $schema;
 	}
 }
