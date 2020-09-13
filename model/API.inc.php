@@ -40,6 +40,7 @@ class Zotero_API {
 	
 	private static $defaultParams = [
 		'v' => 3,
+		'schemaVersion' => null,
 		
 		'format' => [
 			'v' => [

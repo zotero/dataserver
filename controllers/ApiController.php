@@ -460,6 +460,9 @@ class ApiController extends Controller {
 			$apiVersion,
 			$atomAccepted
 		);
+		$this->queryParams['schemaVersion'] = !empty($_SERVER['HTTP_ZOTERO_SCHEMA_VERSION'])
+			? (int) $_SERVER['HTTP_ZOTERO_SCHEMA_VERSION']
+			: 0;
 		if ($this->publications) {
 			$this->queryParams['publications'] = true;
 			// Don't show trashed items in publications view

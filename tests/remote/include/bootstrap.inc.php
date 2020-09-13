@@ -12,6 +12,8 @@ class Z_Tests {
 	public static $AWS;
 }
 
+define('Z_ENV_BASE_PATH', realpath(__DIR__ . '/../../../') . '/');
+
 //
 // Set up AWS service factory
 //

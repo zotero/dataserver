@@ -45,6 +45,7 @@ class APITests extends \APITests {
 		self::$nsZAPI = 'http://zotero.org/ns/api';
 		
 		API::useAPIVersion(3);
+		API::resetSchemaVersion();
 		
 		API::setKeyUserPermission(self::$config['apiKey'], 'notes', true);
 		API::setKeyUserPermission(self::$config['apiKey'], 'write', true);

@@ -34,6 +34,10 @@ class SchemaTests extends APITests {
 		"Some data in “My Library” was created in a newer version of Zotero and could not be downloaded. "
 			. "Upgrade Zotero to continue syncing this library.";
 	
+	public function tearDown(): void {
+		API::resetSchemaVersion(false);
+	}
+	
 	public function test_should_reject_download_from_old_client_for_item_using_newer_schema() {
 		$key = API::createItem(
 			"book",
@@ -43,6 +47,8 @@ class SchemaTests extends APITests {
 			$this,
 			'key'
 		);
+		
+		API::useSchemaVersion(false);
 		
 		// Property should show up in 5.0.78
 		//
@@ -93,6 +99,8 @@ class SchemaTests extends APITests {
 	public function test_should_not_reject_download_from_old_client_for_collection_using_legacy_schema() {
 		$key = API::createCollection("Foo", [], $this, 'key');
 		
+		API::useSchemaVersion(false);
+		
 		// Single-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],
@@ -128,6 +136,8 @@ class SchemaTests extends APITests {
 			'key'
 		);
 		
+		API::useSchemaVersion(false);
+		
 		// Single-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],
@@ -161,6 +171,8 @@ class SchemaTests extends APITests {
 			'key'
 		);
 		
+		API::useSchemaVersion(false);
+		
 		// Single-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],
@@ -188,6 +200,8 @@ class SchemaTests extends APITests {
 	public function test_should_not_reject_download_from_old_client_for_attachment_using_legacy_schema() {
 		$key = API::createAttachmentItem("imported_file", [], false, $this, 'key');
 		
+		API::useSchemaVersion(false);
+		
 		// Single-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],
@@ -210,6 +224,8 @@ class SchemaTests extends APITests {
 	
 	public function test_should_not_reject_download_from_old_client_for_linked_file_attachment_using_legacy_schema() {
 		$key = API::createAttachmentItem("linked_file", ['path' => '/home/user/foo.pdf'], false, $this, 'key');
+		
+		API::useSchemaVersion(false);
 		
 		// Single-object endpoint
 		$response = API::userGet(
@@ -234,6 +250,8 @@ class SchemaTests extends APITests {
 	public function test_should_not_reject_download_from_old_client_for_note_using_legacy_schema() {
 		$key = API::createNoteItem("Test", false, $this, 'key');
 		
+		API::useSchemaVersion(false);
+		
 		// Single-object endpoint
 		$response = API::userGet(
 			self::$config['userID'],
@@ -257,6 +275,8 @@ class SchemaTests extends APITests {
 	public function test_should_not_reject_download_from_old_client_for_child_note_using_legacy_schema() {
 		$parentKey = $key = API::createItem("book", null, $this, 'key');
 		$key = API::createNoteItem("Test", $parentKey, $this, 'key');
+		
+		API::useSchemaVersion(false);
 		
 		// Single-object endpoint
 		$response = API::userGet(

@@ -30,6 +30,7 @@ class API3 {
 	private static $config;
 	private static $nsZAPI;
 	private static $apiVersion = false;
+	private static $schemaVersion = false;
 	private static $apiKey = false;
 	
 	public static function loadConfig() {
@@ -45,6 +46,17 @@ class API3 {
 		self::$apiVersion = $apiVersion;
 	}
 	
+	
+	public static function useSchemaVersion($schemaVersion) {
+		self::$schemaVersion = $schemaVersion;
+	}
+	
+	
+	public static function resetSchemaVersion() {
+		self::$schemaVersion = json_decode(
+			file_get_contents(\Z_ENV_BASE_PATH . 'htdocs/zotero-schema/schema.json')
+		)->version;
+	}
 	
 	public static function useAPIKey($key = "") {
 		self::$apiKey = $key;
@@ -444,6 +456,9 @@ class API3 {
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
 		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
+		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
 		}
@@ -478,6 +493,9 @@ class API3 {
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
 		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
+		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
 		}
@@ -509,6 +527,9 @@ class API3 {
 		$url = self::$config['apiURLPrefix'] . $url;
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
+		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
 		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
@@ -542,6 +563,9 @@ class API3 {
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
 		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
+		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
 		}
@@ -558,6 +582,9 @@ class API3 {
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
 		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
+		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
 		}
@@ -573,6 +600,9 @@ class API3 {
 		$url = self::$config['apiURLPrefix'] . $url;
 		if (self::$apiVersion) {
 			$headers[] = "Zotero-API-Version: " . self::$apiVersion;
+		}
+		if (self::$schemaVersion) {
+			$headers[] = "Zotero-Schema-Version: " . self::$schemaVersion;
 		}
 		if (!$auth && self::$apiKey) {
 			$headers[] = "Authorization: Bearer " . self::$apiKey;
