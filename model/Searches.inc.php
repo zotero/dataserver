@@ -279,7 +279,7 @@ class Zotero_Searches {
 							case 'value':
 								$maxLen = 255;
 								if (strlen($conditionVal) > $maxLen) {
-									throw new Exception("Search operator cannot be longer than $maxLen characters", Z_ERROR_INVALID_INPUT);
+									throw new Exception("Search value cannot be longer than $maxLen characters", Z_ERROR_INVALID_INPUT);
 								}
 								break;
 								
