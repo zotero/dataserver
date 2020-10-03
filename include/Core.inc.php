@@ -60,10 +60,12 @@ class Z_Core {
 			$fileStr = date("D M j G:i:s T Y") . "\n";
 			if (!empty($_SERVER)) {
 				$fileStr .= "IP address: " . $_SERVER['REMOTE_ADDR'] . "\n";
+				if (isset($_SERVER['HTTP_USER_AGENT'])) {
+					$fileStr .= "User Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\n";
+				}
 				if (isset($_SERVER['HTTP_X_ZOTERO_VERSION'])) {
 					$str = "Version: " . $_SERVER['HTTP_X_ZOTERO_VERSION'];
 					$logStr .= $str . " ";
-					$fileStr .= $str . "\n";
 				}
 				$str = $_SERVER['REQUEST_METHOD'] . " " . self::getCleanRequestURI();
 				$logStr .= $str;
