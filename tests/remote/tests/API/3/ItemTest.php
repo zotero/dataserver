@@ -2621,6 +2621,26 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_should_reject_parentItem_that_matches_item_key() {
+		$response = API::get("items/new?itemType=attachment&linkMode=imported_file");
+		$json = json_decode($response->getBody());
+		require_once '../../model/ID.inc.php';
+		$json->key = \Zotero_ID::getKey();
+		$json->version = 0;
+		$json->parentItem = $json->key;
+		
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json])
+		);
+		$msg = "Item $json->key cannot be a child of itself";
+		// TEMP
+		$msg .= "\n\nCheck your database integrity from the Advanced → Files and Folders pane of the Zotero preferences.";
+		$this->assert400ForObject($response, $msg);
+	}
+	
+	
 	public function testParentItemPatch() {
 		$json = API::createItem("book", false, $this, 'jsonData');
 		$parentKey = $json['key'];

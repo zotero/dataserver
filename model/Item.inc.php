@@ -1350,10 +1350,18 @@ class Zotero_Item extends Zotero_DataObject {
 						if (!$parentItem) {
 							throw new Exception("Parent item $parent not found");
 						}
+						$parentKey = $parentItem->key;
+						// Don't allow item to be set as its own parent
+						if ($parentKey == $this->_key) {
+							// Keep in sync with Zotero_Errors::parseException
+							throw new Exception(
+								"Item $this->_libraryID/$this->key cannot be a child of itself",
+								Z_ERROR_ITEM_PARENT_SET_TO_SELF
+							);
+						}
 						if ($parentItem->getSource()) {
 							// Only embedded-image attachments can have child items as parents
 							if (!$isEmbeddedImage) {
-								$parentKey = $parentItem->key;
 								throw new Exception("=Parent item $parentKey cannot be a child item", Z_ERROR_INVALID_INPUT);
 							}
 						}

@@ -149,6 +149,17 @@ class Zotero_Errors {
 				}
 				break;
 			
+			case Z_ERROR_ITEM_PARENT_SET_TO_SELF:
+				preg_match("/Item \d+\/([^ ]+)/", $msg, $matches);
+				if ($matches) {
+					$error['code'] = 400;
+					$error['message'] = "Item {$matches[1]} cannot be a child of itself";
+					// TEMP: Corrected/prevented in 5.0.92
+					$error['message'] .= "\n\nCheck your database integrity from the "
+						. "Advanced → Files and Folders pane of the Zotero preferences.";
+				}
+				break;
+			
 			case Z_ERROR_UPLOAD_TOO_LARGE:
 				$error['code'] = 413;
 				$error['log'] = true;
