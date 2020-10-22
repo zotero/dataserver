@@ -241,9 +241,9 @@ class Zotero_Cite {
 		'statute' => "bill",				// ??
 		'email' => "personal_communication",
 		'map' => "map",
-		'blogPost' => "webpage",
+		'blogPost' => "post-weblog",
 		'instantMessage' => "personal_communication",
-		'forumPost' => "webpage",
+		'forumPost' => "post",
 		'audioRecording' => "song",		// ??
 		'presentation' => "speech",
 		'videoRecording' => "motion_picture",
@@ -383,6 +383,9 @@ class Zotero_Cite {
 	
 	
 	private static function getCacheKey($mode, $item, array $queryParams) {
+		// Increment on code changes
+		$version = 1;
+		
 		$lk = $item->libraryID . "/" . $item->key;
 		
 		// Any query parameters that have an effect on the output
@@ -397,6 +400,7 @@ class Zotero_Cite {
 		
 		return $mode . "_" . $lk . "_"
 				. md5($item->etag . json_encode($cachedParams))
+				. "_$version"
 				. (isset(Z_CONFIG::$CACHE_VERSION_BIB)
 					? "_" . Z_CONFIG::$CACHE_VERSION_BIB
 					: "");
