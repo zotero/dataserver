@@ -2957,8 +2957,15 @@ class Zotero_Item extends Zotero_DataObject {
 			trigger_error("attachment$fieldCap can only be set for attachment items", E_USER_ERROR);
 		}
 		
+		$linkMode = $this->getAttachmentLinkMode();
+		
+		if ($linkMode == "linked_file" && Zotero_Libraries::getType($this->libraryID) != 'user') {
+			throw new Exception(
+				"Linked files can only be added to user libraries", Z_ERROR_INVALID_INPUT
+			);
+		}
+		
 		if ($field == 'filename') {
-			$linkMode = $this->getAttachmentLinkMode();
 			if ($linkMode == "linked_url") {
 				throw new Exception("Linked URLs cannot have filenames");
 			}

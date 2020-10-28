@@ -1438,6 +1438,21 @@ class ItemTests extends APITests {
 	}
 	
 	/**
+	 * @group attachments
+	 */
+	public function test_should_reject_linked_file_attachment_in_group() {
+		$key = API::groupCreateItem(self::$config['ownedPrivateGroupID'], "book", false, $this, 'key');
+		$path = 'attachments:tést.txt';
+		$response = API::groupCreateAttachmentItem(
+			self::$config['ownedPrivateGroupID'],
+			"linked_file", [
+				'path' => $path
+			], $key, $this, 'response'
+		);
+		$this->assert400ForObject($response, "Linked files can only be added to user libraries");
+	}
+	
+	/**
 	 * Date Modified should be updated when a field is changed if not included in upload
 	 */
 	public function testDateModifiedChangeOnEdit() {

@@ -1,0 +1,24 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+require("../../../model/Error.inc.php");
+
+$rows = Zotero_DB::query("SELECT shardID, shardHostID, db FROM shards ORDER BY shardID");
+
+foreach ($rows as $row) {
+	$shardID = $row['shardID'];
+	echo "Shard $shardID\n";
+	
+	$rows = Zotero_DB::query("SELECT libraryID, `key` FROM shardLibraries JOIN items USING (libraryID) JOIN itemAttachments USING (itemID) WHERE libraryType='group' AND linkMode='LINKED_FILE'", false, $shardID);
+	if (!$rows) continue;
+	
+	$deleted = 0;
+	foreach ($rows as $row) {
+		Zotero_Items::delete($row['libraryID'], $row['key']);
+		$deleted++;
+	}
+	if ($deleted) {
+		echo "Deleted $deleted item(s)\n";
+	}
+}
