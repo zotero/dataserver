@@ -52,7 +52,7 @@ class ExportTests extends APITests {
 			)
 		), null, 'key');
 		self::$items[$key] = [
-			'bibtex' => "\n@book{last_title_2014,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
+			'bibtex' => "\n@book{last_title_2014,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014},\n}\n",
 			'ris' => "TY  - BOOK\r\nTI  - Title\r\nAU  - Last, First\r\nDA  - 2014/01/01/\r\nPY  - 2014\r\nY2  - 2019/05/23/01:23:45\r\nER  - \r\n\r\n",
 			'csljson' => [
 				'id' => self::$config['libraryID'] . "/$key",
@@ -94,7 +94,7 @@ class ExportTests extends APITests {
 			)
 		), null, 'key');
 		self::$items[$key] = [
-			'bibtex' => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014}\n}",
+			'bibtex' => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014},\n}\n",
 			'ris' => "TY  - BOOK\r\nTI  - Title 2\r\nAU  - Last, First\r\nA3  - McEditor, Ed\r\nDA  - 2014/06/24/\r\nPY  - 2014\r\nER  - \r\n\r\n",
 			'csljson' => [
 				'id' => self::$config['libraryID'] . "/$key",
@@ -123,7 +123,7 @@ class ExportTests extends APITests {
 		self::$multiResponses = [
 			'bibtex' => [
 				"contentType" => "application/x-bibtex",
-				"content" => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014}\n}\n\n@book{last_title_2014-1,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014}\n}",
+				"content" => "\n@book{last_title_2014,\n	title = {Title 2},\n	author = {Last, First},\n	editor = {McEditor, Ed},\n	month = jun,\n	year = {2014},\n}\n\n@book{last_title_2014-1,\n	title = {Title},\n	urldate = {2019-05-23},\n	author = {Last, First},\n	month = jan,\n	year = {2014},\n}\n",
 			],
 			'ris' => [
 				"contentType" => "application/x-research-info-systems",
