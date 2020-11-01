@@ -377,6 +377,34 @@ class CollectionTests extends APITests {
 	}
 	
 	
+	public function test_should_convert_child_attachent_with_embedded_note_in_collection_to_standalone_attachment_while_changing_note() {
+		$collectionKey = API::createCollection('Test', false, $this, 'key');
+		
+		$key = API::createItem("book", ['collections' => [$collectionKey]], $this, 'key');
+		$json = API::createAttachmentItem("linked_url", ["note" => "Foo"], $key, $this, 'jsonData');
+		$json = [
+			'key' => $json['key'],
+			'version' => $json['version'],
+			'note' => "",
+			'collections' => [$collectionKey],
+			'parentItem' => false
+		];
+		
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			[
+				"Content-Type: application/json"
+			]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response)['successful'][0];
+		$this->assertEquals("", $json['data']['note']);
+		$this->assertSame([$collectionKey], $json['data']['collections']);
+	}
+	
+	
 	public function testCollectionItems() {
 		$collectionKey = API::createCollection('Test', false, $this, 'key');
 		
