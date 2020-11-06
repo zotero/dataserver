@@ -1,0 +1,29 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+$startShard = !empty($argv[1]) ? $argv[1] : 1;
+
+$shardIDs = Zotero_DB::columnQuery("SELECT shardID FROM shards WHERE shardID >= ? ORDER BY shardID", $startShard);
+
+$authorID = Zotero_CreatorTypes::getID('author');
+
+foreach ($shardIDs as $shardID) {
+	echo "Shard: $shardID\n";
+	
+	$itemTypes = Zotero_ItemTypes::getAll();
+	foreach ($itemTypes as $itemType) {
+		$primaryID = Zotero_CreatorTypes::getPrimaryIDForType($itemType['id']);
+		if (!$primaryID || $primaryID == $authorID) continue;
+		echo "Checking {$itemType['name']}\n";
+		$rows = Zotero_DB::query("SELECT * FROM items JOIN itemCreators USING (itemID) JOIN creators USING (creatorID) WHERE itemTypeID=? AND creatorTypeID=?", [$itemType['id'], $authorID], $shardID);
+		if ($rows) {
+			foreach ($rows as $row) {
+				echo implode(" ", $row) . "\n";
+			}
+		}
+		Zotero_DB::query("UPDATE items JOIN itemCreators USING (itemID) JOIN creators USING (creatorID) SET creatorTypeID=? WHERE itemTypeID=? AND creatorTypeID=?", [$primaryID, $itemType['id'], $authorID], $shardID);
+	}
+	echo "\n";
+}
