@@ -538,7 +538,7 @@ class Zotero_Items {
 					if (!$fieldID) {
 						throw new Exception("Invalid order field '" . $params['sort'] . "'");
 					}
-					$orderSQL = "(SELECT value FROM itemData WHERE itemID=I.itemID AND fieldID=?)";
+					$orderSQL = "(SELECT value FROM itemData WHERE itemID=$itemIDSelector AND fieldID=?)";
 					if (!$params['emptyFirst']) {
 						$sqlParams[] = $fieldID;
 					}
