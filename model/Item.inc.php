@@ -56,10 +56,10 @@ class Zotero_Item extends Zotero_DataObject {
 		'linkMode' => null,
 		'mimeType' => null,
 		'charset' => null,
+		'path' => null,
+		'filename' => null,
 		'storageModTime' => null,
 		'storageHash' => null,
-		'path' => null,
-		'filename' => null
 	);
 	
 	private $annotationData = [
@@ -143,17 +143,16 @@ class Zotero_Item extends Zotero_DataObject {
 			case 'attachmentCharset':
 				return $this->getAttachmentCharset();
 			
-			case 'attachmentPath':
-				return $this->getAttachmentPath();
-			
 			case 'attachmentFilename':
 				return $this->getAttachmentFilename();
 			
+			case 'attachmentPath':
 			case 'attachmentStorageModTime':
-				return $this->getAttachmentStorageModTime();
-			
 			case 'attachmentStorageHash':
-				return $this->getAttachmentStorageHash();
+				// Strip 'attachment'
+				$field = substr($field, 10);
+				$field[0] = strtolower($field[0]);
+				return $this->getAttachmentField($field);
 			
 			case 'annotationType':
 			case 'annotationText':
@@ -1846,7 +1845,6 @@ class Zotero_Item extends Zotero_DataObject {
 					// TODO: handle changed source?
 				}
 				
-				
 				// Attachment
 				if (!empty($this->changed['attachmentData'])) {
 					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
@@ -1856,7 +1854,16 @@ class Zotero_Item extends Zotero_DataObject {
 					}
 					
 					$sql = "INSERT INTO itemAttachments
-						(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash)
+						(
+							itemID,
+							sourceItemID,
+							linkMode,
+							mimeType,
+							charsetID,
+							path,
+							storageModTime,
+							storageHash
+						)
 						VALUES (?,?,?,?,?,?,?,?)
 						ON DUPLICATE KEY UPDATE
 							sourceItemID=VALUES(sourceItemID),
@@ -3084,30 +3091,6 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	private function getAttachmentPath() {
-		if (!$this->isAttachment()) {
-			trigger_error("attachmentPath can only be retrieved for attachment items", E_USER_ERROR);
-		}
-		
-		if ($this->attachmentData['path'] !== null) {
-			return $this->attachmentData['path'];
-		}
-		
-		if (!$this->id) {
-			return '';
-		}
-		
-		$sql = "SELECT path FROM itemAttachments WHERE itemID=?";
-		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-		$path = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-		if (!$path) {
-			$path = '';
-		}
-		$this->attachmentData['path'] = $path;
-		return $path;
-	}
-	
-	
 	private function getAttachmentFilename() {
 		if (!$this->isAttachment()) {
 			throw new Exception("attachmentFilename can only be retrieved for attachment items");
@@ -3140,46 +3123,50 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	private function getAttachmentStorageModTime() {
+	private function getAttachmentField($field) {
+		$fullField = "attachment" . ucfirst($field);
 		if (!$this->isAttachment()) {
-			trigger_error("attachmentStorageModTime can only be retrieved
-				for attachment items", E_USER_ERROR);
+			throw new Exception("$fullField can only be retrieved for attachment items");
 		}
 		
-		if ($this->attachmentData['storageModTime'] !== null) {
-			return $this->attachmentData['storageModTime'];
+		switch ($field) {
+			case 'path':
+				$defaultType = 'string';
+				break;
+			
+			case 'storageModTime':
+			case 'storageHash':
+				$defaultType = 'null';
+				break;
+			
+			default:
+				throw new Exception("Invalid field '$field'");
+		}
+		
+		if ($this->attachmentData[$field] !== null) {
+			return $this->attachmentData[$field];
 		}
 		
 		if (!$this->id) {
-			return null;
+			return $defaultType == 'string' ? '' : null;
 		}
 		
-		$sql = "SELECT storageModTime FROM itemAttachments WHERE itemID=?";
+		$sql = "SELECT $field FROM itemAttachments WHERE itemID=?";
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 		$val = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-		$this->attachmentData['storageModTime'] = $val;
-		return $val;
-	}
-	
-	
-	private function getAttachmentStorageHash() {
-		if (!$this->isAttachment()) {
-			trigger_error("attachmentStorageHash can only be retrieved
-				for attachment items", E_USER_ERROR);
+		
+		if ($defaultType == 'string') {
+			if (!$val) {
+				$val = '';
+			}
+		}
+		else if ($defaultType == 'null') {
+			if ($val === false) {
+				$val = null;
+			}
 		}
 		
-		if ($this->attachmentData['storageHash'] !== null) {
-			return $this->attachmentData['storageHash'];
-		}
-		
-		if (!$this->id) {
-			return null;
-		}
-		
-		$sql = "SELECT storageHash FROM itemAttachments WHERE itemID=?";
-		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-		$val = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-		$this->attachmentData['storageHash'] = $val;
+		$this->attachmentData[$field] = $val;
 		return $val;
 	}
 	
@@ -3207,6 +3194,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		// Clean value
 		switch ($field) {
+			// Default to string
 			case 'mimeType':
 			case 'charset':
 			case 'path':
@@ -3226,6 +3214,7 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				break;
 			
+			// Default to null
 			case 'storageModTime':
 			case 'storageHash':
 				if (!$val) {
