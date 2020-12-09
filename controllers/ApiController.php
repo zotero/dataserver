@@ -396,7 +396,7 @@ class ApiController extends Controller {
 			}
 			
 			if ($this->isWriteMethod()) {
-				$this->e405("Please upgrade to the latest Zotero 5.0 beta to update My Publications.", Z_ERROR_INVALID_INPUT);
+				$this->e405("Please upgrade to the latest version of Zotero to update My Publications.", Z_ERROR_INVALID_INPUT);
 			}
 			
 			$this->permissions->setPublications();
