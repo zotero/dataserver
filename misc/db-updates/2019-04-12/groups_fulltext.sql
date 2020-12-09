@@ -1,1 +1,1 @@
-CREATE FULLTEXT INDEX name ON groups(name);
+CREATE FULLTEXT INDEX name ON `groups`(name);

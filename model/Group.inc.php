@@ -308,7 +308,7 @@ class Zotero_Group {
 					VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
 		$added = Zotero_DB::query($sql, array($this->id, $userID, $role));
 		
-		$sql = "UPDATE groups SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
+		$sql = "UPDATE `groups` SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
 		Zotero_DB::query($sql, $this->id);
 		
 		// Clear cache
@@ -363,7 +363,7 @@ class Zotero_Group {
 					WHERE groupID=? AND userID=?";
 		$updated = Zotero_DB::query($sql, array($role, $this->id, $userID));
 		
-		$sql = "UPDATE groups SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
+		$sql = "UPDATE `groups` SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
 		Zotero_DB::query($sql, $this->id);
 		
 		// Clear cache
@@ -398,7 +398,7 @@ class Zotero_Group {
 		$sql = "DELETE FROM groupUsers WHERE groupID=? AND userID=?";
 		Zotero_DB::query($sql, array($this->id, $userID));
 		
-		$sql = "UPDATE groups SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
+		$sql = "UPDATE `groups` SET dateModified=CURRENT_TIMESTAMP, version=version+1 WHERE groupID=?";
 		Zotero_DB::query($sql, $this->id);
 		
 		// Clear cache
@@ -563,7 +563,7 @@ class Zotero_Group {
 		
 		$fields = array_merge($fields, array('libraryEditing', 'libraryReading', 'fileEditing'));
 		
-		$sql = "INSERT INTO groups
+		$sql = "INSERT INTO `groups`
 					(groupID, libraryID, " . implode(", ", $fields) . ", dateModified)
 					VALUES (?, ?, " . implode(", ", array_fill(0, sizeOf($fields), "?")) . ", CURRENT_TIMESTAMP)";
 		$params = array($this->id, $libraryID);
@@ -1111,7 +1111,7 @@ class Zotero_Group {
 	
 	
 	private function load() {
-		$sql = "SELECT * FROM groups WHERE groupID=?";
+		$sql = "SELECT * FROM `groups` WHERE groupID=?";
 		$row = Zotero_DB::rowQuery($sql, $this->id);
 		if (!$row) {
 			return false;

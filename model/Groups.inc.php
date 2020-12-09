@@ -100,7 +100,7 @@ class Zotero_Groups {
 				// Use SQL_CALC_FOUND_ROWS for user queries
 				. (($calcFoundRows && $userID) ? "SQL_CALC_FOUND_ROWS " : "")
 				. "G.groupID, GUO.userID AS ownerUserID "
-				. "FROM groups G JOIN groupUsers GUO ON (G.groupID=GUO.groupID AND GUO.role='owner') ";
+				. "FROM `groups` G JOIN groupUsers GUO ON (G.groupID=GUO.groupID AND GUO.role='owner') ";
 			$sqlParams = [];
 			if ($userID) {
 				$sql .= "JOIN groupUsers GUA ON (G.groupID=GUA.groupID) WHERE GUA.userID=? ";
@@ -108,7 +108,7 @@ class Zotero_Groups {
 			}
 			
 			// Run separate query to get Total-Results for non-user queries
-			$countSQL = "SELECT COUNT(*) FROM groups G ";
+			$countSQL = "SELECT COUNT(*) FROM `groups` G ";
 			$countSQLParams = [];
 			
 			$querySQL = "";
@@ -359,7 +359,7 @@ class Zotero_Groups {
 	 * @return	array						An array of groupIDs
 	 */
 	public static function getUpdated($userID, $timestamp) {
-		$sql = "SELECT groupID FROM groups G NATURAL JOIN groupUsers GU WHERE userID=?
+		$sql = "SELECT groupID FROM `groups` G NATURAL JOIN groupUsers GU WHERE userID=?
 				AND (G.dateModified>FROM_UNIXTIME(?) OR GU.lastUpdated>FROM_UNIXTIME(?))";
 		$groupIDs = Zotero_DB::columnQuery($sql, array($userID, $timestamp, $timestamp));
 		return $groupIDs ? $groupIDs : array();
@@ -367,7 +367,7 @@ class Zotero_Groups {
 	
 	
 	public static function exist($groupIDs) {
-		$sql = "SELECT groupID FROM groups WHERE groupID IN ("
+		$sql = "SELECT groupID FROM `groups` WHERE groupID IN ("
 			. implode(', ', array_fill(0, sizeOf($groupIDs), '?')) . ")";
 		$exist = Zotero_DB::columnQuery($sql, $groupIDs);
 		return $exist ? $exist : array();
@@ -376,7 +376,7 @@ class Zotero_Groups {
 	
 	public static function publicNameExists($name) {
 		$slug = Zotero_Utilities::slugify($name);
-		$sql = "SELECT groupID FROM groups WHERE (name=? OR slug=?) AND
+		$sql = "SELECT groupID FROM `groups` WHERE (name=? OR slug=?) AND
 					type IN ('PublicOpen', 'PublicClosed')";
 		$groupID = Zotero_DB::valueQuery($sql, array($name, $slug));
 		return $groupID ? $groupID : false;
@@ -389,7 +389,7 @@ class Zotero_Groups {
 		if ($libraryID) {
 			return $libraryID;
 		}
-		$sql = "SELECT libraryID FROM groups WHERE groupID=?";
+		$sql = "SELECT libraryID FROM `groups` WHERE groupID=?";
 		$libraryID = Zotero_DB::valueQuery($sql, $groupID);
 		if (!$libraryID) {
 			trigger_error("Group $groupID does not exist", E_USER_ERROR);
@@ -405,7 +405,7 @@ class Zotero_Groups {
 		if ($groupID) {
 			return $groupID;
 		}
-		$sql = "SELECT groupID FROM groups WHERE libraryID=?";
+		$sql = "SELECT groupID FROM `groups` WHERE libraryID=?";
 		$groupID = Zotero_DB::valueQuery($sql, $libraryID);
 		if (!$groupID) {
 			trigger_error("Group with libraryID $libraryID does not exist", E_USER_ERROR);
@@ -426,7 +426,7 @@ class Zotero_Groups {
 	
 	
 	public static function getUserOwnedGroups($userID) {
-		$sql = "SELECT G.groupID FROM groups G
+		$sql = "SELECT G.groupID FROM `groups` G
 				JOIN groupUsers GU ON (G.groupID=GU.groupID AND role='owner')
 				WHERE userID=?";
 		$groups = Zotero_DB::columnQuery($sql, $userID);
@@ -465,7 +465,7 @@ class Zotero_Groups {
 	
 	
 	public static function getUserGroupLibraries($userID) {
-		$sql = "SELECT libraryID FROM groupUsers JOIN groups USING (groupID) WHERE userID=?";
+		$sql = "SELECT libraryID FROM groupUsers JOIN `groups` USING (groupID) WHERE userID=?";
 		$libraryIDs = Zotero_DB::columnQuery($sql, $userID);
 		if (!$libraryIDs) {
 			return array();

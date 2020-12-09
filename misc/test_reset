@@ -60,7 +60,7 @@ echo "INSERT INTO libraries VALUES (2, 'user', '0000-00-00 00:00:00', 0, 1)" | $
 echo "INSERT INTO libraries VALUES (3, 'group', '0000-00-00 00:00:00', 0, 2)" | $MASTER zoterotest_master
 echo "INSERT INTO users VALUES (1, 1, 'testuser', '0000-00-00 00:00:00', '0000-00-00 00:00:00')" | $MASTER zoterotest_master
 echo "INSERT INTO users VALUES (2, 2, 'testuser2', '0000-00-00 00:00:00', '0000-00-00 00:00:00')" | $MASTER zoterotest_master
-echo "INSERT INTO groups VALUES (1, 3, 'Test Group', 'test_group', 'Private', 1, 'admins', 'all', 'members', '', '', 0, '0000-00-00 00:00:00', '0000-00-00 00:00:00')" | $MASTER zoterotest_master
+echo "INSERT INTO `groups` VALUES (1, 3, 'Test Group', 'test_group', 'Private', 1, 'admins', 'all', 'members', '', '', 0, '0000-00-00 00:00:00', '0000-00-00 00:00:00')" | $MASTER zoterotest_master
 echo "INSERT INTO groupUsers VALUES (1, 1, 'owner', '0000-00-00 00:00:00', '0000-00-00 00:00:00')" | $MASTER zoterotest_master
 
 # Set up sample users

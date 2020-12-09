@@ -104,7 +104,7 @@ class Zotero_Users {
 			break;
 		
 		case 'group':
-			$sql = "SELECT userID FROM groupUsers JOIN groups USING (groupID) "
+			$sql = "SELECT userID FROM groupUsers JOIN `groups` USING (groupID) "
 				. "WHERE libraryID=? AND role='owner'";
 			break;
 		}
