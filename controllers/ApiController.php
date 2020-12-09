@@ -151,6 +151,10 @@ class ApiController extends Controller {
 			$this->e400("Invalid endpoint");
 		}
 		
+		if ($this->isWriteMethod() && Z_CONFIG::$READ_ONLY) {
+			$this->e503(Z_CONFIG::$MAINTENANCE_MESSAGE);
+		}
+		
 		if (in_array($this->method, array('POST', 'PUT', 'PATCH'))) {
 			$this->ifUnmodifiedSince =
 				isset($_SERVER['HTTP_IF_UNMODIFIED_SINCE'])

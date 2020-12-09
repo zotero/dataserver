@@ -1,6 +1,7 @@
 <?
 class Z_CONFIG {
 	public static $API_ENABLED = true;
+	public static $READ_ONLY = false;
 	public static $MAINTENANCE_MESSAGE = 'Server updates in progress. Please try again in a few minutes.';
 	public static $BACKOFF = 0;
 
