@@ -376,9 +376,8 @@ class Zotero_Groups {
 	
 	public static function publicNameExists($name) {
 		$slug = Zotero_Utilities::slugify($name);
-		$sql = "SELECT groupID FROM `groups` WHERE (name=? OR slug=?) AND
-					type IN ('PublicOpen', 'PublicClosed')";
-		$groupID = Zotero_DB::valueQuery($sql, array($name, $slug));
+		$sql = "SELECT groupID FROM `groups` WHERE slug=? AND type IN ('PublicOpen', 'PublicClosed')";
+		$groupID = Zotero_DB::valueQuery($sql, [$slug]);
 		return $groupID ? $groupID : false;
 	}
 	
