@@ -136,28 +136,37 @@ class API3 {
 	}
 	
 	
-	public static function createDataObject($objectType, $format) {
+	public static function createDataObject($objectType, $data = false, $context = false, $format = 'json') {
+		$template = self::createUnsavedDataObject($objectType);
+		if ($data) {
+			foreach ($data as $key => $val) {
+				$template[$key] = $val;
+			}
+		}
+		$data = $template;
+		
 		switch ($objectType) {
 		case 'collection':
-			return self::createCollection("Test", [], null, $format);
+			return self::createCollection("Test", $data, $context, $format);
 		
 		case 'item':
-			return self::createItem("book", [], null, $format);
+			return self::createItem("book", $data, $context, $format);
 		
 		case 'search':
-			return self::createSearch(
-				"Test",
-				[
-					[
-						"condition" => "title",
-						"operator" => "contains",
-						"value" => "test"
-					]
-				],
-				null,
-				$format
-			);
+			$response = self::postObjects($objectType, [$data]);
+			return self::handleCreateResponse('search', $response, $format, $context);
 		}
+	}
+	
+	
+	public static function postObjects($objectType, $json) {
+		$objectTypePlural = self::getPluralObjectType($objectType);
+		return self::userPost(
+			self::$config['userID'],
+			$objectTypePlural,
+			json_encode($json),
+			["Content-Type: application/json"]
+		);
 	}
 	
 	
@@ -212,12 +221,7 @@ class API3 {
 	 * and return the response
 	 */
 	public static function postItems($json) {
-		return self::userPost(
-			self::$config['userID'],
-			"items?key=" . self::$config['apiKey'],
-			json_encode($json),
-			array("Content-Type: application/json")
-		);
+		return self::postObjects('item', $json);
 	}
 	
 	
@@ -291,12 +295,7 @@ class API3 {
 			$json->parentItem = $parentKey;
 		}
 		
-		$response = self::userPost(
-			self::$config['userID'],
-			"items?key=" . self::$config['apiKey'],
-			json_encode([$json]),
-			array("Content-Type: application/json")
-		);
+		$response = self::postObjects('item', [$json]);
 		return self::handleCreateResponse('item', $response, $returnFormat, $context);
 	}
 	
@@ -319,19 +318,17 @@ class API3 {
 			]
 		];
 		
-		$response = self::userPost(
-			self::$config['userID'],
-			"collections?key=" . self::$config['apiKey'],
-			json_encode($json),
-			array("Content-Type: application/json")
-		);
+		if (isset($data['deleted'])) {
+			$json[0]['deleted'] = $data['deleted'];
+		}
 		
+		$response = self::postObjects('collection', $json);
 		return self::handleCreateResponse('collection', $response, $returnFormat, $context);
 	}
 	
 	
 	public static function createSearch($name, $conditions=array(), $context=null, $returnFormat='responseJSON') {
-		if ($conditions == 'default') {
+		if (!$conditions || $conditions == 'default') {
 			$conditions = array(
 				array(
 					'condition' => 'title',
@@ -348,13 +345,7 @@ class API3 {
 			]
 		];
 		
-		$response = self::userPost(
-			self::$config['userID'],
-			"searches?key=" . self::$config['apiKey'],
-			json_encode($json),
-			array("Content-Type: application/json")
-		);
-		
+		$response = self::postObjects('search', $json);
 		return self::handleCreateResponse('search', $response, $returnFormat, $context);
 	}
 	

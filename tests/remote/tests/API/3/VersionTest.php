@@ -511,7 +511,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectWithoutVersion($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		
 		$response = API::userPatch(
@@ -636,7 +636,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectWithVersion0Header($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		
 		$response = API::userPatch(
@@ -662,7 +662,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectWithVersion0Property($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		$json['version'] = 0;
 		
@@ -688,7 +688,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectWithOldVersionHeader($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		
 		$response = API::userPatch(
@@ -714,7 +714,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectWithOldVersionProperty($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		$json['version'] = 1;
 		
@@ -816,7 +816,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectsWithVersion0Property($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		$json['key'] = $key;
 		$json['version'] = 0;
@@ -841,7 +841,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectsWithoutVersionWithHeader($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$existing = API::createDataObject($objectType, 'json');
+		$existing = API::createDataObject($objectType, null, null, 'json');
 		$key = $existing['key'];
 		$libraryVersion = $existing['version'];
 		$json = API::createUnsavedDataObject($objectType);
@@ -867,7 +867,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectsWithoutVersionWithoutHeader($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		$json['key'] = $key;
 		
@@ -909,7 +909,7 @@ class VersionTests extends APITests {
 	private function _testPatchExistingObjectsWithOldVersionProperty($objectType) {
 		$objectTypePlural = API::getPluralObjectType($objectType);
 		
-		$key = API::createDataObject($objectType, 'key');
+		$key = API::createDataObject($objectType, null, null, 'key');
 		$json = API::createUnsavedDataObject($objectType);
 		$json['key'] = $key;
 		$json['version'] = 1;

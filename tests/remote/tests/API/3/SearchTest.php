@@ -267,7 +267,12 @@ class SearchTests extends APITests {
 	
 	
 	public function testNewSearchNoConditions() {
-		$json = API::createSearch("Test", array(), $this, 'responseJSON');
+		$json = [
+			"name" => "Test",
+			"conditions" => []
+		];
+		$response = API::postObjects('search', [$json]);
+		$json = API::getJSONFromResponse($response);
 		$this->assert400ForObject($json, "'conditions' cannot be empty");
 	}
 	
