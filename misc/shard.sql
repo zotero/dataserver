@@ -74,12 +74,25 @@ CREATE TABLE `creators` (
 
 
 
+CREATE TABLE `deletedCollections` (
+  `collectionID` int(10) unsigned NOT NULL,
+  `dateDeleted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`collectionID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
 CREATE TABLE `deletedItems` (
   `itemID` int(10) unsigned NOT NULL,
   `dateDeleted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`itemID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
+CREATE TABLE `deletedSearches` (
+  `searchID` int(10) unsigned NOT NULL,
+  `dateDeleted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`searchID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
 CREATE TABLE `groupItems` (
@@ -348,8 +361,14 @@ ALTER TABLE `collections`
 ALTER TABLE `creators`
   ADD CONSTRAINT `creators_ibfk_1` FOREIGN KEY (`libraryID`) REFERENCES `shardLibraries` (`libraryID`) ON DELETE CASCADE;
 
+ALTER TABLE `deletedCollections`
+  ADD CONSTRAINT `deletedCollections_ibfk_1` FOREIGN KEY (`collectionID`) REFERENCES `collections` (`collectionID`) ON DELETE CASCADE;
+
 ALTER TABLE `deletedItems`
   ADD CONSTRAINT `deletedItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;
+
+ALTER TABLE `deletedSearches`
+  ADD CONSTRAINT `deletedSearches_ibfk_1` FOREIGN KEY (`searchID`) REFERENCES `savedSearches` (`searchID`) ON DELETE CASCADE;
 
 ALTER TABLE `groupItems`
   ADD CONSTRAINT `groupItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;

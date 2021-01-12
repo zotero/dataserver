@@ -30,6 +30,8 @@ require_once 'APITests.inc.php';
 require_once 'include/api3.inc.php';
 
 class ObjectTests extends APITests {
+	private static $types = ['collection', 'search', 'item'];
+	
 	public function setUp(): void {
 		parent::setUp();
 		API::userClear(self::$config['userID']);
@@ -276,6 +278,85 @@ class ObjectTests extends APITests {
 		$this->assert200($response);
 		$json = json_decode($response->getBody(), true);
 		$func($json, 'tag', $objectKeys['tag']);
+	}
+	
+	
+	//
+	// 'deleted' property (trash)
+	//
+	public function test_patch_of_object_should_set_trash_state() {
+		foreach (self::$types as $type) {
+			$json = API::createDataObject($type);
+			
+			$data = [
+				[
+					'key' => $json['key'],
+					'version' => $json['version'],
+					'deleted' => true
+				]
+			];
+			$response = API::postObjects($type, $data);
+			$this->assert200ForObject($response);
+			$json = API::getJSONFromResponse($response);
+			
+			$this->assertArrayHasKey('deleted', $json['successful'][0]['data'], $type);
+			// TODO: Change to true in APIv4
+			if ($type == 'item') {
+				$this->assertSame(1, $json['successful'][0]['data']['deleted'], $type);
+			}
+			else {
+				$this->assertTrue($json['successful'][0]['data']['deleted'], $type);
+			}
+		}
+	}
+	
+	
+	public function test_patch_with_deleted_should_clear_trash_state() {
+		foreach (self::$types as $type) {
+			$json = API::createDataObject($type, [
+				"deleted" => true
+			], $this);
+			// TODO: Change to true in APIv4
+			if ($type == 'item') {
+				$this->assertSame(1, $json['data']['deleted']);
+			}
+			else {
+				$this->assertTrue($json['data']['deleted']);
+			}
+			
+			$data = [
+				[
+					'key' => $json['key'],
+					'version' => $json['version'],
+					'deleted' => false
+				]
+			];
+			$response = API::postObjects($type, $data);
+			$json = API::getJSONFromResponse($response);
+			$this->assertArrayNotHasKey('deleted', $json['successful'][0]['data']);
+		}
+	}
+	
+	
+	public function test_patch_of_object_in_trash_without_deleted_should_not_remove_it_from_trash() {
+		foreach (self::$types as $type) {
+			$json = API::createItem("book", [
+				"deleted" => true
+			], $this, 'json');
+			
+			$data = [
+				[
+					'key' => $json['key'],
+					'version' => $json['version'],
+					'title' => 'A'
+				]
+			];
+			$response = API::postItems($data);
+			$json = API::getJSONFromResponse($response);
+			
+			$this->assertArrayHasKey('deleted', $json['successful'][0]['data']);
+			$this->assertEquals(1, $json['successful'][0]['data']['deleted']);
+		}
 	}
 	
 	

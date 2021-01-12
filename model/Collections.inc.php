@@ -302,6 +302,10 @@ class Zotero_Collections {
 			}
 		}
 		
+		if (isset($json->deleted) || !$partialUpdate) {
+			$collection->deleted = !empty($json->deleted);
+		}
+		
 		$changed = $collection->save() || $changed;
 		
 		if ($transactionStarted) {
@@ -426,6 +430,13 @@ class Zotero_Collections {
 								throw new Exception("'$key' values currently must be Zotero collection URIs", Z_ERROR_INVALID_INPUT);
 							}
 						}
+					}
+					break;
+				
+				case 'deleted':
+					// Accept a boolean or 0/1, but lie about it
+					if (gettype($val) != 'boolean' && $val !== 0 && $val !== 1) {
+						throw new Exception("'deleted' must be a boolean");
 					}
 					break;
 				

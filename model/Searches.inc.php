@@ -191,6 +191,11 @@ class Zotero_Searches {
 			}
 			$search->updateConditions($conditions);
 		}
+		
+		if (isset($json->deleted) || !$partialUpdate) {
+			$search->deleted = !empty($json->deleted);
+		}
+		
 		return !!$search->save();
 	}
 	
@@ -287,6 +292,13 @@ class Zotero_Searches {
 								throw new Exception("Invalid property '$conditionKey' for search condition", Z_ERROR_INVALID_INPUT);
 							}
 						}
+					}
+					break;
+				
+				case 'deleted':
+					// Accept a boolean or 0/1, but lie about it
+					if (gettype($val) != 'boolean' && $val !== 0 && $val !== 1) {
+						throw new Exception("'deleted' must be a boolean");
 					}
 					break;
 				

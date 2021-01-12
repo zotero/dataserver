@@ -50,7 +50,6 @@ class Zotero_Item extends Zotero_DataObject {
 	private $noteText = null;
 	private $noteTextSanitized = null;
 	
-	private $deleted = null;
 	private $inPublications = null;
 	
 	private $attachmentData = array(
@@ -68,8 +67,6 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	protected $collections = [];
 	protected $tags = [];
-	
-	private $cacheEnabled = false;
 	
 	public function __construct($itemTypeOrID=false) {
 		parent::__construct();
@@ -112,9 +109,6 @@ class Zotero_Item extends Zotero_DataObject {
 			case 'creatorSummary':
 				return $this->getCreatorSummary();
 				
-			case 'deleted':
-				return $this->getDeleted();
-			
 			case 'inPublications':
 				return $this->getPublications();
 			
@@ -154,6 +148,9 @@ class Zotero_Item extends Zotero_DataObject {
 			
 			case 'etag':
 				return $this->getETag();
+			
+			default:
+				return parent::__get($field);
 		}
 		
 		throw new Exception("'$field' is not a primary or attachment field");
@@ -877,64 +874,6 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	private function getDeleted() {
-		if ($this->deleted !== null) {
-			return $this->deleted;
-		}
-		
-		if (!$this->__get('id')) {
-			return false;
-		}
-		
-		if (!is_numeric($this->id)) {
-			throw new Exception("Invalid itemID");
-		}
-		
-		if ($this->cacheEnabled) {
-			$cacheVersion = 1;
-			$cacheKey = $this->getCacheKey("itemIsDeleted",
-				$cacheVersion
-					. isset(Z_CONFIG::$CACHE_VERSION_ITEM_DATA)
-					? "_" . Z_CONFIG::$CACHE_VERSION_ITEM_DATA
-					: ""
-			);
-			$deleted = Z_Core::$MC->get($cacheKey);
-		}
-		else {
-			$deleted = false;
-		}
-		if ($deleted === false) {
-			$sql = "SELECT COUNT(*) FROM deletedItems WHERE itemID=?";
-			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-			$deleted = !!Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-			
-			// Memcache returns false for empty keys, so use integer
-			if ($this->cacheEnabled) {
-				Z_Core::$MC->set($cacheKey, $deleted ? 1 : 0);
-			}
-		}
-		
-		$this->deleted = $deleted;
-		
-		return $deleted;
-	}
-	
-	
-	private function setDeleted($val) {
-		$deleted = !!$val;
-		
-		if ($this->getDeleted() == $deleted) {
-			Z_Core::debug("Deleted state ($deleted) hasn't changed for item $this->id");
-			return;
-		}
-		
-		if (empty($this->changed['deleted'])) {
-			$this->changed['deleted'] = true;
-		}
-		$this->deleted = $deleted;
-	}
-	
-	
 	private function getPublications() {
 		if ($this->inPublications !== null) {
 			return $this->inPublications;
@@ -1241,8 +1180,7 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Deleted item
 				if (!empty($this->changed['deleted'])) {
-					$deleted = $this->getDeleted();
-					if ($deleted) {
+					if ($this->_deleted) {
 						$sql = "REPLACE INTO deletedItems (itemID) VALUES (?)";
 					}
 					else {
@@ -3925,6 +3863,7 @@ class Zotero_Item extends Zotero_DataObject {
 		// Non-field properties, which don't get shown for publications endpoints
 		if (!$isPublications) {
 			if ($this->getDeleted()) {
+				// TODO: Use true/false in APIv4
 				$arr['deleted'] = 1;
 			}
 			

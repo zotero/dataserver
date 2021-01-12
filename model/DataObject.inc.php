@@ -36,6 +36,7 @@ class Zotero_DataObject {
 	protected $_version;
 	protected $_parentID;
 	protected $_parentKey;
+	protected $_deleted;
 	
 	protected $relations = [];
 	
@@ -51,6 +52,8 @@ class Zotero_DataObject {
 	protected $previousData = [];
 	
 	private $disabled = false;
+	
+	protected $cacheEnabled = false;
 	
 	public function __construct() {
 		$objectType = $this->objectType;
@@ -72,6 +75,14 @@ class Zotero_DataObject {
 		}
 		
 		if ($field != 'id') $this->disabledCheck();
+		
+		switch ($field) {
+			case 'deleted':
+				return $this->getDeleted();
+			
+			case 'relations':
+				return $this->getRelations();
+		}
 		
 		if (!property_exists($this, "_$field")) {
 			throw new Exception("Invalid property '$field'");
@@ -101,6 +112,11 @@ class Zotero_DataObject {
 		}
 		if ($field == 'parentID') {
 			$this->setParentID($value);
+			return;
+		}
+		
+		if ($field == 'deleted') {
+			$this->setDeleted($value);
 			return;
 		}
 		
@@ -271,6 +287,67 @@ class Zotero_DataObject {
 		$this->_parentKey = $key;
 		$this->_parentID = null;
 		return true;
+	}
+	
+	
+	protected function getDeleted() {
+		if ($this->_deleted !== null) {
+			return $this->_deleted;
+		}
+		
+		if (!$this->__get('id')) {
+			return false;
+		}
+		
+		$idProp = $this->objectType . "ID";
+		
+		if (!is_numeric($this->id)) {
+			throw new Exception("Invalid $idProp");
+		}
+		
+		if ($this->cacheEnabled) {
+			$cacheVersion = 1;
+			$configProp = "CACHE_VERSION_" . strtoupper($this->objectType) . "_DATA";
+			$cacheKey = $this->getCacheKey($this->objectType . "IsDeleted",
+				$cacheVersion
+					. isset(Z_CONFIG::$$configProp)
+					? "_" . Z_CONFIG::$$configProp
+					: ""
+			);
+			$deleted = Z_Core::$MC->get($cacheKey);
+		}
+		else {
+			$deleted = false;
+		}
+		if ($deleted === false) {
+			$sql = "SELECT COUNT(*) FROM deleted{$this->ObjectTypePlural} WHERE $idProp=?";
+			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
+			$deleted = !!Zotero_DB::valueQueryFromStatement($stmt, $this->id);
+			
+			// Memcache returns false for empty keys, so use integer
+			if ($this->cacheEnabled) {
+				Z_Core::$MC->set($cacheKey, $deleted ? 1 : 0);
+			}
+		}
+		
+		$this->_deleted = $deleted;
+		
+		return $deleted;
+	}
+	
+	
+	protected function setDeleted($val) {
+		$deleted = !!$val;
+		
+		if ($this->getDeleted() == $deleted) {
+			Z_Core::debug("Deleted state ($deleted) hasn't changed for $this->objectType $this->id");
+			return;
+		}
+		
+		if (empty($this->changed['deleted'])) {
+			$this->changed['deleted'] = true;
+		}
+		$this->_deleted = $deleted;
 	}
 	
 	

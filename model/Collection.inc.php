@@ -38,16 +38,14 @@ class Zotero_Collection extends Zotero_DataObject {
 	private $_hasChildItems;
 	private $childItems = [];
 	
+	
 	public function __get($field) {
 		switch ($field) {
-		case 'relations':
-			return $this->getRelations();
-		
-		case 'etag':
-			return $this->getETag();
-		
-		default:
-			return parent::__get($field);
+			case 'etag':
+				return $this->getETag();
+			
+			default:
+				return parent::__get($field);
 		}
 	}
 	
@@ -229,6 +227,16 @@ class Zotero_Collection extends Zotero_DataObject {
 						);
 					}
 				}
+			}
+			
+			if (isset($this->changed['deleted'])) {
+				if ($this->_deleted) {
+					$sql = "REPLACE INTO deletedCollections (collectionID) VALUES (?)";
+				}
+				else {
+					$sql = "DELETE FROM deletedCollections WHERE collectionID=?";
+				}
+				Zotero_DB::query($sql, $collectionID, $shardID);
 			}
 		}
 		catch (Exception $e) {
@@ -740,6 +748,9 @@ class Zotero_Collection extends Zotero_DataObject {
 		if ($requestParams['v'] >= 2) {
 			$arr['parentCollection'] = $parentKey ? $parentKey : false;
 			$arr['relations'] = $this->getRelations();
+			if ($this->getDeleted()) {
+				$arr['deleted'] = true;
+			}
 		}
 		else {
 			$arr['parent'] = $parentKey ? $parentKey : false;

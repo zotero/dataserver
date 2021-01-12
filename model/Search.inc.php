@@ -146,6 +146,16 @@ class Zotero_Search extends Zotero_DataObject {
 				}
 			}
 			
+			if (isset($this->changed['deleted'])) {
+				if ($this->_deleted) {
+					$sql = "REPLACE INTO deletedSearches (searchID) VALUES (?)";
+				}
+				else {
+					$sql = "DELETE FROM deletedSearches WHERE searchID=?";
+				}
+				Zotero_DB::query($sql, $searchID, $shardID);
+			}
+			
 			Zotero_DB::commit();
 		}
 		catch (Exception $e) {
@@ -267,6 +277,12 @@ class Zotero_Search extends Zotero_DataObject {
 				'operator' => $condition['operator'],
 				'value' => $condition['value']
 			);
+		}
+		
+		if ($requestParams['v'] >= 2) {
+			if ($this->getDeleted()) {
+				$arr['deleted'] = true;
+			}
 		}
 		
 		return $arr;

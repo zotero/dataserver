@@ -2200,6 +2200,10 @@ class Zotero_Items {
 					break;
 				
 				case 'deleted':
+					// Accept a boolean or 0/1, but lie about it
+					if (gettype($val) != 'boolean' && $val !== 0 && $val !== 1) {
+						throw new Exception("'deleted' must be a boolean");
+					}
 					break;
 				
 				case 'inPublications':
