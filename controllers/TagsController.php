@@ -94,6 +94,9 @@ class TagsController extends ApiController {
 					$empty = false;
 					if ($this->scopeObject == 'collection-items') {
 						$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->scopeObjectKey);
+						if (!$collection) {
+							$this->e404();
+						}
 						$itemIDs = $collection->getItems(true);
 						$itemParams['itemIDs'] = $itemIDs;
 						if (!$itemIDs) {
