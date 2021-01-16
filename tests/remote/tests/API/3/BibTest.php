@@ -348,7 +348,7 @@ class BibTests extends APITests {
 	public function testFormatBibLocale() {
 		$response = API::userGet(
 			self::$config['userID'],
-			"items/?format=bib&locale=fr-FR"
+			"items?format=bib&locale=fr-FR"
 		);
 		$this->assert200($response);
 		$this->assertXmlStringEqualsXmlString(self::$multiResponsesLocales['fr'], $response->getBody());
