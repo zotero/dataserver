@@ -171,7 +171,11 @@ class ItemsController extends ApiController {
 							$this->e404("Item not found in collection");
 						}
 						
+						Zotero_DB::beginTransaction();
 						$collection->removeItem($item->id);
+						$item->updateVersion($this->userID);
+						Zotero_DB::commit();
+						
 						$this->e204();
 						
 					default:
@@ -318,7 +322,9 @@ class ItemsController extends ApiController {
 						// Add items to collection
 						if ($this->method == 'POST') {
 							$itemKeys = explode(' ', $this->body);
-							$itemIDs = array();
+							
+							$items = [];
+							$itemIDs = [];
 							foreach ($itemKeys as $key) {
 								try {
 									$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $key);
@@ -339,9 +345,14 @@ class ItemsController extends ApiController {
 								if ($item->getSource()) {
 									throw new Exception("Child items cannot be added to collections directly", Z_ERROR_INVALID_INPUT);
 								}
+								$items[] = $item;
 								$itemIDs[] = $item->id;
 							}
+							
+							Zotero_DB::beginTransaction();
 							$collection->addItems($itemIDs);
+							Zotero_Items::updateVersions($items, $this->userID);
+							Zotero_DB::commit();
 							
 							$this->e204();
 						}

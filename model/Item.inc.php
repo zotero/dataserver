@@ -1351,7 +1351,6 @@ class Zotero_Item extends Zotero_DataObject {
 							);
 						}
 						$collection->addItem($itemID);
-						$collection->save();
 					}
 				}
 				
@@ -1864,13 +1863,11 @@ class Zotero_Item extends Zotero_DataObject {
 							);
 						}
 						$collection->addItem($this->_id);
-						$collection->save();
 					}
 					
 					foreach ($toRemove as $collectionKey) {
 						$collection = Zotero_Collections::getByLibraryAndKey($this->_libraryID, $collectionKey);
 						$collection->removeItem($this->_id);
-						$collection->save();
 					}
 				}
 				
