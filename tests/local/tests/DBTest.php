@@ -59,7 +59,7 @@ class DBTests extends \PHPUnit\Framework\TestCase {
 			$fail = true;
 		}
 		catch (Exception $e) {
-			$this->assertContains("MySQL server has gone away", $e->getMessage());
+			$this->assertStringContainsString("MySQL server has gone away", $e->getMessage());
 		}
 		
 		if (isset($fail)) {
@@ -101,7 +101,7 @@ class DBTests extends \PHPUnit\Framework\TestCase {
 	public function testValueQuery_Null() {
 		Zotero_DB::query("CREATE TABLE test (foo INTEGER NULL)");
 		Zotero_DB::query("INSERT INTO test VALUES (NULL)");
-		$val = Zotero_DB::valueQuery("SELECT * FROM test");
+		$val = Zotero_DB::valueQuery("SELECT foo FROM test LIMIT 1");
 		$this->assertNull($val);
 	}
 	
@@ -141,7 +141,7 @@ class DBTests extends \PHPUnit\Framework\TestCase {
 		$sets2 = array();
 		$sets2Comp = array();
 		foreach ($sets as $set) {
-			$sets2[] = $set[1];
+			$sets2[] = [$set[1]];
 			$sets2Comp[] = array(1, $set[1]);
 		}
 		Zotero_DB::bulkInsert($sql, $sets2, 2, 1);
