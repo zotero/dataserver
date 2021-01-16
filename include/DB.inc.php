@@ -50,7 +50,6 @@ class Zotero_DB {
 	private $transactionTimestampMS;
 	private $transactionTimestampUnix;
 	private $transactionConnections = [];
-	private $transactionRollback = false;
 	
 	private $testFailureCounts = [];
 	
@@ -393,12 +392,6 @@ class Zotero_DB {
 			return -1;
 		}
 		
-		if ($instance->transactionRollback) {
-			Z_Core::debug("Rolling back previously flagged transaction");
-			self::rollback();
-			return;
-		}
-		
 		while ($conn = array_pop($instance->transactionConnections)) {
 			$instance->commitReal($conn);
 		}
@@ -410,7 +403,7 @@ class Zotero_DB {
 	
 	
 	/**
-	 * Rollback MySQL transactions on all shards
+	 * Roll back MySQL transactions on all shards
 	 *
 	 * This only works with InnoDB tables
 	 */
@@ -430,19 +423,11 @@ class Zotero_DB {
 			return;
 		}
 		
-		if ($instance->transactionLevel > 1) {
-			Z_Core::debug("Flagging nested transaction for rollback");
-			$instance->transactionRollback = true;
-			$instance->transactionLevel--;
-			return;
-		}
-		
 		while ($conn = array_pop($instance->transactionConnections)) {
 			$instance->rollBackReal($conn);
 		}
 		
-		$instance->transactionLevel--;
-		$instance->transactionRollback = false;
+		$instance->transactionLevel = 0;
 		
 		foreach ($instance->callbacks['rollback'] as $callback) {
 			call_user_func($callback);

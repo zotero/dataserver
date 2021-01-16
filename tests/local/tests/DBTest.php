@@ -161,4 +161,52 @@ class DBTests extends \PHPUnit\Framework\TestCase {
 		$id = Zotero_ID_DB_2::valueQuery("SELECT id FROM items");
 		$this->assertNotEquals(false, $id);
 	}
+	
+	public function testRollback() {
+		Zotero_DB::query("CREATE TABLE test (foo INTEGER NULL)");
+		
+		Zotero_DB::beginTransaction();
+		Zotero_DB::query("INSERT INTO test VALUES (1)");
+		Zotero_DB::rollback();
+		
+		$this->assertFalse(Zotero_DB::transactionInProgress());
+		
+		$result = Zotero_DB::columnQuery("SELECT foo FROM test");
+		$this->assertFalse($result);
+	}
+	
+	public function testNestedRollback() {
+		Zotero_DB::query("CREATE TABLE test (foo INTEGER NULL)");
+		
+		Zotero_DB::beginTransaction();
+		
+		// Nested
+		Zotero_DB::beginTransaction();
+		Zotero_DB::query("INSERT INTO test VALUES (1)");
+		Zotero_DB::rollback();
+		
+		$this->assertFalse(Zotero_DB::transactionInProgress());
+		$result = Zotero_DB::columnQuery("SELECT foo FROM test");
+		$this->assertFalse($result);
+		
+		// Another rollback() should be a no-op
+		Zotero_DB::rollback();
+		
+		$this->assertFalse(Zotero_DB::transactionInProgress());
+		
+		$result = Zotero_DB::columnQuery("SELECT foo FROM test");
+		$this->assertFalse($result);
+	}
+	
+	public function test_should_throw_on_commit_not_in_transaction() {
+		$error = false;
+		try {
+			Zotero_DB::commit();
+		}
+		catch (Exception $e) {
+			$this->assertEquals("Transaction not open", $e->getMessage());
+			$error = true;
+		}
+		$this->assertTrue($error);
+	}
 }
