@@ -1766,10 +1766,16 @@ class Zotero_Items {
 					break;
 				
 				case 'md5':
+					if (!$val) {
+						continue;
+					}
 					$item->attachmentStorageHash = $val;
 					break;
 					
 				case 'mtime':
+					if (!$val) {
+						continue;
+					}
 					$item->attachmentStorageModTime = $val;
 					break;
 				
@@ -2303,7 +2309,7 @@ class Zotero_Items {
 					
 					if ($key == 'mtime' || $key == 'md5') {
 						if ($item && $item->$propName !== $val && is_null($val)) {
-							throw new Exception("Cannot change existing '$key' to null", Z_ERROR_INVALID_INPUT);
+							//throw new Exception("Cannot change existing '$key' to null", Z_ERROR_INVALID_INPUT);
 						}
 					}
 					if ($key == 'md5') {

@@ -1655,7 +1655,15 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function test_cannot_change_existing_storage_properties_to_null() {
+	/**
+	 * Changing existing 'md5' and 'mtime' values to null was originally prevented, but some client
+	 * versions were sending null, so now we just ignore it.
+	 *
+	 * At some point, we should check whether any clients are still doing this and restore the
+	 * restriction if not. These should only be cleared on a storage purge.
+	 */
+	//public function test_cannot_change_existing_storage_properties_to_null() {
+	public function test_should_ignore_null_for_existing_storage_properties() {
 		$key = API::createItem("book", [], $this, 'key');
 		$json = API::createAttachmentItem(
 			"imported_url",
@@ -1684,9 +1692,14 @@ class ItemTests extends APITests {
 					"If-Unmodified-Since-Version: $version"
 				]
 			);
-			$this->assert400($response);
-			$this->assertEquals("Cannot change existing '$prop' to null", $response->getBody());
+			//$this->assert400($response);
+			//$this->assertEquals("Cannot change existing '$prop' to null", $response->getBody());
+			$this->assert204($response);
 		}
+		
+		$json3 = API::getItem($json['key']);
+		$this->assertEquals($json['md5'], $json3['data']['md5']);
+		$this->assertEquals($json['mtime'], $json3['data']['mtime']);
 	}
 	
 	
