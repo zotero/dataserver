@@ -720,7 +720,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$fieldID = Zotero_ItemFields::getID($field);
 		
 		if (!$fieldID) {
-			throw new Exception("'$field' is not a valid itemData field.", Z_ERROR_INVALID_INPUT);
+			throw new Exception("'$field' is not a valid itemData field", Z_ERROR_INVALID_INPUT);
 		}
 		
 		if ($value === "" || $value === null) {
