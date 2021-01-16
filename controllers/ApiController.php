@@ -1166,6 +1166,14 @@ class ApiController extends Controller {
 			Zotero_DB::profileEnd($this->objectLibraryID, true, $this->uri);
 		}
 		
+		// If a transaction is still open, return a 500 (without logging a warning, since this is
+		// also checked in a shutdown handler)
+		if ($this->checkDBTransactionState(true)) {
+			$this->responseCode = 500;
+			ob_end_clean();
+			echo "An error occurred";
+		}
+		
 		switch ($this->responseCode) {
 			case 200:
 				// Output a Content-Type header for the given format
@@ -1375,11 +1383,15 @@ class ApiController extends Controller {
 	}
 	
 	
-	public function checkDBTransactionState() {
+	public function checkDBTransactionState($noLog = false) {
 		if (Zotero_DB::transactionInProgress()) {
-			error_log("Transaction still in progress at request end! "
-				. "[" . $this->method . " " . $_SERVER['REQUEST_URI'] . "]");
+			if (!$noLog) {
+				error_log("Transaction still in progress at request end! "
+					. "[" . $this->method . " " . $_SERVER['REQUEST_URI'] . "]");
+			}
+			return true;
 		}
+		return false;
 	}
 	
 	public function addHeaders() {
