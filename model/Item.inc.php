@@ -857,11 +857,6 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function isImageAnnotation() {
-		return $this->isAnnotation() && $this->annotationType == 'image';
-	}
-	
-	
 	private function getCreatorSummary() {
 		if ($this->creatorSummary !== null) {
 			return $this->creatorSummary;
@@ -1362,11 +1357,10 @@ class Zotero_Item extends Zotero_DataObject {
 								throw new Exception("=Parent item $parentKey cannot be a child item", Z_ERROR_INVALID_INPUT);
 							}
 						}
-						// Parent item must be a regular item, or, if this is an embedded image, an
-						// image annotation or note
+						// Parent item must be a regular item, or, if this is an embedded image, a
+						// note
 						if (!($parentItem->isRegularItem()
-								|| ($isEmbeddedImage &&
-									($parentItem->isImageAnnotation() || $parentItem->isNote())))) {
+								|| ($isEmbeddedImage && $parentItem->isNote()))) {
 							throw new Exception(
 								// Keep in sync with Errors.inc.php
 								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
@@ -1877,11 +1871,10 @@ class Zotero_Item extends Zotero_DataObject {
 								throw new Exception("=Parent item $parentKey cannot be a child attachment", Z_ERROR_INVALID_INPUT);
 							}
 						}
-						// Parent item must be a regular item, or, if this is an embedded image, an
-						// image annotation or note
+						// Parent item must be a regular item, or, if this is an embedded image, a
+						// note
 						if (!($parentItem->isRegularItem()
-								|| ($isEmbeddedImage &&
-									($parentItem->isImageAnnotation() || $parentItem->isNote())))) {
+								|| ($isEmbeddedImage && $parentItem->isNote()))) {
 							throw new Exception(
 								// Keep in sync with Errors.inc.php
 								"Parent item $this->_libraryID/$parentItem->key cannot be a note or attachment",
@@ -2439,7 +2432,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if ($this->isRegularItem()) {
 			return $this->numNotes($includeTrashed) + $this->numAttachments($includeTrashed);
 		}
-		if ($this->isNote() || $this->isImageAnnotation()) {
+		if ($this->isNote()) {
 			return $this->numAttachments($includeTrashed);
 		}
 		if ($this->isImportedAttachment()) {
@@ -2485,9 +2478,8 @@ class Zotero_Item extends Zotero_DataObject {
 		$isRegularItem = $this->isRegularItem();
 		$isNote = $this->isNote();
 		$isFileAttachment = $this->isFileAttachment() && !$this->isEmbeddedImageAttachment();
-		$isImageAnnotation = $this->isImageAnnotation();
 		
-		if (!($isRegularItem || $isNote || $isFileAttachment || $isImageAnnotation)) {
+		if (!($isRegularItem || $isNote || $isFileAttachment)) {
 			return [];
 		}
 		
@@ -2497,7 +2489,7 @@ class Zotero_Item extends Zotero_DataObject {
 		// Get child items
 		$sqlParts = [];
 		$sqlParams = [];
-		if ($isRegularItem || $isNote || $isImageAnnotation) {
+		if ($isRegularItem || $isNote) {
 			$sqlParts[] = "SELECT itemID FROM itemAttachments WHERE sourceItemID=?";
 			$sqlParams[] = $id;
 		}
@@ -2705,7 +2697,7 @@ class Zotero_Item extends Zotero_DataObject {
 	 * @return	{Integer}
 	 */
 	public function numAttachments($includeTrashed=false) {
-		if (!$this->isRegularItem() && !$this->isNote() && !$this->isImageAnnotation()) {
+		if (!$this->isRegularItem() && !$this->isNote()) {
 			throw new Exception("numAttachments() can only be called on regular items and notes");
 		}
 		
@@ -3976,7 +3968,6 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		else {
 			if ($this->isNote()
-					|| $this->isImageAnnotation()
 					// Annotations depend on note permissions
 					|| ($this->isImportedAttachment() && $permissions->canAccess($this->libraryID, 'notes'))) {
 				$numChildren = $this->numChildren();
@@ -4063,8 +4054,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (false && $cached) {
 			if ($isRegularItem
 					|| $this->isNote()
-					|| $this->isImportedAttachment()
-					|| $this->isImageAnnotation()) {
+					|| $this->isImportedAttachment()) {
 				$cached['meta']->numChildren = $numChildren;
 			}
 			
@@ -4194,8 +4184,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		if ($isRegularItem
 				|| $this->isNote()
-				|| $this->isImportedAttachment()
-				|| $this->isImageAnnotation()) {
+				|| $this->isImportedAttachment()) {
 			$json['meta']->numChildren = $numChildren;
 		}
 		

@@ -177,7 +177,7 @@ class AnnotationTest extends APITests {
 	}
 	
 	
-	public function test_should_save_an_image_annotation_and_embedded_image() {
+	public function test_should_save_an_image_annotation() {
 		// Create annotation
 		$json = [
 			'itemType' => 'annotation',
@@ -208,30 +208,7 @@ class AnnotationTest extends APITests {
 		$position = json_decode($jsonData['annotationPosition'], true);
 		$this->assertEquals(123, $position['pageIndex']);
 		$this->assertSame([[314.4, 412.8, 556.2, 609.6]], $position['rects']);
-		$this->assertEquals(0, $json['meta']['numChildren']);
 		$this->assertArrayNotHasKey('annotationText', $jsonData);
-		
-		// Create embedded-image annotation
-		$imageKey = API::createAttachmentItem(
-			'embedded_image', ['contentType' => 'image/png'], $annotationKey, $this, 'key'
-		);
-		
-		// Check numChildren
-		$json = API::getItem($annotationKey, $this, 'json');
-		$this->assertEquals(1, $json['meta']['numChildren']);
-		
-		$json = API::getItem($imageKey, $this, 'json');
-		
-		$this->assertArrayNotHasKey('title', $json['data']);
-		$this->assertArrayNotHasKey('url', $json['data']);
-		$this->assertArrayNotHasKey('accessDate', $json['data']);
-		$this->assertArrayNotHasKey('note', $json['data']);
-		$this->assertArrayNotHasKey('charset', $json['data']);
-		$this->assertArrayNotHasKey('path', $json['data']);
-		$this->assertArrayNotHasKey('tags', $json['data']);
-		$this->assertArrayNotHasKey('relations', $json['data']);
-		$this->assertNull($json['data']['md5']);
-		$this->assertNull($json['data']['mtime']);
 		
 		// Image uploading tested in FileTest
 	}

@@ -2404,10 +2404,10 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function test_top_should_return_top_level_item_for_four_level_hierarchy() {
+	public function test_top_should_return_top_level_item_for_three_level_hierarchy() {
 		API::userClear(self::$config['userID']);
 		
-		// Create parent item, PDF attachment, image annotation, and embedded-image attachment
+		// Create parent item, PDF attachment, and annotation
 		$itemKey = API::createItem("book", ['title' => 'aaa'], $this, 'key');
 		$attachmentKey = API::createAttachmentItem(
 			"imported_url", [
@@ -2416,18 +2416,15 @@ class ItemTests extends APITests {
 			], $itemKey, $this, 'key'
 		);
 		$annotationKey = API::createAnnotationItem(
-			'image',
+			'highlight',
 			['annotationComment' => 'ccc'],
 			$attachmentKey,
 			$this,
 			'key'
 		);
-		$imageKey = API::createAttachmentItem(
-			'embedded_image', ['contentType' => 'image/png'], $annotationKey, $this, 'key'
-		);
 		
 		//
-		// Search for three descendant items in /top mode
+		// Search for descendant items in /top mode
 		//
 		$response = API::userGet(
 			self::$config['userID'],
@@ -2815,51 +2812,27 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function test_deleting_parent_item_should_delete_attachment_image_annotation_and_embedded_image_attachment() {
+	public function test_deleting_parent_item_should_delete_note_and_embedded_image_attachment() {
 		$json = API::createItem("book", false, $this, 'jsonData');
 		$itemKey = $json['key'];
 		$itemVersion = $json['version'];
 		
-		$json = API::createAttachmentItem(
-			"imported_file", ['contentType' => 'application/pdf'], $itemKey, $this, 'jsonData'
+		// Create embedded-image attachment
+		$noteKey = API::createNoteItem(
+			'<p>Test</p>', $itemKey, $this, 'key'
 		);
-		$attachmentKey = $json['key'];
-		$attachmentVersion = $json['version'];
 		
 		// Create image annotation
-		$json = [
-			'itemType' => 'annotation',
-			'parentItem' => $attachmentKey,
-			'annotationType' => 'image',
-			'annotationSortIndex' => '00015|002431|00000',
-			'annotationPosition' => json_encode([
-				'pageIndex' => 123,
-				'rects' => [
-					[314.4, 412.8, 556.2, 609.6]
-				]
-			])
-		];
-		$response = API::userPost(
-			self::$config['userID'],
-			"items",
-			json_encode([$json]),
-			array("Content-Type: application/json")
-		);
-		$this->assert200ForObject($response);
-		$json = API::getJSONFromResponse($response);
-		$annotationKey = $json['successful'][0]['key'];
-		
-		// Create embedded-image attachment
-		$imageKey = API::createAttachmentItem(
-			'embedded_image', ['contentType' => 'image/png'], $annotationKey, $this, 'key'
+		$attachmentKey = API::createAttachmentItem(
+			'embedded_image', ['contentType' => 'image/png'], $noteKey, $this, 'key'
 		);
 		
 		// Check that all items can be found
 		$response = API::userGet(
 			self::$config['userID'],
-			"items?itemKey=$itemKey,$attachmentKey,$annotationKey,$imageKey"
+			"items?itemKey=$itemKey,$noteKey,$attachmentKey"
 		);
-		$this->assertNumResults(4, $response);
+		$this->assertNumResults(3, $response);
 		
 		$response = API::userDelete(
 			self::$config['userID'],
@@ -2870,7 +2843,49 @@ class ItemTests extends APITests {
 		
 		$response = API::userGet(
 			self::$config['userID'],
-			"items?itemKey=$itemKey,$attachmentKey,$annotationKey,$imageKey"
+			"items?itemKey=$itemKey,$noteKey,$attachmentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertNumResults(0, $response);
+	}
+	
+	
+	public function test_deleting_parent_item_should_delete_attachment_and_annotation() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		$itemVersion = $json['version'];
+		
+		$json = API::createAttachmentItem(
+			"imported_file", ['contentType' => 'application/pdf'], $itemKey, $this, 'jsonData'
+		);
+		$attachmentKey = $json['key'];
+		$attachmentVersion = $json['version'];
+		
+		$annotationKey = API::createAnnotationItem(
+			'highlight',
+			['annotationComment' => 'ccc'],
+			$attachmentKey,
+			$this,
+			'key'
+		);
+		
+		// Check that all items can be found
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey"
+		);
+		$this->assertNumResults(3, $response);
+		
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items/$itemKey",
+			["If-Unmodified-Since-Version: " . $itemVersion]
+		);
+		$this->assert204($response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey"
 		);
 		$json = API::getJSONFromResponse($response);
 		$this->assertNumResults(0, $response);

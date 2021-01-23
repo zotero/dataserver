@@ -592,9 +592,6 @@ trait Zotero_DataObjects {
 			else if ($obj->isNote()) {
 				$children = $obj->getAttachments();
 			}
-			else if ($obj->isImageAnnotation()) {
-				$children = $obj->getAttachments();
-			}
 			if ($children) {
 				$children = Zotero_Items::get($libraryID, $children);
 				foreach ($children as $child) {
