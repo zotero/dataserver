@@ -3272,6 +3272,29 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
+	public function getLastPageIndexSettingKey() {
+		if (!$this->isFileAttachment()) {
+			throw new Exception("getLastPageIndexSettingKey() can only be called on file attachments");
+		}
+		$libraryType = Zotero_Libraries::getType($this->libraryID);
+		$key = 'lastPageIndex_';
+		switch ($libraryType) {
+			case 'user':
+				$key .= 'u';
+				break;
+			
+			case 'group':
+				$key .= 'g' . Zotero_Libraries::getLibraryTypeID($this->libraryID);
+				break;
+			
+			default:
+				throw new Exception("Can't get last page index key for $libraryType item");
+		}
+		$key .= "_" . $this->key;
+		return $key;
+	}
+	
+	
 	/**
 	* Returns an array of attachment itemIDs that have this item as a source,
 	* or FALSE if none

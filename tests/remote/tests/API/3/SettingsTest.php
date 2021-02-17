@@ -137,6 +137,12 @@ class SettingsTests extends APITests {
 						"refreshInterval" => 60
 					]
 				]
+			],
+			"lastPageIndex_u_ABCD2345" => [
+				"value" => 123
+			],
+			"lastPageIndex_g1234567890_ABCD2345" => [
+				"value" => 123
 			]
 		];
 		$settingKeys = array_keys($json);
@@ -637,6 +643,25 @@ class SettingsTests extends APITests {
 			array("Content-Type: application/json")
 		);
 		$this->assert400($response, "'value' cannot be longer than 25000 characters");
+	}
+	
+	
+	public function test_should_reject_lastPageLabel_in_group_library() {
+		$settingKey = "lastPageIndex_g" . self::$config['ownedPrivateGroupID'] . "_ABCD2345";
+		$value = 1234;
+		
+		$json = [
+			"value" => $value,
+			"version" => 0
+		];
+		
+		$response = API::groupPut(
+			self::$config['ownedPrivateGroupID'],
+			"settings/$settingKey",
+			json_encode($json),
+			["Content-Type: application/json"]
+		);
+		$this->assert400($response, "lastPageIndex can only be set in user library");
 	}
 	
 	

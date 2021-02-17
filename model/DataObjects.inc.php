@@ -619,6 +619,38 @@ trait Zotero_DataObjects {
 				$info = Zotero_Storage::getLocalFileItemInfo($obj);
 				$storageFileID = $info['storageFileID'];
 			}
+			
+			// Remove lastPageIndex setting
+			if ($obj->isFileAttachment()) {
+				$libraryType = Zotero_Libraries::getType($libraryID);
+				$libraryIDs = [];
+				switch ($libraryType) {
+					case 'user':
+						$libraryIDs[] = $libraryID;
+						break;
+					
+					// Setting is stored in user library, so get all group members' libraries
+					case 'group':
+						$groupID = Zotero_Groups::getGroupIDFromLibraryID($libraryID);
+						$group = Zotero_Groups::get($groupID);
+						$userIDs = $group->getUsers();
+						$libraryIDs = array_map(function ($userID) {
+							return Zotero_Users::getLibraryIDFromUserID($userID);
+						}, $userIDs);
+						break;
+				}
+				if ($libraryIDs) {
+					$settingKey = $obj->getLastPageIndexSettingKey();
+					foreach ($libraryIDs as $settingLibraryID) {
+						Zotero_Settings::delete(
+							$settingLibraryID,
+							$settingKey,
+							false,
+							["skipDeleteLog" => true]
+						);
+					}
+				}
+			}
 		}
 		
 		try {

@@ -2892,6 +2892,110 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_deleting_user_library_attachment_should_delete_lastPageIndex_setting() {
+		$json = API::createAttachmentItem(
+			"imported_file", ['contentType' => 'application/pdf'], null, $this, 'jsonData'
+		);
+		$attachmentKey = $json['key'];
+		$attachmentVersion = $json['version'];
+		
+		$settingKey = "lastPageIndex_u_$attachmentKey";
+		$response = API::userPut(
+			self::$config['userID'],
+			"settings/$settingKey",
+			json_encode([
+				"value" => 123,
+				"version" => 0
+			]),
+			["Content-Type: application/json"]
+		);
+		$this->assert204($response);
+		
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items/$attachmentKey",
+			["If-Unmodified-Since-Version: " . $attachmentVersion]
+		);
+		$this->assert204($response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"settings/$settingKey"
+		);
+		$this->assert404($response);
+		
+		// Setting shouldn't be in delete log
+		$response = API::userGet(
+			self::$config['userID'],
+			"deleted?since=$attachmentVersion"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertNotContains($settingKey, $json['settings']);
+	}
+	
+	
+	public function test_deleting_group_library_attachment_should_delete_lastPageIndex_setting_for_all_users() {
+		$json = API::groupCreateAttachmentItem(
+			self::$config['ownedPrivateGroupID'],
+			"imported_file",
+			['contentType' => 'application/pdf'],
+			null,
+			$this,
+			'jsonData'
+		);
+		$attachmentKey = $json['key'];
+		$attachmentVersion = $json['version'];
+		
+		//
+		// Add setting to both group members
+		//
+		$settingKey = "lastPageIndex_g" . self::$config['ownedPrivateGroupID'] . "_$attachmentKey";
+		$response = API::userPut(
+			self::$config['userID'],
+			"settings/$settingKey",
+			json_encode([
+				"value" => 123,
+				"version" => 0
+			]),
+			["Content-Type: application/json"]
+		);
+		$this->assert204($response);
+		
+		// TEMP: Get a API key for the second user instead of using root user
+		$response = API::superPut(
+			"users/" . self::$config['userID2'] . "/settings/$settingKey",
+			json_encode([
+				"value" => 123,
+				"version" => 0
+			]),
+			["Content-Type: application/json"]
+		);
+		$this->assert204($response);
+		
+		// Delete group item
+		$response = API::groupDelete(
+			self::$config['ownedPrivateGroupID'],
+			"items/$attachmentKey",
+			["If-Unmodified-Since-Version: " . $attachmentVersion]
+		);
+		$this->assert204($response);
+		
+		//
+		// Setting should be gone for both group users
+		//
+		$response = API::userGet(
+			self::$config['userID'],
+			"settings/$settingKey"
+		);
+		$this->assert404($response);
+		
+		$response = API::superGet(
+			"users/" . self::$config['userID2'] . "/settings/$settingKey"
+		);
+		$this->assert404($response);
+	}
+	
+	
 	public function test_should_return_409_on_missing_parent() {
 		$missingParentKey = "BDARG2AV";
 		$json = API::createNoteItem("<p>test</p>", $missingParentKey, $this);

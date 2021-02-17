@@ -484,7 +484,7 @@ class Zotero_ClassicDataObjects {
 	}
 	
 	
-	public static function delete($libraryID, $key, $userID=false) {
+	public static function delete($libraryID, $key, $userID = false, $options = []) {
 		$table = static::field('table');
 		$id = static::field('id');
 		$type = static::field('object');
@@ -543,7 +543,7 @@ class Zotero_ClassicDataObjects {
 		
 		static::uncachePrimaryData($libraryID, $key);
 		
-		if ($deleted) {
+		if ($deleted && empty($options['skipDeleteLog'])) {
 			$sql = "INSERT INTO syncDeleteLogKeys
 						(libraryID, objectType, `key`, timestamp, version)
 						VALUES (?, '$type', ?, ?, ?)

@@ -122,6 +122,14 @@ class Zotero_Setting {
 			return false;
 		}
 		
+		// Only allow lastPageIndex in user libraries
+		if (strpos($this->name, 'lastPageIndex_') === 0) {
+			$libraryType = Zotero_Libraries::getType($this->libraryID);
+			if ($libraryType != 'user') {
+				throw new Exception("lastPageIndex can only be set in user library", Z_ERROR_INVALID_INPUT);
+			}
+		}
+		
 		$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
 		
 		Zotero_DB::beginTransaction();
@@ -223,9 +231,7 @@ class Zotero_Setting {
 				break;
 			
 			case 'name':
-				if (!in_array($val, Zotero_Settings::$allowedSettings)) {
-					throw new Exception("Invalid setting '$val'", Z_ERROR_INVALID_INPUT);
-				}
+				Zotero_Settings::checkSettingName($val);
 				break;
 			
 			case 'value':

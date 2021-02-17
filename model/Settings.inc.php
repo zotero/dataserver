@@ -27,7 +27,11 @@
 class Zotero_Settings extends Zotero_ClassicDataObjects {
 	public static $MAX_VALUE_LENGTH = 25000;
 	
-	public static $allowedSettings = ['feeds', 'tagColors'];
+	public static $allowedSettings = [
+		'feeds',
+		'tagColors',
+		'/^lastPageIndex_(u|g[0-9]+)_[A-Z0-9]{8}$/'
+	];
 	
 	protected static $ZDO_object = 'setting';
 	protected static $ZDO_key = 'name';
@@ -124,9 +128,7 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 		
 		$requiredProps = array('value');
 		
-		if (!in_array($name, self::$allowedSettings)) {
-			throw new Exception("Invalid setting '$name'", Z_ERROR_INVALID_INPUT);
-		}
+		self::checkSettingName($name);
 		
 		foreach ($requiredProps as $prop) {
 			if (!isset($json->$prop)) {
@@ -179,13 +181,34 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 	}
 	
 	
+	public static function checkSettingName($name) {
+		if (in_array($name, self::$allowedSettings)) {
+			return;
+		}
+		
+		foreach (self::$allowedSettings as $setting) {
+			// Check for any allowed settings that are specified by regexp
+			if ($setting[0] == '/' && $setting[-1] == '/') {
+				if (preg_match($setting, $name)) {
+					return;
+				}
+			}
+		}
+		
+		throw new Exception("Invalid setting '$name'", Z_ERROR_INVALID_INPUT);
+	}
+	
+	
 	public static function checkSettingValue($setting, $value) {
 		if (mb_strlen(is_string($value) ? $value : json_encode($value)) > self::$MAX_VALUE_LENGTH) {
 			throw new Exception("'value' cannot be longer than "
 				. self::$MAX_VALUE_LENGTH . " characters", Z_ERROR_INVALID_INPUT);
 		}
 		
-		switch ($setting) {
+		preg_match('/^([a-z]+)/i', $setting, $matches);
+		$baseName = $matches[1];
+		
+		switch ($baseName) {
 		// Object settings
 		case 'feeds':
 			if (!is_object($value)) {
@@ -201,6 +224,13 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			
 			if (empty($value)) {
 				throw new Exception("'value' array cannot be empty", Z_ERROR_INVALID_INPUT);
+			}
+			break;
+		
+		// Integer settings
+		case 'lastPageIndex':
+			if (!is_integer($value)) {
+				throw new Exception("'value' must be an integer", Z_ERROR_INVALID_INPUT);
 			}
 			break;
 		
