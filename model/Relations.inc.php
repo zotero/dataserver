@@ -37,6 +37,7 @@ class Zotero_Relations extends Zotero_ClassicDataObjects {
 		'mendeleyDB:documentUUID',
 		'mendeleyDB:remoteDocumentUUID',
 		'mendeleyDB:fileHash',
+		'mendeleyDB:annotationUUID',
 		'mendeleyDB:relatedDocumentUUID',
 		'mendeleyDB:relatedRemoteDocumentUUID',
 		'mendeleyDB:relatedFileHash'
@@ -46,6 +47,7 @@ class Zotero_Relations extends Zotero_ClassicDataObjects {
 		'mendeleyDB:documentUUID',
 		'mendeleyDB:remoteDocumentUUID',
 		'mendeleyDB:fileHash',
+		'mendeleyDB:annotationUUID',
 		'mendeleyDB:remoteFolderUUID',
 		'mendeleyDB:relatedDocumentUUID',
 		'mendeleyDB:relatedRemoteDocumentUUID',
