@@ -2801,6 +2801,70 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_deleting_parent_item_should_delete_attachment_and_child_annotation() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		
+		$attachmentKey = API::createAttachmentItem(
+			"imported_url",
+			['contentType' => 'application/pdf'],
+			$itemKey,
+			$this,
+			'key'
+		);
+		$json = API::createAnnotationItem('highlight', null, $attachmentKey, $this, 'jsonData');
+		$annotationKey = $json['key'];
+		$version = $json['version'];
+		
+		// Delete parent item
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items?itemKey=$itemKey",
+			["If-Unmodified-Since-Version: " . $version]
+		);
+		$this->assert204($response);
+		
+		// All items should be gone
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(0, $response);
+	}
+	
+	
+	public function test_deleting_linked_file_attachment_should_delete_child_annotation() {
+		$json = API::createItem("book", false, $this, 'jsonData');
+		$itemKey = $json['key'];
+		
+		$attachmentKey = API::createAttachmentItem(
+			"linked_file", ['contentType' => 'application/pdf'], $itemKey, $this, 'key'
+		);
+		$json = API::createAnnotationItem(
+			'highlight', null, $attachmentKey, $this, 'jsonData'
+		);
+		$annotationKey = $json['key'];
+		$version = $json['version'];
+		
+		// Delete parent item
+		$response = API::userDelete(
+			self::$config['userID'],
+			"items?itemKey=$attachmentKey",
+			["If-Unmodified-Since-Version: " . $version]
+		);
+		$this->assert204($response);
+		
+		// Child items should be gone
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?itemKey=$itemKey,$attachmentKey,$annotationKey"
+		);
+		$this->assert200($response);
+		$this->assertNumResults(1, $response);
+	}
+	
+	
 	public function test_should_reject_changing_parent_item_of_annotation() {
 		$attachment1Key = API::createAttachmentItem(
 			"imported_url",

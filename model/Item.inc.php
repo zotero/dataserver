@@ -3536,8 +3536,8 @@ class Zotero_Item extends Zotero_DataObject {
 	 * Returns an array of annotation itemIDs that have this item as a parent or FALSE if none
 	 */
 	public function getAnnotations() {
-		if (!$this->isImportedAttachment()) {
-			throw new Exception("getAnnotations() can only be called on imported attachment items");
+		if (!$this->isFileAttachment()) {
+			throw new Exception("getAnnotations() can only be called on file attachments");
 		}
 		
 		if (!$this->id) {
@@ -3560,8 +3560,8 @@ class Zotero_Item extends Zotero_DataObject {
 	 * @return	{Integer}
 	 */
 	public function numAnnotations($includeTrashed=false) {
-		if (!$this->isAttachment()) {
-			throw new Exception("numAnnotations() can only be called on attachment items");
+		if (!$this->isFileAttachment()) {
+			throw new Exception("numAnnotations() can only be called on file attachments");
 		}
 		
 		if (!$this->id) {

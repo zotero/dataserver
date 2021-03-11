@@ -586,7 +586,7 @@ trait Zotero_DataObjects {
 			if ($obj->isRegularItem()) {
 				$children = array_merge($obj->getNotes(), $obj->getAttachments());
 			}
-			else if ($obj->isImportedAttachment()) {
+			else if ($obj->isFileAttachment()) {
 				$children = $obj->getAnnotations();
 			}
 			else if ($obj->isNote()) {
