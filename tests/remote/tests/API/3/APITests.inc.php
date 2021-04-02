@@ -140,7 +140,7 @@ class APITests extends \APITests {
 					throw $e;
 				}
 				if ($expectedMessage) {
-					$this->assertEquals($expectedMessage, $json['failed'][$index]['message']);
+					$this->assertStringStartsWith($expectedMessage, $json['failed'][$index]['message']);
 				}
 			}
 			else {
