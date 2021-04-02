@@ -385,6 +385,35 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_reject_long_text() {
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'highlight',
+			'annotationText' => str_repeat('a', 50000),
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationColor' => '#ff8c19',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		// TEMP: See note in Item.inc.php
+		//$this->assert413ForObject(
+		$this->assert400ForObject(
+			$response, "Annotation text '" . str_repeat('a', 50) . "…' is too long", 0
+		);
+	}
+	
+	
 	public function test_should_reject_invalid_sortIndex() {
 		$json = [
 			'itemType' => 'annotation',

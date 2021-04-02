@@ -3473,6 +3473,17 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!$val) {
 					$val = '';
 				}
+				// Check annotationText length
+				if ($field == 'text' && strlen($val) > Zotero_Items::$maxAnnotationTextLength) {
+					throw new Exception(
+						"Annotation text '" . mb_substr($val, 0, 50) . "…' is too long",
+						// TEMP: Return 400 until client can handle a specified annotation item,
+						// either by selecting the parent attachment or displaying annotation items
+						// in the items list
+						//Z_ERROR_FIELD_TOO_LONG
+						Z_ERROR_INVALID_INPUT
+					);
+				}
 				break;
 				
 			default:

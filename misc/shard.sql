@@ -130,7 +130,7 @@ CREATE TABLE `itemAnnotations` (
   `itemID` int(10) unsigned NOT NULL,
   `parentItemID` int(10) unsigned NOT NULL,
   `type` enum('highlight','note','image') CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `text` varchar(10000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
+  `text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
   `comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
   `color` char(6) CHARACTER SET ascii NOT NULL,
   `pageLabel` varchar(50) NOT NULL,
