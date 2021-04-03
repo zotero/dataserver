@@ -47,13 +47,16 @@ class Zotero_AuthenticationPlugin_Password implements Zotero_AuthenticationPlugi
 			$sql = "SELECT userID, username, password AS hash FROM $databaseName.users WHERE username=?";
 			$params = [$username];
 		}
+		// Email (primary or secondary)
 		else {
-			$sql = "SELECT userID, username, password AS hash FROM $databaseName.users
-			   WHERE username = ?
-			   UNION
-			   SELECT userID, username, password AS hash FROM $databaseName.users
-			   WHERE email = ?
-			   ORDER BY username = ? DESC";
+			$sql = "SELECT userID, username, password AS hash "
+				. "FROM $databaseName.users "
+				. "WHERE username = ? "
+				. "UNION "
+				. "SELECT userID, username, password AS hash "
+				. "FROM $databaseName.users JOIN $databaseName.users_email USING (userID) "
+				. "WHERE $databaseName.users_email.email=? "
+				. "ORDER BY username = ? DESC";
 			$params = [$username, $username, $username];
 		}
 		

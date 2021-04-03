@@ -300,4 +300,35 @@ class KeysTest extends APITests {
 		);
 		$this->assert204($response);
 	}
+	
+	// Private API
+	public function testKeyCreateWithEmailAddress() {
+		API::useAPIKey("");
+		
+		$name = "Test " . uniqid();
+		
+		foreach ([self::$config['emailPrimary'], self::$config['emailSecondary']] as $email) {
+			$response = API::post(
+				'keys',
+				json_encode([
+					'username' => $email,
+					'password' => self::$config['password'],
+					'name' => $name,
+					'access' => [
+						'user' => [
+							'library' => true
+						]
+					]
+				]),
+				[],
+				[]
+			);
+			$this->assert201($response);
+			$json = API::getJSONFromResponse($response);
+			$key = $json['key'];
+			$this->assertEquals($json['userID'], self::$config['userID']);
+			$this->assertEquals($json['name'], $name);
+			$this->assertEquals(['user' => ['library' => true, 'files' => true]], $json['access']);
+		}
+	}
 }
