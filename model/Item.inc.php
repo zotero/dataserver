@@ -1826,9 +1826,9 @@ class Zotero_Item extends Zotero_DataObject {
 								Z_ERROR_ITEM_NOT_FOUND
 							);
 						}
-						if (!$parentItem->isFileAttachment() || $parentItem->isEmbeddedImageAttachment()) {
+						if (!$parentItem->isPDFAttachment()) {
 							throw new Exception(
-								"Parent item of annotation must be a file attachment",
+								"Parent item of annotation must be a PDF attachment",
 								Z_ERROR_INVALID_INPUT
 							);
 						}
