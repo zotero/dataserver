@@ -1802,11 +1802,45 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				
 				
-				// In case this was previously a standalone item,
-				// delete from any collections it may have been in
-				if (!empty($this->changed['source']) && $this->getSource()) {
+				// Changing parent
+				if (!empty($this->changed['source'])) {
+					$parent = $this->getSource();
+					
+					// In case this was previously a standalone item, delete from any collections
+					// it may have been in
 					$sql = "DELETE FROM collectionItems WHERE itemID=?";
 					Zotero_DB::query($sql, $this->_id, $shardID);
+					
+					// Verify annotation parent change
+					if ($this->isAnnotation()) {
+						if (!$parent) {
+							throw new Exception(
+								"Annotation must have a parent item",
+								Z_ERROR_INVALID_INPUT
+							);
+						}
+						$parentItem = Zotero_Items::get($this->_libraryID, $parent);
+						if (!$parentItem) {
+							throw new Exception(
+								"Parent item $parent not found",
+								Z_ERROR_ITEM_NOT_FOUND
+							);
+						}
+						if (!$parentItem->isFileAttachment() || $parentItem->isEmbeddedImageAttachment()) {
+							throw new Exception(
+								"Parent item of annotation must be a file attachment",
+								Z_ERROR_INVALID_INPUT
+							);
+						}
+					}
+					
+					// Don't allow parent change for embedded-image attachment
+					if ($this->isEmbeddedImageAttachment()) {
+						throw new Exception(
+							"Cannot change parent item of embedded-image attachment",
+							Z_ERROR_INVALID_INPUT
+						);
+					}
 				}
 				
 				//
@@ -1865,10 +1899,6 @@ class Zotero_Item extends Zotero_DataObject {
 				// Attachment
 				if (!empty($this->changed['attachmentData'])) {
 					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
-					
-					if ($isEmbeddedImage && !empty($this->changed['source'])) {
-						throw new Exception("Cannot change parent item of embedded-image attachment", Z_ERROR_INVALID_INPUT);
-					}
 					
 					$sql = "INSERT INTO itemAttachments
 						(
@@ -1943,10 +1973,6 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Annotation
 				if (!empty($this->changed['annotationData'])) {
-					if (!empty($this->changed['source'])) {
-						throw new Exception("Cannot change parent item of annotation", Z_ERROR_INVALID_INPUT);
-					}
-					
 					if (!empty($this->annotationText) && $this->annotationType != 'highlight') {
 						throw new Exception(
 							"'annotationText' can only be set for highlight annotations",
@@ -2025,13 +2051,8 @@ class Zotero_Item extends Zotero_DataObject {
 					if ((empty($this->changed['note']) || !$this->isNote())
 							&& empty($this->changed['attachmentData'])
 							&& empty($this->changed['annotationData'])) {
-						if ($this->isEmbeddedImageAttachment()) {
-							throw new Exception("Cannot change parent item of embedded-image attachment", Z_ERROR_INVALID_INPUT);
-						}
-						else if ($this->isAnnotation()) {
-							throw new Exception("Cannot change parent item of annotation", Z_ERROR_INVALID_INPUT);
-						}
-						$sql = "UPDATE item" . $Type . "s SET sourceItemID=? WHERE itemID=?";
+						$column = $this->isAnnotation() ? "parentItemID" : "sourceItemID";
+						$sql = "UPDATE item" . $Type . "s SET $column=? WHERE itemID=?";
 						$bindParams = array(
 							$parent ? $parent : null,
 							$this->_id

@@ -2865,7 +2865,7 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function test_should_reject_changing_parent_item_of_annotation() {
+	public function test_should_allow_changing_parent_item_of_annotation_to_another_file_attachment() {
 		$attachment1Key = API::createAttachmentItem(
 			"imported_url",
 			['contentType' => 'application/pdf'],
@@ -2892,7 +2892,58 @@ class ItemTests extends APITests {
 			"items/{$jsonData['key']}",
 			json_encode($json)
 		);
-		$this->assert400($response, "Cannot change parent item of annotation");
+		$this->assert204($response);
+	}
+	
+	
+	public function test_should_reject_changing_parent_item_of_annotation_to_invalid_items() {
+		$itemKey = API::createItem("book", false, $this, 'key');
+		$linkedURLAttachmentKey = API::createAttachmentItem("linked_url", [], $itemKey, $this, 'key');
+		
+		$attachmentKey = API::createAttachmentItem(
+			"imported_url",
+			['contentType' => 'application/pdf'],
+			null,
+			$this,
+			'key'
+		);
+		$jsonData = API::createAnnotationItem('highlight', null, $attachmentKey, $this, 'jsonData');
+		
+		// No parent
+		$json = [
+			'version' => $jsonData['version'],
+			'parentItem' => false
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/{$jsonData['key']}",
+			json_encode($json)
+		);
+		$this->assert400($response, "Annotation must have a parent item");
+		
+		// Regular item
+		$json = [
+			'version' => $jsonData['version'],
+			'parentItem' => $itemKey
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/{$jsonData['key']}",
+			json_encode($json)
+		);
+		$this->assert400($response, "Parent item of annotation must be a file attachment");
+		
+		// Linked-URL attachment
+		$json = [
+			'version' => $jsonData['version'],
+			'parentItem' => $linkedURLAttachmentKey
+		];
+		$response = API::userPatch(
+			self::$config['userID'],
+			"items/{$jsonData['key']}",
+			json_encode($json)
+		);
+		$this->assert400($response, "Parent item of annotation must be a file attachment");
 	}
 	
 	
