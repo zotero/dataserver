@@ -27,6 +27,7 @@
 // Client subclass to add prefix to all keys and add some other behaviors
 class Z_MemcachedClientLocal {
 	public $requestTime = 0.0;
+	public $writeOnly = false; // If true, get() always returns false
 	
 	private $client;
 	private $disabled;
@@ -78,7 +79,7 @@ class Z_MemcachedClientLocal {
 	
 	
 	public function get($keys) {
-		if ($this->disabled) {
+		if ($this->disabled || $this->writeOnly) {
 			return false;
 		}
 		
