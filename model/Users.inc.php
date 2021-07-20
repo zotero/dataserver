@@ -563,6 +563,9 @@ class Zotero_Users {
 			throw new Exception("userID not provided");
 		}
 		
+		// Don't read values from memcached, just to be extra safe
+		Z_Core::$MC->writeOnly = true;
+		
 		$username = Zotero_Users::getUsername($userID, true);
 		
 		$sql = "SELECT role='deleted' FROM users WHERE userID=?";
