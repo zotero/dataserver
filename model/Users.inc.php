@@ -31,6 +31,7 @@ class Zotero_Users {
 	private static $realNamesByID = [];
 	private static $userLibraryIDs = [];
 	private static $libraryUserIDs = [];
+	private static $deletedUsers = [];
 	
 	
 	/**
@@ -426,6 +427,10 @@ class Zotero_Users {
 			throw new Exception("Invalid user");
 		}
 		
+		if (isset(self::$deletedUsers[$userID])) {
+			return self::$deletedUsers[$userID];
+		}
+		
 		$cacheKey = "deletedUser_" . $userID;
 		$valid = Z_Core::$MC->get($cacheKey);
 		if ($valid === 1) {
@@ -444,7 +449,8 @@ class Zotero_Users {
 			$deleted = Zotero_WWW_DB_1::valueQuery($sql, $userID);
 		}
 		
-		Z_Core::$MC->set($cacheKey, $deleted ? 1 : 0);
+		Z_Core::$MC->set($cacheKey, $deleted ? 1 : 0, 60);
+		self::$deletedUsers[$userID] = !!$deleted;
 		
 		return $deleted;
 	}
