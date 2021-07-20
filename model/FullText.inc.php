@@ -228,6 +228,7 @@ class Zotero_FullText {
 			'index' => self::$elasticsearchType . "_index",
 			'type' => self::$elasticsearchType,
 			'routing' => $libraryID,
+			'size' => 150,
 			"body" => [
 				'query' => [
 					'bool' => [
