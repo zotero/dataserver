@@ -896,7 +896,7 @@ class Zotero_Storage {
 				// Domain is treated as a fully matching regexp with an implied optional
 				// subdomain prefix. 'mail.school.edu' will match 'school.edu' or
 				// '(school.edu|school.org)', but 'abcd.edu' won't match 'bcd.edu'.
-				. "AND SUBSTRING_INDEX(email, '@', -1) REGEXP CONCAT('^(.+\\.)?', domain, '$')"
+				. "AND SUBSTRING_INDEX(email, '@', -1) REGEXP CONCAT('^(.+\\\.)?', domain, '$')"
 				// Email doesn't match blacklist if one exists for domain
 				. "AND (domainBlacklist = '' "
 					. "OR SUBSTRING_INDEX(email, '@', -1) NOT REGEXP domainBlacklist)"
