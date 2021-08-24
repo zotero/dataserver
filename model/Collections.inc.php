@@ -97,6 +97,7 @@ class Zotero_Collections {
 			$sqlParams[] = $params['sincetime'];
 		}
 		
+		$sql .= "ORDER BY ";
 		if (!empty($params['sort'])) {
 			switch ($params['sort']) {
 			case 'title':
@@ -113,7 +114,7 @@ class Zotero_Collections {
 				$orderSQL = $params['sort'];
 			}
 			
-			$sql .= "ORDER BY $orderSQL";
+			$sql .= $orderSQL;
 			if (!empty($params['direction'])) {
 				$sql .= " {$params['direction']}";
 			}
