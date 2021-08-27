@@ -3465,11 +3465,12 @@ class Zotero_Item extends Zotero_DataObject {
 					case 'highlight':
 					case 'note':
 					case 'image':
+					case 'ink':
 						break;
 					
 					default:
 						throw new Exception(
-							"annotationType must be 'highlight', 'note', or 'image'",
+							"annotationType must be 'highlight', 'note', 'image', or 'ink'",
 							Z_ERROR_INVALID_INPUT
 						);
 				}
@@ -3504,6 +3505,19 @@ class Zotero_Item extends Zotero_DataObject {
 				if ($field == 'text' && strlen($val) > Zotero_Items::$maxAnnotationTextLength) {
 					throw new Exception(
 						"Annotation text '" . mb_substr($val, 0, 50) . "…' is too long",
+						// TEMP: Return 400 until client can handle a specified annotation item,
+						// either by selecting the parent attachment or displaying annotation items
+						// in the items list
+						//Z_ERROR_FIELD_TOO_LONG
+						Z_ERROR_INVALID_INPUT
+					);
+				}
+				// Check annotationPosition length
+				if ($field == 'position' && strlen($val) > Zotero_Items::$maxAnnotationPositionLength) {
+					throw new Exception(
+						// TODO: Restore once output isn't HTML-encoded
+						//"Annotation position '" . mb_substr($val, 0, 50) . "…' is too long",
+						"Annotation position is too long",
 						// TEMP: Return 400 until client can handle a specified annotation item,
 						// either by selecting the parent attachment or displaying annotation items
 						// in the items list

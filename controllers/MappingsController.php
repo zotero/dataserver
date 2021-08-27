@@ -170,6 +170,7 @@ class MappingsController extends ApiController {
 				case 'highlight':
 				case 'note':
 				case 'image':
+				case 'ink':
 					break;
 				
 				default:
@@ -259,10 +260,19 @@ class MappingsController extends ApiController {
 			$json['annotationColor'] = '';
 			$json['annotationPageLabel'] = '';
 			$json['annotationSortIndex'] = '00000|000000|00000';
-			$json['annotationPosition'] = [
-				'pageIndex' => 0,
-				'rects' => []
-			];
+			if ($annotationType == 'ink') {
+				$json['annotationPosition'] = [
+					'pageIndex' => 0,
+					'paths' => [],
+					'width' => 2
+				];
+			}
+			else {
+				$json['annotationPosition'] = [
+					'pageIndex' => 0,
+					'rects' => []
+				];
+			}
 			if ($annotationType == 'image') {
 				$json['annotationPosition']['width'] = 0;
 				$json['annotationPosition']['height'] = 0;

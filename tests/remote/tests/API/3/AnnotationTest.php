@@ -214,6 +214,44 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_save_an_ink_annotation() {
+		$paths = [
+			[173.54, 647.25, 175.88, 647.25, 181.32, 647.25, 184.44, 647.25, 191.44, 647.25, 197.67, 647.25, 203.89, 645.7, 206.23, 645.7, 210.12, 644.92, 216.34, 643.36, 218.68],
+			[92.4075, 245.284, 92.4075, 245.284, 92.4075, 246.034, 91.6575, 248.284, 91.6575, 253.534, 91.6575, 255.034, 91.6575, 261.034, 91.6575, 263.284, 95.4076, 271.535, 99.9077]
+		];
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'ink',
+			'annotationColor' => '#ff8c19',
+			'annotationPageLabel' => '10',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'paths' => $paths,
+				'width'=> 2
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$jsonData = $json['successful'][0]['data'];
+		$this->assertEquals('annotation', (string) $jsonData['itemType']);
+		$this->assertEquals('ink', $jsonData['annotationType']);
+		$this->assertEquals('#ff8c19', $jsonData['annotationColor']);
+		$this->assertEquals('10', $jsonData['annotationPageLabel']);
+		$this->assertEquals('00015|002431|00000', $jsonData['annotationSortIndex']);
+		$position = json_decode($jsonData['annotationPosition'], true);
+		$this->assertEquals(123, $position['pageIndex']);
+		$this->assertSame($paths, $position['paths']);
+	}
+	
+	
 	public function test_should_not_allow_changing_annotation_type() {
 		// Create highlight annotation
 		$json = [
@@ -382,6 +420,37 @@ class AnnotationTest extends APITests {
 		$json = API::getItem($annotationKey, $this, 'json');
 		$this->assertEquals('', $json['data']['annotationComment']);
 		$this->assertEquals('', $json['data']['annotationPageLabel']);
+	}
+	
+	
+	public function test_should_reject_long_position() {
+		$positionJSON = json_encode([
+			'pageIndex' => 123,
+			'rects' => [
+				range(0, 13000)
+			]
+		]);
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'ink',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationColor' => '#ff8c19',
+			'annotationPosition' => $positionJSON
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		// TEMP: See note in Item.inc.php
+		//$this->assert413ForObject(
+		$this->assert400ForObject(
+			// TODO: Restore once output isn't HTML-encoded
+			//$response, "Annotation position '" . mb_substr($positionJSON, 0, 50) . "…' is too long", 0
+			$response, "Annotation position is too long", 0
+		);
 	}
 	
 	

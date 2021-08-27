@@ -129,13 +129,13 @@ CREATE TABLE `itemAttachments` (
 CREATE TABLE `itemAnnotations` (
   `itemID` int(10) unsigned NOT NULL,
   `parentItemID` int(10) unsigned NOT NULL,
-  `type` enum('highlight','note','image') CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `type` enum('highlight','note','image', 'ink') CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
   `comment` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
   `color` char(6) CHARACTER SET ascii NOT NULL,
   `pageLabel` varchar(50) NOT NULL,
   `sortIndex` varchar(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `position` varchar(20000) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `position` text CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   PRIMARY KEY (`itemID`),
   KEY `parentItemID` (`parentItemID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
