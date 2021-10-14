@@ -89,7 +89,7 @@ class Zotero_Attachments {
 		}
 		
 		$url = self::generateSignedURL($payload, $filename);
-		Z_Core::$MC->set($cacheKey, $url, self::$urlTTL);
+		Z_Core::$MC->set($cacheKey, $url, self::$urlTTL - 15);
 		return $url;
 	}
 	
