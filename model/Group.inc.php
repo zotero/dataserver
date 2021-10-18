@@ -730,7 +730,7 @@ class Zotero_Group {
 			"",
 			true
 		);
-		$tr->td->a = Zotero_Users::getUsername($this->ownerUserID);
+		$tr->td->a = Zotero_Users::getName($this->ownerUserID);
 		$tr->td->a['href'] = Zotero_URI::getUserURI($this->ownerUserID);
 		
 		Zotero_Atom::addHTMLRow($html, '', "Type", preg_replace('/([a-z])([A-Z])/', '$1 $2', $this->type));
@@ -748,7 +748,7 @@ class Zotero_Group {
 			$ul = $tr->td->addChild('ul');
 			foreach ($admins as $admin) {
 				$li = $ul->addChild('li');
-				$li->a = Zotero_Users::getUsername($admin);
+				$li->a = Zotero_Users::getName($admin);
 				$li->a['href'] = Zotero_URI::getUserURI($admin);
 			}
 		}
@@ -905,7 +905,7 @@ class Zotero_Group {
 		
 		$author = $xml->addChild('author');
 		$ownerLibraryID = Zotero_Users::getLibraryIDFromUserID($this->ownerUserID);
-		$author->name = Zotero_Users::getUsername($this->ownerUserID);
+		$author->name = Zotero_Users::getName($this->ownerUserID);
 		$author->uri = Zotero_URI::getLibraryURI($ownerLibraryID);
 		
 		$xml->id = Zotero_URI::getGroupURI($this);
@@ -995,7 +995,7 @@ class Zotero_Group {
 		// If we know the username, provide that
 		// TODO: get and cache full names
 		if (Zotero_Users::exists($userID)) {
-			$title = Zotero_Users::getUsername($userID);
+			$title = Zotero_Users::getName($userID);
 		}
 		else {
 			$title = "User $userID";

@@ -1,0 +1,7 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+// Run this after rolling out code changes
+Zotero_Admin_DB::query("ALTER TABLE `users` DROP `joined`, DROP `lastSyncTime`");

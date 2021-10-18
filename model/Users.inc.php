@@ -126,15 +126,6 @@ class Zotero_Users {
 	}
 	
 	
-	/**
-	 * Warning: This method may lie or return false..
-	 */
-	public static function getUserIDFromUsername($username) {
-		$sql = "SELECT userID FROM users WHERE username=?";
-		return Zotero_DB::valueQuery($sql, $username);
-	}
-	
-	
 	public static function getUserIDFromSessionID($sessionID) {
 		$sql = "SELECT userID FROM sessions WHERE id=?
 				AND UNIX_TIMESTAMP() < modified + lifetime";
@@ -164,21 +155,26 @@ class Zotero_Users {
 			return $username;
 		}
 		
-		if (!$skipAutoAdd && !self::isDeletedUser($userID)) {
-			if (!self::exists($userID)) {
-				self::addFromWWW($userID);
-			}
-			else {
-				self::updateFromWWW($userID);
-			}
-		}
-		
 		$sql = "SELECT username FROM users WHERE userID=?";
 		$username = Zotero_DB::valueQuery($sql, $userID);
-		// Fall back to WWW. Deleting accounts currently deletes the dataserver user, so we need to
-		// get the username from WWW.
-		if (!$username) {
-			$username = self::getUsernameFromWWW($userID);
+		try {
+			$wwwUsername = self::getUsernameFromWWW($userID);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("WARNING: $e -- can't get username from www");
+		}
+		
+		if ($wwwUsername
+				&& $username != $wwwUsername
+				&& !$skipAutoAdd
+				&& !self::isDeletedUser($userID)) {
+			if (!self::exists($userID)) {
+				self::add($userID, $wwwUsername);
+			}
+			else {
+				self::updateUsername($userID, $wwwUsername);
+			}
+			$username = $wwwUsername;
 		}
 		
 		self::$usernamesByID[$userID] = $username;
@@ -222,8 +218,20 @@ class Zotero_Users {
 		}
 		
 		self::$realNamesByID[$userID] = $name;
-		Z_Core::$MC->set($cacheKey, $name);
+		Z_Core::$MC->set($cacheKey, $name, 43200);
 		
+		return $name;
+	}
+	
+	
+	/**
+	 * Get real name, falling back to username if unavailable
+	 */
+	public static function getName($userID) {
+		$name = self::getRealName($userID);
+		if (!$name) {
+			$name = self::getUsername($userID);
+		}
 		return $name;
 	}
 	
@@ -292,31 +300,9 @@ class Zotero_Users {
 	}
 	
 	
-	public static function updateFromWWW($userID) {
-		if (self::isDeletedUser($userID)) {
-			throw new Exception("User $userID was deleted", Z_ERROR_USER_NOT_FOUND);
-		}
-		$username = self::getUsernameFromWWW($userID);
-		self::updateUsername($userID, $username);
-	}
-	
-	
-	public static function update($userID, $username=false) {
-		$sql = "UPDATE users SET ";
-		$params = array();
-		if ($username) {
-			$sql .= "username=?, ";
-			$params[] = $username;
-		}
-		$sql .= "lastSyncTime=NOW() WHERE userID=?";
-		$params[] = $userID;
-		return Zotero_DB::query($sql, $params);
-	}
-	
-	
 	public static function updateUsername($userID, $username) {
 		$sql = "UPDATE users SET username=? WHERE userID=?";
-		return Zotero_DB::query(
+		Zotero_DB::query(
 			$sql,
 			[
 				$username,
@@ -327,6 +313,10 @@ class Zotero_Users {
 				'writeInReadMode' => true
 			]
 		);
+		
+		self::$usernamesByID[$userID] = $username;
+		$cacheKey = "usernameByID_" . $userID;
+		Z_Core::$MC->set($cacheKey, $username, 43200);
 	}
 	
 	

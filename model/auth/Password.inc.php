@@ -117,12 +117,11 @@ class Zotero_AuthenticationPlugin_Password implements Zotero_AuthenticationPlugi
 		if (Zotero_Users::exists($userID)) {
 			$currentUsername = Zotero_Users::getUsername($userID, true);
 			if ($currentUsername != $username) {
-				Zotero_Users::update($userID, $username);
+				Zotero_Users::updateUsername($userID, $username);
 			}
 		}
 		else {
 			Zotero_Users::add($userID, $username);
-			Zotero_Users::update($userID);
 		}
 	}
 }

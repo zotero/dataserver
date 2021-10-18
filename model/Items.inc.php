@@ -299,7 +299,7 @@ class Zotero_Items {
 							foreach ($createdByUserIDs as $createdByUserID) {
 								$toAdd[] = array(
 									$createdByUserID,
-									Zotero_Users::getUsername($createdByUserID)
+									Zotero_Users::getName($createdByUserID)
 								);
 							}
 							
@@ -981,7 +981,7 @@ class Zotero_Items {
 		);
 		$cachedParams = Z_Array::filterKeys($queryParams, $allowedParams);
 		
-		$cacheVersion = 3;
+		$cacheVersion = 4;
 		$cacheKey = "atomEntry_" . $item->libraryID . "/" . $item->id . "_"
 			. md5(
 				$version
@@ -1136,7 +1136,7 @@ class Zotero_Items {
 		}
 		if ($createdByUserID) {
 			try {
-				$author->name = Zotero_Users::getUsername($createdByUserID);
+				$author->name = Zotero_Users::getName($createdByUserID);
 				$author->uri = Zotero_URI::getUserURI($createdByUserID);
 			}
 			// If user no longer exists, use library for author instead
@@ -1215,7 +1215,7 @@ class Zotero_Items {
 			try {
 				$xml->addChild(
 					'zapi:lastModifiedByUser',
-					Zotero_Users::getUsername($lastModifiedByUserID),
+					Zotero_Users::getName($lastModifiedByUserID),
 					Zotero_Atom::$nsZoteroAPI
 				);
 			}

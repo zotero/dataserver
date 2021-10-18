@@ -221,7 +221,7 @@ class GroupsController extends ApiController {
 		// Multiple groups
 		else {
 			if ($this->objectUserID) {
-				$title = Zotero_Users::getUsername($this->objectUserID) . "’s Groups";
+				$title = Zotero_Users::getName($this->objectUserID) . "’s Groups";
 			}
 			else {
 				// For now, only root can do unrestricted group searches

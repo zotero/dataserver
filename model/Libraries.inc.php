@@ -60,11 +60,11 @@ class Zotero_Libraries {
 		switch ($type) {
 			case 'user':
 				$userID = Zotero_Users::getUserIDFromLibraryID($libraryID);
-				return Zotero_Users::getUsername($userID);
+				return Zotero_Users::getName($userID);
 			
 			case 'publications':
 				$userID = Zotero_Users::getUserIDFromLibraryID($libraryID);
-				return Zotero_Users::getUsername($userID) . "’s Publications";
+				return Zotero_Users::getName($userID) . "’s Publications";
 			
 			case 'group':
 				$groupID = Zotero_Groups::getGroupIDFromLibraryID($libraryID);
