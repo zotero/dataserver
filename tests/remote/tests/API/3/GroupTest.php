@@ -273,5 +273,42 @@ class GroupTests extends APITests {
 		
 		API::deleteGroup($groupID);
 	}
+	
+	
+	public function test_group_should_not_appear_in_search_until_first_populated() {
+		$name = \Zotero_Utilities::randomString(14);
+		$groupID = API::createGroup([
+			'owner' => self::$config['userID'],
+			'type' => 'PublicClosed',
+			'name' => $name,
+			'libraryReading' => 'all'
+		]);
+		
+		// Group shouldn't show up if it's never had items
+		$response = API::superGet("groups?q=$name");
+		$this->assertNumResults(0, $response);
+		
+		API::groupCreateItem($groupID, "book", false, $this);
+		
+		$response = API::superGet("groups?q=$name");
+		$this->assertNumResults(1, $response);
+		
+		API::deleteGroup($groupID);
+	}
+	
+	
+	public function testDeleteGroup() {
+		$groupID = API::createGroup([
+			'owner' => self::$config['userID'],
+			'type' => 'Private',
+			'libraryReading' => 'all'
+		]);
+		API::groupCreateItem($groupID, "book", false, $this, 'key');
+		API::groupCreateItem($groupID, "book", false, $this, 'key');
+		API::groupCreateItem($groupID, "book", false, $this, 'key');
+		API::deleteGroup($groupID);
+		
+		$response = API::groupGet($groupID, "");
+		$this->assert404($response);
+	}
 }
-?>

@@ -148,8 +148,7 @@ class Zotero_Groups {
 				}
 				else {
 					// Don't include groups that have never had items
-					$whereSQL = "JOIN libraries L ON (G.libraryID=L.libraryID)
-							WHERE L.lastUpdated != '0000-00-00 00:00:00' ";
+					$whereSQL = "JOIN libraries L ON (G.libraryID=L.libraryID) WHERE L.hasData = 1 ";
 				}
 				$sql .= $whereSQL;
 				$countSQL .= $whereSQL;

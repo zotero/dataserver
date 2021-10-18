@@ -66,7 +66,7 @@ class API3 {
 	public static function createGroup($fields) {
 		$xml = new \SimpleXMLElement('<group/>');
 		$xml['owner'] = $fields['owner'];
-		$xml['name'] = "Test Group " . uniqid();
+		$xml['name'] = $fields['name'] ?? "Test Group " . uniqid();
 		$xml['type'] = $fields['type'];
 		$xml['libraryEditing'] = isset($fields['libraryEditing'])
 			? $fields['libraryEditing']

@@ -1,0 +1,8 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+// Run this after rolling out code changes
+Zotero_DB::query("UPDATE `libraries` SET hasData=1 WHERE version > 0 OR lastUpdated != '0000-00-00 00:00:00'");
+Zotero_Admin_DB::query("ALTER TABLE `libraries` DROP COLUMN `lastUpdated`, DROP COLUMN `version`");
