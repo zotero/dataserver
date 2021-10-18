@@ -127,6 +127,12 @@ class Zotero_Users {
 	
 	
 	public static function getUserIDFromSessionID($sessionID) {
+		$cacheKey = "userIDBySessionID_" . $sessionID;
+		$userID = Z_Core::$MC->get($cacheKey);
+		if ($userID) {
+			return $userID;
+		}
+		
 		$sql = "SELECT userID FROM sessions WHERE id=?
 				AND UNIX_TIMESTAMP() < modified + lifetime";
 		try {
@@ -137,6 +143,10 @@ class Zotero_Users {
 			Z_Core::logError("WARNING: $e -- retrying on primary");
 			$userID = Zotero_WWW_DB_1::valueQuery($sql, $sessionID);
 			Zotero_WWW_DB_1::close();
+		}
+		
+		if ($userID) {
+			Z_Core::$MC->set($cacheKey, $userID, 60);
 		}
 		
 		return $userID;
