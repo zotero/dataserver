@@ -280,6 +280,7 @@ class Zotero_Key {
 				}
 			}
 		}
+		Z_Core::$MC->delete("keyPermissionsByID_" . $this->id);
 		
 		$this->permissions = $newPermissions;
 		
@@ -374,6 +375,11 @@ class Zotero_Key {
 		}
 		
 		Zotero_DB::commit();
+		
+		// Keep in sync with Zotero_Keys::getByKey()
+		Z_Core::$MC->delete("keyIDByKey_" . $this->key);
+		// Keep in sync with load() and save()
+		Z_Core::$MC->delete("keyPermissionsByID_" . $this->id);
 		
 		$this->erased = true;
 	}
@@ -571,8 +577,15 @@ class Zotero_Key {
 		
 		$this->loadFromRow($row);
 		
-		$sql = "SELECT * FROM keyPermissions WHERE keyID=?";
-		$rows = Zotero_DB::query($sql, $this->id);
+		$cacheKey = "keyPermissionsByID_" . $this->id;
+		$rows = Z_Core::$MC->get($cacheKey);
+		if (!$rows) {
+			$sql = "SELECT * FROM keyPermissions WHERE keyID=?";
+			$rows = Zotero_DB::query($sql, $this->id);
+			if ($rows) {
+				Z_Core::$MC->set($cacheKey, $rows, 300);
+			}
+		}
 		foreach ($rows as $row) {
 			$this->permissions[$row['libraryID']][$row['permission']] = !!$row['granted'];
 			

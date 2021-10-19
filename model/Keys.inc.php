@@ -26,8 +26,16 @@
 
 class Zotero_Keys {
 	public static function getByKey($key) {
-		$sql = "SELECT keyID FROM `keys` WHERE `key`=?";
-		$keyID = Zotero_DB::valueQuery($sql, $key);
+		// Keep in sync with Zotero_Key::erase()
+		$cacheKey = "keyIDByKey_" . $key;
+		$keyID = Z_Core::$MC->get($cacheKey);
+		if (!$keyID) {
+			$sql = "SELECT keyID FROM `keys` WHERE `key`=?";
+			$keyID = Zotero_DB::valueQuery($sql, $key);
+			if ($keyID) {
+				Z_Core::$MC->set($cacheKey, $keyID, 300);
+			}
+		}
 		if (!$keyID) {
 			return false;
 		}
