@@ -634,7 +634,7 @@ class Zotero_Users {
 	
 	
 	public static function hasPublicationsInUserLibrary($userID) {
-		$sql = "SELECT COUNT(*) > 0 FROM publicationsItems JOIN items WHERE libraryID=?";
+		$sql = "SELECT COUNT(*) > 0 FROM publicationsItems JOIN items USING (itemID) WHERE libraryID=?";
 		$libraryID = self::getLibraryIDFromUserID($userID);
 		$shardID = Zotero_Shards::getByLibraryID($libraryID);
 		return !!Zotero_DB::valueQuery($sql, $libraryID, $shardID);
