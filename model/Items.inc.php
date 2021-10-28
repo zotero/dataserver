@@ -64,9 +64,6 @@ class Zotero_Items {
 	
 	
 	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
-		// TEMP
-		$ITL = true;
-		
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
@@ -97,18 +94,10 @@ class Zotero_Items {
 		
 		// In /top mode, use the top-level item's values for most joins
 		if ($onlyTopLevel) {
-			if ($ITL) {
-				$itemIDSelector = "COALESCE(ITL.topLevelItemID, I.itemID)";
-				$itemKeySelector = "COALESCE(ITLI.key, I.key)";
-				$itemVersionSelector = "COALESCE(ITLI.version, I.version)";
-				$itemTypeIDSelector = "COALESCE(ITLI.itemTypeID, I.itemTypeID)";
-			}
-			else {
-				$itemIDSelector = "COALESCE(IA.sourceItemID, INo.sourceItemID, I.itemID)";
-				$itemKeySelector = "COALESCE(IP.key, I.key)";
-				$itemVersionSelector = "COALESCE(IP.version, I.version)";
-				$itemTypeIDSelector = "COALESCE(IP.itemTypeID, I.itemTypeID)";
-			}
+			$itemIDSelector = "COALESCE(ITL.topLevelItemID, I.itemID)";
+			$itemKeySelector = "COALESCE(ITLI.key, I.key)";
+			$itemVersionSelector = "COALESCE(ITLI.version, I.version)";
+			$itemTypeIDSelector = "COALESCE(ITLI.itemTypeID, I.itemTypeID)";
 		}
 		else {
 			$itemIDSelector = "I.itemID";
@@ -133,33 +122,17 @@ class Zotero_Items {
 		
 		// For /top, we need the top-level item's itemID
 		if ($onlyTopLevel) {
-			if ($ITL) {
-				$sql .= "LEFT JOIN itemTopLevel ITL ON (ITL.itemID=I.itemID) ";
-				
-				// For some /top requests, pull in the top-level item's items row
-				if ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort) {
-					$sql .= "LEFT JOIN items ITLI ON (ITLI.itemID=$itemIDSelector) ";
-				}
-			}
-			else {
-				$sql .= "LEFT JOIN itemAttachments IA ON (IA.itemID=I.itemID) ";
+			$sql .= "LEFT JOIN itemTopLevel ITL ON (ITL.itemID=I.itemID) ";
+			
+			// For some /top requests, pull in the top-level item's items row
+			if ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort) {
+				$sql .= "LEFT JOIN items ITLI ON (ITLI.itemID=$itemIDSelector) ";
 			}
 		}
 		
 		// For 'q' we need the note; for sorting by title, we need the note title
-		if ($ITL) {
-			if (!empty($params['q']) || $titleSort) {
-				$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
-			}
-		}
-		else {
-			if ($onlyTopLevel || !empty($params['q']) || $titleSort) {
-				$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
-			}
-			
-			if ($onlyTopLevel && ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort)) {
-				$sql .= "LEFT JOIN items IP ON ($itemIDSelector=IP.itemID) ";
-			}
+		if (!empty($params['q']) || $titleSort) {
+			$sql .= "LEFT JOIN itemNotes INo ON (INo.itemID=I.itemID) ";
 		}
 		
 		// Pull in titles
@@ -495,12 +468,7 @@ class Zotero_Items {
 				case 'dateModified':
 				case 'serverDateModified':
 					if ($onlyTopLevel) {
-						if ($ITL) {
-							$orderSQL = "ITLI." . $params['sort'];
-						}
-						else {
-							$orderSQL = "IP." . $params['sort'];
-						}
+						$orderSQL = "ITLI." . $params['sort'];
 					}
 					else {
 						$orderSQL = "I." . $params['sort'];
@@ -556,12 +524,7 @@ class Zotero_Items {
 						$orderSQL = "TCBU.username";
 					}
 					else {
-						if ($ITL) {
-							$orderSQL = ($onlyTopLevel ? "ITLI" : "I") . ".dateAdded";
-						}
-						else {
-							$orderSQL = ($onlyTopLevel ? "IP" : "I") . ".dateAdded";
-						}
+						$orderSQL = ($onlyTopLevel ? "ITLI" : "I") . ".dateAdded";
 					}
 					break;
 				
@@ -755,11 +718,6 @@ class Zotero_Items {
 	public static function setTopLevelItem($itemIDs, $topLevelItemID, $shardID) {
 		if (!$itemIDs) return;
 		
-		// TEMP
-		if (!Zotero_DB::tableExists('itemTopLevel', $shardID)) {
-			return;
-		}
-		
 		$params = [];
 		$sql = "INSERT INTO itemTopLevel (itemID, topLevelItemID) "
 			. "VALUES " . implode(", ", array_fill(0, sizeOf($itemIDs), "(?, ?)")) . " "
@@ -774,11 +732,6 @@ class Zotero_Items {
 	
 	
 	public static function clearTopLevelItem($itemID, $shardID) {
-		// TEMP
-		if (!Zotero_DB::tableExists('itemTopLevel', $shardID)) {
-			return;
-		}
-		
 		$sql = "DELETE FROM itemTopLevel WHERE itemID=?";
 		Zotero_DB::query($sql, $itemID, $shardID);
 	}
