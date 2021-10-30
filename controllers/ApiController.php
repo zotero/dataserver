@@ -171,12 +171,7 @@ class ApiController extends Controller {
 			}
 			
 			if (!empty($_SERVER['HTTP_CONTENT_ENCODING']) && $_SERVER['HTTP_CONTENT_ENCODING'] == 'gzip') {
-				// Strip standard gzip header if present
-				if (substr($this->body, 0, 3) == (chr(31) . chr(139) . chr(8))) { // 1F 8B 08
-					$this->body = substr($this->body, 10);
-				}
-				
-				$this->body = gzinflate($this->body);
+				$this->body = gzdecode($this->body);
 				
 				// If form data, parse uncompressed data into $_REQUEST. (This might not be used.)
 				if (isset($_SERVER['CONTENT_TYPE'])
