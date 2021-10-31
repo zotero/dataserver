@@ -2404,6 +2404,44 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function testTopWithSince() {
+		API::userClear(self::$config['userID']);
+		
+		$version1 = API::getLibraryVersion();
+		$parentKeys[0] = API::createItem("book", [], $this, 'key');
+		$version2 = API::getLibraryVersion();
+		$childKeys[0] = API::createAttachmentItem("linked_url", [], $parentKeys[0], $this, 'key');
+		$version3 = API::getLibraryVersion();
+		$parentKeys[1] = API::createItem("journalArticle", [], $this, 'key');
+		$version4 = API::getLibraryVersion();
+		$childKeys[1] = API::createNoteItem("", $parentKeys[1], $this, 'key');
+		$version5 = API::getLibraryVersion();
+		$parentKeys[2] = API::createItem("book", [], $this, 'key');
+		$version6 = API::getLibraryVersion();
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?since=$version1"
+		);
+		$this->assertNumResults(3, $response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?since=$version1"
+		);
+		$this->assertNumResults(5, $response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/top?format=versions&since=$version4"
+		);
+		$this->assertNumResults(1, $response);
+		$json = API::getJSONFromResponse($response);
+		$keys = array_keys($json);
+		$this->assertEquals($parentKeys[2], $keys[0]);
+	}
+	
+	
 	public function test_top_should_return_top_level_item_for_three_level_hierarchy() {
 		API::userClear(self::$config['userID']);
 		

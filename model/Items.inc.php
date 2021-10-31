@@ -90,10 +90,33 @@ class Zotero_Items {
 		$topLevelItemSort = !empty($params['sort'])
 			&& in_array($params['sort'], ['itemType', 'dateAdded', 'dateModified', 'serverDateModified', 'addedBy']);
 		
+		// For /top, don't use a parent-items table if not needed, since it prevents index use.
+		// This dramatically improves performance for the `/top?format=versions&since=` request used
+		// by the desktop client for syncing.
+		//
+		// The parent-items table is necessary when there are search parameters that match child
+		// items. This is conceptually a little muddled but is basically determined by what's needed
+		// by the web library. For example, you should be able to search by child item key in the
+		// search bar and see the parent item, so `itemKey` needs to use the parent-items table, but
+		// `since` is only used by syncing, and there's not a clear use case for returning the
+		// parent items of child items modified since a given version, so `since` can just match on
+		// the top-level items.
+		//
+		// When matching parent items directly, we can exclude child items with `ITL.itemID IS NULL`.
+		$skipITLI = $onlyTopLevel
+			// /top?itemKey=[child key]
+			&& !$itemKeys
+			// /top?itemType=annotation
+			&& empty($params['itemType'])
+			// /top?q=[child note title]
+			&& empty($params['q'])
+			// /top?tag=[child tag]
+			&& empty($params['tag']);
+		
 		$sql = "SELECT SQL_CALC_FOUND_ROWS DISTINCT ";
 		
 		// In /top mode, use the top-level item's values for most joins
-		if ($onlyTopLevel) {
+		if ($onlyTopLevel && !$skipITLI) {
 			$itemIDSelector = "COALESCE(ITL.topLevelItemID, I.itemID)";
 			$itemKeySelector = "COALESCE(ITLI.key, I.key)";
 			$itemVersionSelector = "COALESCE(ITLI.version, I.version)";
@@ -125,7 +148,8 @@ class Zotero_Items {
 			$sql .= "LEFT JOIN itemTopLevel ITL ON (ITL.itemID=I.itemID) ";
 			
 			// For some /top requests, pull in the top-level item's items row
-			if ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort) {
+			if (!$skipITLI
+					&& ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort)) {
 				$sql .= "LEFT JOIN items ITLI ON (ITLI.itemID=$itemIDSelector) ";
 			}
 		}
@@ -181,7 +205,7 @@ class Zotero_Items {
 			$sql .= "LEFT JOIN deletedItems DI ON (DI.itemID=I.itemID) ";
 			
 			// In /top mode, we don't want to show results for deleted parents or children
-			if ($onlyTopLevel) {
+			if ($onlyTopLevel && !$skipITLI) {
 				$sql .= "LEFT JOIN deletedItems DIP ON (DIP.itemID=$itemIDSelector) ";
 			}
 		}
@@ -294,7 +318,7 @@ class Zotero_Items {
 			$sql .= "AND DI.itemID IS NULL ";
 			
 			// Hide deleted parents in /top mode
-			if ($onlyTopLevel) {
+			if ($onlyTopLevel && !$skipITLI) {
 				$sql .= "AND DIP.itemID IS NULL ";
 			}
 		}
@@ -460,6 +484,11 @@ class Zotero_Items {
 			$sqlParams = array_merge($sqlParams, $itemKeys);
 		}
 		
+		// If we're not using a parent-items table, limit to top-level items using itemTopLevel
+		if ($skipITLI) {
+			$sql .= "AND ITL.itemID IS NULL ";
+		}
+		
 		$sql .= "ORDER BY ";
 		
 		if (!empty($params['sort'])) {
@@ -467,7 +496,7 @@ class Zotero_Items {
 				case 'dateAdded':
 				case 'dateModified':
 				case 'serverDateModified':
-					if ($onlyTopLevel) {
+					if ($onlyTopLevel && !$skipITLI) {
 						$orderSQL = "ITLI." . $params['sort'];
 					}
 					else {
@@ -524,7 +553,7 @@ class Zotero_Items {
 						$orderSQL = "TCBU.username";
 					}
 					else {
-						$orderSQL = ($onlyTopLevel ? "ITLI" : "I") . ".dateAdded";
+						$orderSQL = (($onlyTopLevel && !$skipITLI) ? "ITLI" : "I") . ".dateAdded";
 					}
 					break;
 				
