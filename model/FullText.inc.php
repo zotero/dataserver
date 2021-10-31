@@ -48,8 +48,8 @@ class Zotero_FullText {
 		
 		// Add to MySQL for syncing, since Elasticsearch doesn't refresh immediately
 		$sql = "REPLACE INTO itemFulltext (";
-		$fields = ["itemID", "version", "timestamp"];
-		$params = [$item->id, $version, $timestamp];
+		$fields = ["itemID", "libraryID", "version", "timestamp"];
+		$params = [$item->id, $libraryID, $version, $timestamp];
 		$sql .= implode(", ", $fields) . ") VALUES ("
 			. implode(', ', array_fill(0, sizeOf($params), '?')) . ")";
 		Zotero_DB::query($sql, $params, Zotero_Shards::getByLibraryID($libraryID));
@@ -204,8 +204,8 @@ class Zotero_FullText {
 	 * @return {Object} An object with item keys for keys and full-text content versions for values
 	 */
 	public static function getNewerInLibrary($libraryID, $version) {
-		$sql = "SELECT `key`, IFT.version FROM itemFulltext IFT JOIN items USING (itemID) "
-			. "WHERE libraryID=? AND IFT.version>?";
+		$sql = "SELECT `key`, IFT.version FROM itemFulltext IFT JOIN items I USING (itemID) "
+			. "WHERE IFT.libraryID=? AND IFT.version>?";
 		$rows = Zotero_DB::query(
 			$sql,
 			[$libraryID, $version],
@@ -303,7 +303,7 @@ class Zotero_FullText {
 	}
 	
 	public static function deleteByLibraryMySQL($libraryID) {
-		$sql = "DELETE IFT FROM itemFulltext IFT JOIN items USING (itemID) WHERE libraryID=?";
+		$sql = "DELETE FROM itemFulltext WHERE libraryID=?";
 		Zotero_DB::query(
 			$sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID)
 		);
