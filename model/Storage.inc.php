@@ -219,7 +219,8 @@ class Zotero_Storage {
 			'SourceFile' => $file,
 			'Bucket' => Z_CONFIG::$S3_BUCKET,
 			'Key' => $info->hash,
-			'ACL' => 'private'
+			'ACL' => 'private',
+			'StorageClass' => 'INTELLIGENT_TIERING'
 		]);
 		
 		return self::addFile($info);
