@@ -199,7 +199,7 @@ class Zotero_Users {
 			return self::$realNamesByID[$userID];
 		}
 		
-		$cacheKey = "userRealNameByID_" . $userID;
+		$cacheKey = "userRealNameByID2_" . $userID;
 		$name = Z_Core::$MC->get($cacheKey);
 		if ($name) {
 			self::$realNamesByID[$userID] = $name;
