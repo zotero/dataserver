@@ -50,7 +50,7 @@ class NoteTests extends APITests {
 		parent::setUp();
 		
 		// Create too-long note content
-		$this->content = str_repeat("1234567890", 25001);
+		$this->content = str_repeat("1234567890", 50001);
 		
 		// Create JSON template
 		$this->json = API::getItemTemplate("note");
