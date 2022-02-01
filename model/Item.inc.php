@@ -1417,11 +1417,6 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Annotation
 				if ($this->isAnnotation()) {
-					// TEMP
-					if (Zotero_Libraries::getType($this->_libraryID) != 'user') {
-						throw new Exception("Can only add annotation in user library");
-					}
-					
 					$parent = $this->getSource();
 					if (!$parent) {
 						throw new Exception("Annotation item must have a parent item", Z_ERROR_INVALID_INPUT);
