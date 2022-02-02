@@ -165,9 +165,11 @@ CREATE TABLE `itemData` (
 
 CREATE TABLE `itemFulltext` (
   `itemID` int(10) unsigned NOT NULL,
+  `libraryID` int(10) unsigned NOT NULL,
   `version` int(10) unsigned NOT NULL DEFAULT '0',
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`itemID`)
+  PRIMARY KEY (`itemID`),
+  KEY `libraryVersion` (`libraryID`,`version`),
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
