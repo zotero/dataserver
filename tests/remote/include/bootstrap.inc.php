@@ -35,7 +35,7 @@ unset($awsConfig);
 // Wipe data and create API key
 require_once 'http.inc.php';
 $response = HTTP::post(
-	$config['apiURLPrefix'] . "test/setup?u=" . $config['userID'],
+	$config['apiURLPrefix'] . "test/setup?u={$config['userID']}&u2={$config['userID2']}",
 	" ",
 	[],
 	[
@@ -49,7 +49,10 @@ if (!$json) {
 	echo $response->getBody();
 	throw new Exception("Invalid test setup response");
 }
-$config['apiKey'] = $json->apiKey;
+$config['user1APIKey'] = $json->user1->apiKey;
+$config['user2APIKey'] = $json->user2->apiKey;
+// Deprecated
+$config['apiKey'] = $json->user1->apiKey;
 \Zotero\Tests\Config::update($config);
 
 // Set up groups

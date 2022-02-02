@@ -549,53 +549,63 @@ class ApiController extends Controller {
 		if (empty($_GET['u'])) {
 			throw new Exception("User not provided (e.g., ?u=1)");
 		}
-		$userID = $_GET['u'];
-		
-		// Clear keys
-		$keys = Zotero_Keys::getUserKeys($userID);
-		foreach ($keys as $keyObj) {
-			$keyObj->erase();
+		if (empty($_GET['u2'])) {
+			throw new Exception("User 2 not provided (e.g., &u2=2)");
 		}
-		$keys = Zotero_Keys::getUserKeys($userID);
-		if ($keys) {
-			throw new Exception("Keys still exist");
-		}
-		// Create new key
-		$keyObj = new Zotero_Key;
-		$keyObj->userID = $userID;
-		$keyObj->name = "Tests Key";
-		$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
-		$keyObj->setPermission($libraryID, 'library', true);
-		$keyObj->setPermission($libraryID, 'notes', true);
-		$keyObj->setPermission($libraryID, 'write', true);
-		$keyObj->setPermission(0, 'group', true);
-		$keyObj->setPermission(0, 'write', true);
-		$keyObj->save();
-		$key = $keyObj->key;
 		
-		Zotero_DB::beginTransaction();
-		
-		// Clear data
-		Zotero_Users::clearAllData($userID);
-		
-		// Delete publications library, so we can test auto-creating it
-		$publicationsLibraryID = Zotero_Users::getLibraryIDFromUserID($userID, 'publications');
-		if ($publicationsLibraryID) {
-			// Delete user publications shard library
-			$sql = "DELETE FROM shardLibraries WHERE libraryID=?";
-			Zotero_DB::query($sql, $publicationsLibraryID, Zotero_Shards::getByUserID($userID));
+		function getUserKey($userID) {
+			$keys = Zotero_Keys::getUserKeys($userID);
+			foreach ($keys as $keyObj) {
+				$keyObj->erase();
+			}
+			$keys = Zotero_Keys::getUserKeys($userID);
+			if ($keys) {
+				throw new Exception("Keys still exist");
+			}
+			// Create new key
+			$keyObj = new Zotero_Key;
+			$keyObj->userID = $userID;
+			$keyObj->name = "Tests Key";
+			$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
+			$keyObj->setPermission($libraryID, 'library', true);
+			$keyObj->setPermission($libraryID, 'notes', true);
+			$keyObj->setPermission($libraryID, 'write', true);
+			$keyObj->setPermission(0, 'group', true);
+			$keyObj->setPermission(0, 'write', true);
+			$keyObj->save();
+			$key = $keyObj->key;
 			
-			// Delete user publications library
-			$sql = "DELETE FROM libraries WHERE libraryID=?";
-			Zotero_DB::query($sql, $publicationsLibraryID);
+			Zotero_DB::beginTransaction();
 			
-			Z_Core::$MC->delete('userPublicationsLibraryID_' . $userID);
-			Z_Core::$MC->delete('libraryUserID_' . $publicationsLibraryID);
+			// Clear data
+			Zotero_Users::clearAllData($userID);
+			
+			// Delete publications library, so we can test auto-creating it
+			$publicationsLibraryID = Zotero_Users::getLibraryIDFromUserID($userID, 'publications');
+			if ($publicationsLibraryID) {
+				// Delete user publications shard library
+				$sql = "DELETE FROM shardLibraries WHERE libraryID=?";
+				Zotero_DB::query($sql, $publicationsLibraryID, Zotero_Shards::getByUserID($userID));
+				
+				// Delete user publications library
+				$sql = "DELETE FROM libraries WHERE libraryID=?";
+				Zotero_DB::query($sql, $publicationsLibraryID);
+				
+				Z_Core::$MC->delete('userPublicationsLibraryID_' . $userID);
+				Z_Core::$MC->delete('libraryUserID_' . $publicationsLibraryID);
+			}
+			Zotero_DB::commit();
+			
+			return $key;
 		}
-		Zotero_DB::commit();
 		
 		echo json_encode([
-			"apiKey" => $key
+			"user1" => [
+				"apiKey" => getUserKey($_GET['u'])
+			],
+			"user2" => [
+				"apiKey" => getUserKey($_GET['u2'])
+			]
 		]);
 		$this->end();
 	}
