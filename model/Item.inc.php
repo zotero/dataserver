@@ -1041,6 +1041,7 @@ class Zotero_Item extends Zotero_DataObject {
 		//$this->checkTopLevelAttachment();
 		
 		$shardID = Zotero_Shards::getByLibraryID($this->_libraryID);
+		$isGroupLibrary = Zotero_Libraries::getType($this->_libraryID) == 'group';
 		
 		$env = [];
 		
@@ -1114,10 +1115,36 @@ class Zotero_Item extends Zotero_DataObject {
 					$this->_serverDateModified = $timestamp;
 				}
 				
+				$createdByUserID = $userID;
+				
+				// Remove from delete log if present, and if group item restore the previous
+				// createdByUserID (e.g., in case another user is doing a Replace Online Library
+				// or choosing the local version for conflict resolution)
+				$deleteFromLog = true;
+				if ($isGroupLibrary) {
+					$sql = "SELECT version, data FROM syncDeleteLogKeys "
+						. "WHERE libraryID=? AND objectType='item' AND `key`=?";
+					$row = Zotero_DB::rowQuery($sql, [$this->_libraryID, $key], $shardID);
+					if ($row) {
+						$data = json_decode($row['data']);
+						if (!empty($data->createdByUserID)) {
+							$createdByUserID = $data->createdByUserID;
+						}
+					}
+					else {
+						$deleteFromLog = false;
+					}
+				}
+				if ($deleteFromLog) {
+					$sql = "DELETE FROM syncDeleteLogKeys "
+						. "WHERE libraryID=? AND objectType='item' AND `key`=?";
+					Zotero_DB::query($sql, [$this->_libraryID, $key], $shardID);
+				}
+				
 				// Group item data
-				if (Zotero_Libraries::getType($this->_libraryID) == 'group' && $userID) {
+				if ($isGroupLibrary && $createdByUserID) {
 					$sql = "INSERT INTO groupItems VALUES (?, ?, ?)";
-					Zotero_DB::query($sql, array($itemID, $userID, $userID), $shardID);
+					Zotero_DB::query($sql, [$itemID, $createdByUserID, $userID], $shardID);
 				}
 				
 				//
@@ -1577,10 +1604,6 @@ class Zotero_Item extends Zotero_DataObject {
 						);
 					}
 				}
-				
-				// Remove from delete log if it's there
-				$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=? AND objectType='item' AND `key`=?";
-				Zotero_DB::query($sql, array($this->_libraryID, $key), $shardID);
 			}
 			
 			//
@@ -1631,7 +1654,7 @@ class Zotero_Item extends Zotero_DataObject {
 				$this->_serverDateModified = $timestamp;
 				
 				// Group item data
-				if (Zotero_Libraries::getType($this->_libraryID) == 'group' && $userID) {
+				if ($isGroupLibrary && $userID) {
 					$sql = "INSERT INTO groupItems VALUES (?, ?, ?)
 								ON DUPLICATE KEY UPDATE lastModifiedByUserID=?";
 					Zotero_DB::query($sql, array($this->_id, null, $userID, $userID), $shardID);

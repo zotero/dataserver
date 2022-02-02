@@ -3174,6 +3174,41 @@ class ItemTests extends APITests {
 	}
 	
 	
+	public function test_should_preserve_createdByUserID_on_undelete() {
+		$json = API::groupCreateItem(
+			self::$config['ownedPrivateGroupID'], "book", false, $this, 'json'
+		);
+		$jsonData = $json['data'];
+		
+		$this->assertEquals($json['meta']['createdByUser']['username'], self::$config['username']);
+		
+		$response = API::groupDelete(
+			self::$config['ownedPrivateGroupID'],
+			"items/{$json['key']}",
+			["If-Unmodified-Since-Version: " . $json['version']]
+		);
+		$this->assert204($response);
+		
+		API::useAPIKey(self::$config['user2APIKey']);
+		$jsonData['version'] = 0;
+		$response = API::groupPost(
+			self::$config['ownedPrivateGroupID'],
+			"items",
+			json_encode([$jsonData]),
+			[
+				"Content-Type: application/json"
+			]
+		);
+		$json = API::getJSONFromResponse($response);
+		
+		// createdByUser shouldn't have changed
+		$this->assertEquals(
+			$json['successful'][0]['meta']['createdByUser']['username'],
+			self::$config['username']
+		);
+	}
+	
+	
 	public function test_should_return_409_on_missing_parent() {
 		$missingParentKey = "BDARG2AV";
 		$json = API::createNoteItem("<p>test</p>", $missingParentKey, $this);

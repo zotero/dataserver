@@ -332,6 +332,7 @@ CREATE TABLE `syncDeleteLogKeys` (
   `key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `version` int(10) unsigned NOT NULL DEFAULT '1',
+  `data` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`libraryID`,`objectType`,`key`),
   KEY `objectType` (`objectType`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

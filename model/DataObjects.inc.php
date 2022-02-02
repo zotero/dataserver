@@ -610,6 +610,13 @@ trait Zotero_DataObjects {
 			$tagName = $obj->name;
 		}
 		
+		if ($type == 'item' && Zotero_Libraries::getType($libraryID) == 'group') {
+			$createdByUserID = $obj->createdByUserID;
+		}
+		else {
+			$createdByUserID = null;
+		}
+		
 		$storageFileID = null;
 		if ($type == 'item' && $obj->isAttachment()) {
 			Zotero_FullText::deleteItemContent($obj);
@@ -685,14 +692,28 @@ trait Zotero_DataObjects {
 			}
 			
 			$sql = "INSERT INTO syncDeleteLogKeys
-						(libraryID, objectType, `key`, timestamp, version)
-						VALUES (?, '$type', ?, ?, ?)
-						ON DUPLICATE KEY UPDATE timestamp=?, version=?";
+						(libraryID, objectType, `key`, timestamp, version, data)
+						VALUES (?, '$type', ?, ?, ?, ?)
+						ON DUPLICATE KEY UPDATE timestamp=?, version=?, data=?";
 			$timestamp = Zotero_DB::getTransactionTimestamp();
 			$version = Zotero_Libraries::getUpdatedVersion($libraryID);
-			$params = array(
-				$libraryID, $key, $timestamp, $version, $timestamp, $version
-			);
+			$data = '';
+			if ($createdByUserID) {
+				$data = [
+					'createdByUserID' => $createdByUserID
+				];
+			}
+			$data = $data ? json_encode($data) : '';
+			$params = [
+				$libraryID,
+				$key,
+				$timestamp,
+				$version,
+				$data,
+				$timestamp,
+				$version,
+				$data
+			];
 			Zotero_DB::query($sql, $params, $shardID);
 			
 			if ($type == 'tag') {
