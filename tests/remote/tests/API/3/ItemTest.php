@@ -3122,6 +3122,7 @@ class ItemTests extends APITests {
 		//
 		// Add setting to both group members
 		//
+		// Set as user 1
 		$settingKey = "lastPageIndex_g" . self::$config['ownedPrivateGroupID'] . "_$attachmentKey";
 		$response = API::userPut(
 			self::$config['userID'],
@@ -3134,16 +3135,20 @@ class ItemTests extends APITests {
 		);
 		$this->assert204($response);
 		
-		// TEMP: Get a API key for the second user instead of using root user
-		$response = API::superPut(
-			"users/" . self::$config['userID2'] . "/settings/$settingKey",
+		// Set as user 2
+		API::useAPIKey(self::$config['user2APIKey']);
+		$response = API::userPut(
+			self::$config['userID2'],
+			"settings/$settingKey",
 			json_encode([
-				"value" => 123,
+				"value" => 234,
 				"version" => 0
 			]),
 			["Content-Type: application/json"]
 		);
 		$this->assert204($response);
+		
+		API::useAPIKey(self::$config['user1APIKey']);
 		
 		// Delete group item
 		$response = API::groupDelete(
