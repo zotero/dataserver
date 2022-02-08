@@ -64,6 +64,7 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	private $annotationData = [
 		'type' => null,
+		'authorName' => null,
 		'text' => null,
 		'comment' => null,
 		'color' => null,
@@ -155,6 +156,7 @@ class Zotero_Item extends Zotero_DataObject {
 				return $this->getAttachmentField($field);
 			
 			case 'annotationType':
+			case 'annotationAuthorName':
 			case 'annotationText':
 			case 'annotationComment':
 			case 'annotationColor':
@@ -213,6 +215,7 @@ class Zotero_Item extends Zotero_DataObject {
 				return $this->setAttachmentField('mimeType', $val);
 			
 			case 'annotationType':
+			case 'annotationAuthorName':
 			case 'annotationText':
 			case 'annotationComment':
 			case 'annotationColor':
@@ -1481,12 +1484,13 @@ class Zotero_Item extends Zotero_DataObject {
 					}
 					
 					$sql = "INSERT INTO itemAnnotations "
-						. "(itemID, parentItemID, `type`, text, comment, color, pageLabel, sortIndex, position) "
-						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+						. "(itemID, parentItemID, `type`, authorName, text, comment, color, pageLabel, sortIndex, position) "
+						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 					$params = [
 						$itemID,
 						$parent,
 						$this->annotationType,
+						$this->annotationAuthorName,
 						$this->annotationText,
 						$this->annotationComment,
 						$color,
@@ -2008,9 +2012,10 @@ class Zotero_Item extends Zotero_DataObject {
 					}
 					
 					$sql = "INSERT INTO itemAnnotations "
-						. "(itemID, parentItemID, `type`, text, comment, color, pageLabel, sortIndex, position) "
-						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+						. "(itemID, parentItemID, `type`, authorName, text, comment, color, pageLabel, sortIndex, position) "
+						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 						. "ON DUPLICATE KEY UPDATE "
+						. "authorName=VALUES(authorName), "
 						. "text=VALUES(text), "
 						. "comment=VALUES(comment), "
 						. "color=VALUES(color), "
@@ -2021,6 +2026,7 @@ class Zotero_Item extends Zotero_DataObject {
 						$this->_id,
 						$this->getSource(),
 						$this->annotationType,
+						$this->annotationAuthorName,
 						$this->annotationText,
 						$this->annotationComment,
 						$color,
@@ -3509,6 +3515,7 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				break;
 			
+			case 'authorName':
 			case 'text':
 			case 'comment':
 			case 'pageLabel':
@@ -4527,8 +4534,11 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		if ($this->isAnnotation()) {
-			$props = ['type', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
+			$props = ['type', 'authorName', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
 			foreach ($props as $prop) {
+				if ($prop == 'authorName' && $this->annotationAuthorName === '') {
+					continue;
+				}
 				if ($prop == 'text' && $this->annotationType != 'highlight') {
 					continue;
 				}

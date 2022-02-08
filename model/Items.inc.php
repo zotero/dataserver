@@ -1843,6 +1843,7 @@ class Zotero_Items {
 				// Annotation properties
 				//
 				case 'annotationType':
+				case 'annotationAuthorName':
 				case 'annotationText':
 				case 'annotationComment':
 				case 'annotationColor':
@@ -2423,6 +2424,7 @@ class Zotero_Items {
 				
 				// Annotation properties
 				case 'annotationType':
+				case 'annotationAuthorName':
 				case 'annotationText':
 				case 'annotationComment':
 				case 'annotationColor':

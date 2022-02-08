@@ -61,6 +61,7 @@ class AnnotationTest extends APITests {
 			'itemType' => 'annotation',
 			'parentItem' => self::$attachmentKey,
 			'annotationType' => 'highlight',
+			'annotationAuthorName' => 'First Last',
 			'annotationText' => 'This is highlighted text.',
 			'annotationColor' => '#ff8c19',
 			'annotationPageLabel' => '10',
@@ -84,6 +85,7 @@ class AnnotationTest extends APITests {
 		$jsonData = $json['successful'][0]['data'];
 		$this->assertEquals('annotation', (string) $jsonData['itemType']);
 		$this->assertEquals('highlight', $jsonData['annotationType']);
+		$this->assertEquals('First Last', $jsonData['annotationAuthorName']);
 		$this->assertEquals('This is highlighted text.', $jsonData['annotationText']);
 		$this->assertEquals('#ff8c19', $jsonData['annotationColor']);
 		$this->assertEquals('10', $jsonData['annotationPageLabel']);
@@ -249,6 +251,35 @@ class AnnotationTest extends APITests {
 		$position = json_decode($jsonData['annotationPosition'], true);
 		$this->assertEquals(123, $position['pageIndex']);
 		$this->assertSame($paths, $position['paths']);
+	}
+	
+	
+	public function test_should_not_include_authorName_if_empty() {
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'highlight',
+			'annotationText' => 'This is highlighted text.',
+			'annotationColor' => '#ff8c19',
+			'annotationPageLabel' => '10',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			array("Content-Type: application/json")
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$jsonData = $json['successful'][0]['data'];
+		$this->assertArrayNotHasKey('annotationAuthorName', $jsonData);
 	}
 	
 	
