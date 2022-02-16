@@ -52,7 +52,6 @@ class Zotero_Key {
 			case 'key':
 			case 'userID':
 			case 'name':
-			case 'dateAdded':
 				break;
 			
 			default:
@@ -244,6 +243,10 @@ class Zotero_Key {
 			$this->id = $insertID;
 		}
 		
+		// Name might have changed -- keep in sync with self::load()
+		Z_Core::$MC->delete("keyInfoByID_" . $this->id);
+		Z_Core::$MC->delete("keyInfoByKey_" . $this->key);
+		
 		if (!$insertID) {
 			$sql = "SELECT * FROM keyPermissions WHERE keyID=?";
 			$oldRows = Zotero_DB::query($sql, $this->id);
@@ -376,6 +379,8 @@ class Zotero_Key {
 		
 		Zotero_DB::commit();
 		
+		Z_Core::$MC->delete("keyInfoByID_" . $this->id);
+		Z_Core::$MC->delete("keyInfoByKey_" . $this->key);
 		// Keep in sync with Zotero_Keys::getByKey()
 		Z_Core::$MC->delete("keyIDByKey_" . $this->key);
 		// Keep in sync with load() and save()
@@ -390,7 +395,9 @@ class Zotero_Key {
 	 *
 	 * @return	SimpleXMLElement				Key data as SimpleXML element
 	 */
-	public function toXML() {
+	public function toXML($options = []) {
+		$isSuper = !empty($options['super']);
+		
 		if (($this->id || $this->key) && !$this->loaded) {
 			$this->load();
 		}
@@ -399,10 +406,6 @@ class Zotero_Key {
 		$xml = new SimpleXMLElement($xml);
 		
 		$xml['key'] = $this->key;
-		$xml['dateAdded'] = $this->dateAdded;
-		if ($this->lastUsed != '0000-00-00 00:00:00') {
-			$xml['lastUsed'] =  $this->lastUsed;
-		}
 		$xml->name = $this->name;
 		
 		if ($this->permissions) {
@@ -436,16 +439,26 @@ class Zotero_Key {
 			}
 		}
 		
-		$ips = $this->getRecentIPs();
-		if ($ips) {
-			$xml->recentIPs = implode(' ', $ips);
+		if ($isSuper) {
+			$row = $this->getDates();
+			$xml['dateAdded'] = $row['dateAdded'];
+			if ($row['lastUsed'] != '0000-00-00 00:00:00') {
+				$xml['lastUsed'] =  $row['lastUsed'];
+			}
+			
+			$ips = $this->getRecentIPs();
+			if ($ips) {
+				$xml->recentIPs = implode(' ', $ips);
+			}
 		}
 		
 		return $xml;
 	}
 	
 	
-	public function toJSON() {
+	public function toJSON($options = []) {
+		$isWebsite = !empty($options['website']);
+		
 		if (($this->id || $this->key) && !$this->loaded) {
 			$this->load();
 		}
@@ -502,14 +515,17 @@ class Zotero_Key {
 			}
 		}
 		
-		$json['dateAdded'] = Zotero_Date::sqlToISO8601($this->dateAdded);
-		if ($this->lastUsed != '0000-00-00 00:00:00') {
-			$json['lastUsed'] =  Zotero_Date::sqlToISO8601($this->lastUsed);
-		}
-		
-		$ips = $this->getRecentIPs();
-		if ($ips) {
-			$json['recentIPs'] = $ips;
+		if ($isWebsite) {
+			$row = $this->getDates();
+			$json['dateAdded'] = Zotero_Date::sqlToISO8601($row['dateAdded']);
+			if ($row['lastUsed'] != '0000-00-00 00:00:00') {
+				$json['lastUsed'] =  Zotero_Date::sqlToISO8601($row['lastUsed']);
+			}
+			
+			$ips = $this->getRecentIPs();
+			if ($ips) {
+				$json['recentIPs'] = $ips;
+			}
 		}
 		
 		return $json;
@@ -566,12 +582,26 @@ class Zotero_Key {
 	
 	private function load() {
 		if ($this->id) {
-			$sql = "SELECT * FROM `keys` WHERE keyID=?";
-			$row = Zotero_DB::rowQuery($sql, $this->id);
+			$cacheKey = "keyInfoByID_" . $this->id;
+			$row = Z_Core::$MC->get($cacheKey);
+			if (!$row) {
+				$sql = "SELECT `key`, userID, name FROM `keys` WHERE keyID=?";
+				$row = Zotero_DB::rowQuery($sql, $this->id);
+				if ($row) {
+					Z_Core::$MC->set($cacheKey, $row, 60);
+				}
+			}
 		}
 		else if ($this->key) {
-			$sql = "SELECT * FROM `keys` WHERE `key`=?";
-			$row = Zotero_DB::rowQuery($sql, $this->key);
+			$cacheKey = "keyInfoByKey_" . $this->key;
+			$row = Z_Core::$MC->get($cacheKey);
+			if (!$row) {
+				$sql = "SELECT keyID, userID, name FROM `keys` WHERE `key`=?";
+				$row = Zotero_DB::rowQuery($sql, $this->key);
+				if ($row) {
+					Z_Core::$MC->set($cacheKey, $row, 60);
+				}
+			}
 		}
 		if (!$row) {
 			return false;
@@ -602,6 +632,15 @@ class Zotero_Key {
 				}
 			}
 		}
+	}
+	
+	
+	private function getDates() {
+		$row = Zotero_DB::rowQuery("SELECT dateAdded, lastUsed FROM `keys` WHERE keyID=?", $this->id);
+		return [
+			'dateAdded' => $row['dateAdded'],
+			'lastUsed' => $row['lastUsed']
+		];
 	}
 	
 	

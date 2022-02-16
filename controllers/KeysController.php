@@ -43,19 +43,26 @@ class KeysController extends ApiController {
 		
 		$this->allowMethods(['GET', 'POST', 'PUT', 'DELETE']);
 		
+		$isSuper = $this->permissions->isSuper();
+		
 		if ($key) {
 			$keyObj = Zotero_Keys::getByKey($key);
 			if (!$keyObj) {
 				$this->e404("Key '$key' not found");
 			}
-			$isWebsite = $this->permissions->isSuper()
+			$isWebsite = $isSuper
 				|| ($this->apiVersion >= 3 && $this->cookieAuth && $keyObj->userID == $this->userID);
 		}
 		else {
 			$keyObj = null;
-			$isWebsite = $this->permissions->isSuper()
+			$isWebsite = $isSuper
 				|| ($this->apiVersion >= 3 && $this->cookieAuth && $userID == $this->userID);
 		}
+		
+		$options = [
+			'website' => $isWebsite,
+			'super' => $isSuper
+		];
 		
 		if ($this->method == 'GET') {
 			// Single key
@@ -75,14 +82,10 @@ class KeysController extends ApiController {
 				}
 				
 				if ($this->apiVersion >= 3) {
-					$json = $keyObj->toJSON();
+					$json = $keyObj->toJSON($options);
 					
-					// If not super-user or website user, don't include name or recent IP addresses
 					if (!$isWebsite) {
-						unset($json['dateAdded']);
-						unset($json['lastUsed']);
 						unset($json['name']);
-						unset($json['recentIPs']);
 					}
 					
 					header('application/json');
@@ -93,14 +96,10 @@ class KeysController extends ApiController {
 					}
 				}
 				else {
-					$this->responseXML = $keyObj->toXML();
+					$this->responseXML = $keyObj->toXML($options);
 					
-					// If not super-user, don't include name or recent IP addresses
-					if (!$this->permissions->isSuper()) {
-						unset($this->responseXML['dateAdded']);
-						unset($this->responseXML['lastUsed']);
+					if (!$isSuper) {
 						unset($this->responseXML->name);
-						unset($this->responseXML->recentIPs);
 					}
 				}
 			}
@@ -116,7 +115,7 @@ class KeysController extends ApiController {
 					if ($this->apiVersion >= 3) {
 						$json = [];
 						foreach ($keyObjs as $keyObj) {
-							$json[] = $keyObj->toJSON();
+							$json[] = $keyObj->toJSON($options);
 						}
 						echo Zotero_Utilities::formatJSON($json);
 					}
@@ -124,7 +123,7 @@ class KeysController extends ApiController {
 						$xml = new SimpleXMLElement('<keys/>');
 						$domXML = dom_import_simplexml($xml);
 						foreach ($keyObjs as $keyObj) {
-							$keyXML = $keyObj->toXML();
+							$keyXML = $keyObj->toXML($options);
 							$domKeyXML = dom_import_simplexml($keyXML);
 							$node = $domXML->ownerDocument->importNode($domKeyXML, true);
 							$domXML->appendChild($node);
@@ -225,10 +224,10 @@ class KeysController extends ApiController {
 				
 				if ($this->apiVersion >= 3) {
 					header('application/json');
-					echo Zotero_Utilities::formatJSON($keyObj->toJSON());
+					echo Zotero_Utilities::formatJSON($keyObj->toJSON($options));
 				}
 				else {
-					$this->responseXML = $keyObj->toXML();
+					$this->responseXML = $keyObj->toXML($options);
 				}
 				
 				Zotero_DB::commit();
@@ -307,10 +306,10 @@ class KeysController extends ApiController {
 				}
 				
 				if ($this->apiVersion >= 3) {
-					echo Zotero_Utilities::formatJSON($keyObj->toJSON());
+					echo Zotero_Utilities::formatJSON($keyObj->toJSON($options));
 				}
 				else {
-					$this->responseXML = $keyObj->toXML();
+					$this->responseXML = $keyObj->toXML($options);
 				}
 				
 				Zotero_DB::commit();
