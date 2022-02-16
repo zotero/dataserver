@@ -79,6 +79,8 @@ class KeysTest extends APITests {
 		$json = API::getJSONFromResponse($response);
 		$this->assertEquals(self::$config['apiKey'], $json['key']);
 		$this->assertEquals(self::$config['userID'], $json['userID']);
+		$this->assertEquals(self::$config['username'], $json['username']);
+		$this->assertEquals(self::$config['displayName'], $json['displayName']);
 		$this->arrayHasKey("user", $json['access']);
 		$this->arrayHasKey("groups", $json['access']);
 		$this->assertTrue($json['access']['user']['library']);
@@ -186,7 +188,9 @@ class KeysTest extends APITests {
 		$this->assert201($response);
 		$json = API::getJSONFromResponse($response);
 		$key = $json['key'];
-		$this->assertEquals($json['name'], $name);
+		$this->assertEquals(self::$config['username'], $json['username']);
+		$this->assertEquals(self::$config['displayName'], $json['displayName']);
+		$this->assertEquals($name, $json['name']);
 		$this->assertEquals(['user' => ['library' => true, 'files' => true]], $json['access']);
 		
 		// Delete anonymously (with embedded key)
@@ -326,8 +330,10 @@ class KeysTest extends APITests {
 			$this->assert201($response);
 			$json = API::getJSONFromResponse($response);
 			$key = $json['key'];
-			$this->assertEquals($json['userID'], self::$config['userID']);
-			$this->assertEquals($json['name'], $name);
+			$this->assertEquals(self::$config['userID'], $json['userID']);
+			$this->assertEquals(self::$config['username'], $json['username']);
+			$this->assertEquals(self::$config['displayName'], $json['displayName']);
+			$this->assertEquals($name, $json['name']);
 			$this->assertEquals(['user' => ['library' => true, 'files' => true]], $json['access']);
 		}
 	}
