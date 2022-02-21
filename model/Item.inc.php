@@ -1380,11 +1380,6 @@ class Zotero_Item extends Zotero_DataObject {
 							VALUES (?,?,?,?,?,?,?,?)";
 					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
 					
-					// TEMP
-					if ($isEmbeddedImage && Zotero_Libraries::getType($this->_libraryID) != 'user') {
-						throw new Exception("Can only add embedded-image attachment in user library");
-					}
-					
 					$parent = $this->getSource();
 					if ($parent) {
 						$parentItem = Zotero_Items::get($this->_libraryID, $parent);

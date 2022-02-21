@@ -275,7 +275,7 @@ class Zotero_Libraries {
 				}
 				
 				if ($obj && $obj instanceof Zotero_Item
-						&& $obj->isImportedAttachment()
+						&& $obj->isStoredFileAttachment()
 						&& !$group->userCanEditFiles($userID)) {
 					return false;
 				}
