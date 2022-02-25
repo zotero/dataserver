@@ -624,7 +624,7 @@ trait Zotero_DataObjects {
 			if ($obj->isStoredFileAttachment()) {
 				// Get storageFileID while it still exists in storageFileItems table
 				$info = Zotero_Storage::getLocalFileItemInfo($obj);
-				$storageFileID = $info['storageFileID'];
+				$storageFileID = $info['storageFileID'] ?? false;
 			}
 			
 			// Remove lastPageIndex setting

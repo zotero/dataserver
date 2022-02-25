@@ -869,7 +869,7 @@ class Zotero_Storage {
 		// Allow usage a bit above the quota, to account for upload race conditions that result in
 		// a last file going above the quota
 		$leeway = 10;
-		if ($current['quota'] != $quota && ($quota + $leeway) < $usage['total']) {
+		if (($current['quota'] ?? 0) != $quota && ($quota + $leeway) < $usage['total']) {
 			throw new Exception("Cannot set quota below current usage", Z_ERROR_GROUP_QUOTA_SET_BELOW_USAGE);
 		}
 		
