@@ -479,7 +479,7 @@ class ApiController extends Controller {
 		header("Zotero-API-Version: " . $version);
 		StatsD::increment("api.request.version.v" . $version, 0.25);
 		
-		header("Zotero-Schema-Version: " . self::getSchemaVersion());
+		header("Zotero-Schema-Version: " . \Zotero\Schema::getVersion());
 	}
 	
 	
@@ -491,20 +491,6 @@ class ApiController extends Controller {
 	public function noop() {
 		echo "Nothing to see here.";
 		exit;
-	}
-	
-	
-	public function getSchemaVersion() {
-		$cacheKey = "schemaVersion";
-		$version = Z_Core::$MC->get($cacheKey);
-		if ($version) {
-			return $version;
-		}
-		$version = json_decode(
-			file_get_contents(Z_ENV_BASE_PATH . 'htdocs/zotero-schema/schema.json')
-		)->version;
-		Z_Core::$MC->set($cacheKey, $version, 60);
-		return $version;
 	}
 	
 	

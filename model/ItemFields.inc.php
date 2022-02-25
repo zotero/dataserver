@@ -166,7 +166,8 @@ class Zotero_ItemFields {
 		}
 		
 		// Check memcached
-		$cacheKey = "isValidForType_" . $itemTypeID . "_" . $fieldID;
+		$cacheKey = "isValidForType_" . $itemTypeID . "_" . $fieldID . "_"
+			. \Zotero\Schema::getVersion();
 		$valid = Z_Core::$MC->get($cacheKey);
 		if ($valid !== false) {
 			if (!isset(self::$isValidForTypeCache[$itemTypeID])) {
