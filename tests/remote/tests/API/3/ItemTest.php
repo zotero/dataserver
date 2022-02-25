@@ -1837,7 +1837,7 @@ class ItemTests extends APITests {
 		$json = API::createItem('book', false, $this, 'json');
 		$this->assertEquals('user', $json['library']['type']);
 		$this->assertEquals(self::$config['userID'], $json['library']['id']);
-		$this->assertEquals(self::$config['username'], $json['library']['name']);
+		$this->assertEquals(self::$config['displayName'], $json['library']['name']);
 		$this->assertRegExp('%^https?://[^/]+/' . self::$config['username'] . '$%', $json['library']['links']['alternate']['href']);
 		$this->assertEquals('text/html', $json['library']['links']['alternate']['type']);
 	}

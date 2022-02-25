@@ -244,7 +244,7 @@ class PublicationsTests extends APITests {
 		);
 		$this->assert200($response);
 		$json = API::getJSONFromResponse($response);
-		$this->assertEquals(self::$config['username'], $json['library']['name']);
+		$this->assertEquals(self::$config['displayName'], $json['library']['name']);
 		$this->assertEquals("user", $json['library']['type']);
 		
 		// Atom
@@ -254,7 +254,7 @@ class PublicationsTests extends APITests {
 		);
 		$this->assert200($response);
 		$xml = API::getXMLFromResponse($response);
-		$this->assertEquals(self::$config['username'], (string) $xml->author->name);
+		$this->assertEquals(self::$config['displayName'], (string) $xml->author->name);
 	}
 	
 	
