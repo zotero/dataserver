@@ -377,6 +377,12 @@ class ApiController extends Controller {
 		$this->isLegacySchemaClient = false;
 		if (strpos($_SERVER['HTTP_X_ZOTERO_VERSION'] ?? '', '5.0') === 0) {
 			require_once '../model/ToolkitVersionComparator.inc.php';
+			
+			if (ToolkitVersionComparator::compare($_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.61" ) < 0) {
+				$this->e400("This version of Zotero is too old to sync. Please upgrade to a "
+					. "current version to continue syncing.", Z_ERROR_INVALID_INPUT);
+			}
+			
 			$this->isLegacySchemaClient = ToolkitVersionComparator::compare(
 				$_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78"
 			) < 0;
