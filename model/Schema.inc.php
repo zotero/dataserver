@@ -300,7 +300,7 @@ class Schema {
 		
 		\Zotero_DB::commit();
 		
-		Z_Core::$MC->delete(self::$versionCacheKey);
+		\Z_Core::$MC->delete(self::$versionCacheKey);
 		
 		return true;
 	}
