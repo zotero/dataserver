@@ -107,16 +107,22 @@ class Zotero_ID {
 		return $id;
 	}
 	
+	private static $lastMax = [];
+	
 	/**
 	 * Get MAX(id) + 1 from table
 	 *
 	 * @return {Promise<Integer>}
 	 */
 	private static function getMaxPlus1($table) {
+		if (isset(self::$lastMax[$table])) {
+			return ++self::$lastMax[$table];
+		}
+		
 		$col = self::getTableColumn($table);
 		$sql = "SELECT COALESCE(MAX($col) + 1, 1) FROM $table "
 			// TEMP
 			. "WHERE $col < 10000";
-		return Zotero_DB::valueQuery($sql);
+		return self::$lastMax[$table] = Zotero_DB::valueQuery($sql);
 	}
 }
