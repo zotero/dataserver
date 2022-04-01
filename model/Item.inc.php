@@ -3524,7 +3524,21 @@ class Zotero_Item extends Zotero_DataObject {
 				// Check annotationText length
 				if ($field == 'text' && strlen($val) > Zotero_Items::$maxAnnotationTextLength) {
 					throw new Exception(
-						"Annotation text '" . mb_substr($val, 0, 50) . "…' is too long",
+						"Annotation text '" . mb_substr($val, 0, 50) . "…' is too long for "
+							. "attachment " . $this->getSourceKey(),
+						// TEMP: Return 400 until client can handle a specified annotation item,
+						// either by selecting the parent attachment or displaying annotation items
+						// in the items list
+						//Z_ERROR_FIELD_TOO_LONG
+						Z_ERROR_INVALID_INPUT
+					);
+				}
+				// Check annotationPageLabel length
+				if ($field == 'pageLabel' && strlen($val) > Zotero_Items::$maxAnnotationPageLabelLength) {
+					throw new Exception(
+						// TODO: Restore once output isn't HTML-encoded
+						//"Annotation page label '" . mb_substr($val, 0, 50) . "…' is too long",
+						"Annotation page label is too long for attachment " . $this->getSourceKey(),
 						// TEMP: Return 400 until client can handle a specified annotation item,
 						// either by selecting the parent attachment or displaying annotation items
 						// in the items list
@@ -3537,7 +3551,7 @@ class Zotero_Item extends Zotero_DataObject {
 					throw new Exception(
 						// TODO: Restore once output isn't HTML-encoded
 						//"Annotation position '" . mb_substr($val, 0, 50) . "…' is too long",
-						"Annotation position is too long",
+						"Annotation position is too long for attachment " . $this->getSourceKey(),
 						// TEMP: Return 400 until client can handle a specified annotation item,
 						// either by selecting the parent attachment or displaying annotation items
 						// in the items list

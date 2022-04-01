@@ -454,6 +454,35 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_reject_long_page_label() {
+		$label = \Zotero_Utilities::randomString(51);
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'ink',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationColor' => '#ff8c19',
+			'annotationPageLabel' => $label,
+			'annotationPosition' => [
+				'paths' => []
+			]
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		// TEMP: See note in Item.inc.php
+		//$this->assert413ForObject(
+		$this->assert400ForObject(
+			// TODO: Restore once output isn't HTML-encoded
+			//$response, "Annotation page label '" . mb_substr($label, 0, 50) . "…' is too long", 0
+			$response, "Annotation page label is too long for attachment " . self::$attachmentKey, 0
+		);
+	}
+	
+	
 	public function test_should_reject_long_position() {
 		$positionJSON = json_encode([
 			'pageIndex' => 123,
@@ -480,7 +509,7 @@ class AnnotationTest extends APITests {
 		$this->assert400ForObject(
 			// TODO: Restore once output isn't HTML-encoded
 			//$response, "Annotation position '" . mb_substr($positionJSON, 0, 50) . "…' is too long", 0
-			$response, "Annotation position is too long", 0
+			$response, "Annotation position is too long for attachment " . self::$attachmentKey, 0
 		);
 	}
 	
@@ -509,7 +538,8 @@ class AnnotationTest extends APITests {
 		// TEMP: See note in Item.inc.php
 		//$this->assert413ForObject(
 		$this->assert400ForObject(
-			$response, "Annotation text '" . str_repeat('a', 50) . "…' is too long", 0
+			$response, "Annotation text '" . str_repeat('a', 50) . "…' is too long for attachment "
+				. self::$attachmentKey, 0
 		);
 	}
 	

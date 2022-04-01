@@ -41,6 +41,7 @@ class Zotero_Items {
 	
 	public static $maxDataValueLength = 65535;
 	public static $maxAnnotationTextLength = 25000;
+	public static $maxAnnotationPageLabelLength = 50;
 	public static $maxAnnotationPositionLength = 65535;
 	
 	/**
