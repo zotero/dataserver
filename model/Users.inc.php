@@ -174,15 +174,14 @@ class Zotero_Users {
 			Z_Core::logError("WARNING: $e -- can't get username from www");
 		}
 		
-		if ($wwwUsername
-				&& $username != $wwwUsername
-				&& !$skipAutoAdd
-				&& !self::isDeletedUser($userID)) {
-			if (!self::exists($userID)) {
-				self::add($userID, $wwwUsername);
-			}
-			else {
-				self::updateUsername($userID, $wwwUsername);
+		if (!empty($wwwUsername) && $username != $wwwUsername) {
+			if (!$skipAutoAdd && !self::isDeletedUser($userID)) {
+				if (!self::exists($userID)) {
+					self::add($userID, $wwwUsername);
+				}
+				else {
+					self::updateUsername($userID, $wwwUsername);
+				}
 			}
 			$username = $wwwUsername;
 		}
