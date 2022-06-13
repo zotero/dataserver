@@ -435,14 +435,8 @@ class ItemsController extends ApiController {
 						$this->e404("Item not found");
 					}
 					
-					if ($item->isAttachment()) {
-						$this->e400("/children cannot be called on attachment items");
-					}
-					if ($item->isNote()) {
-						$this->e400("/children cannot be called on note items");
-					}
-					if ($item->getSource()) {
-						$this->e400("/children cannot be called on child items");
+					if ($item->isAttachment() && !$item->isPDFAttachment()) {
+						$this->e400("/children cannot be called on non-PDF attachments");
 					}
 					
 					// Create new child items
@@ -496,9 +490,17 @@ class ItemsController extends ApiController {
 					// Display items
 					else {
 						$title = "Child Items of ‘" . $item->getDisplayTitle() . "’";
-						$notes = $item->getNotes();
-						$attachments = $item->getAttachments();
-						$itemIDs = array_merge($notes, $attachments);
+						if ($item->isAttachment()) {
+							$itemIDs = $item->getAnnotations();
+						}
+						else if ($item->isNote()) {
+							$itemIDs = $item->getAttachments();
+						}
+						else {
+							$notes = $item->getNotes();
+							$attachments = $item->getAttachments();
+							$itemIDs = array_merge($notes, $attachments);
+						}
 					}
 				}
 				// All items

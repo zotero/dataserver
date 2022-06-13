@@ -2507,7 +2507,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if ($this->isNote()) {
 			return $this->numAttachments($includeTrashed);
 		}
-		if ($this->isImportedAttachment()) {
+		if ($this->isPDFAttachment()) {
 			return $this->numAnnotations($includeTrashed);
 		}
 		throw new Exception("Invalid item type");
@@ -4086,7 +4086,7 @@ class Zotero_Item extends Zotero_DataObject {
 		else {
 			if ($this->isNote()
 					// Annotations depend on note permissions
-					|| ($this->isImportedAttachment() && $permissions->canAccess($this->libraryID, 'notes'))) {
+					|| ($this->isPDFAttachment() && $permissions->canAccess($this->libraryID, 'notes'))) {
 				$numChildren = $this->numChildren();
 			}
 			else {
@@ -4171,7 +4171,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (false && $cached) {
 			if ($isRegularItem
 					|| $this->isNote()
-					|| $this->isImportedAttachment()) {
+					|| $this->isPDFAttachment()) {
 				$cached['meta']->numChildren = $numChildren;
 			}
 			
@@ -4301,7 +4301,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		if ($isRegularItem
 				|| $this->isNote()
-				|| $this->isImportedAttachment()) {
+				|| $this->isPDFAttachment()) {
 			$json['meta']->numChildren = $numChildren;
 		}
 		

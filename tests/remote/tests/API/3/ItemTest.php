@@ -1210,7 +1210,29 @@ class ItemTests extends APITests {
 		$imageKey = API::createAttachmentItem(
 			'embedded_image', ['contentType' => 'image/png'], $noteKey, $this, 'key'
 		);
-		// Keys tested in AnnotationTest
+	}
+	
+	
+	public function test_num_children_and_children_on_note_with_embedded_image_attachment() {
+		$noteKey = API::createNoteItem("Test", null, $this, 'key');
+		$imageKey = API::createAttachmentItem(
+			'embedded_image', ['contentType' => 'image/png'], $noteKey, $this, 'key'
+		);
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$noteKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals(1, $json['meta']['numChildren']);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$noteKey/children"
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertCount(1, $json);
+		$this->assertEquals($imageKey, $json[0]['key']);
 	}
 	
 	
@@ -1909,6 +1931,41 @@ class ItemTests extends APITests {
 		);
 		$xml = API::getXMLFromResponse($response);
 		$this->assertEquals(2, (int) array_get_first($xml->xpath('/atom:entry/zapi:numChildren')));
+	}
+	
+	
+	public function test_num_children_and_children_on_attachment_with_annotation() {
+		$key = API::createItem("book", false, $this, 'key');
+		$attachmentKey = API::createAttachmentItem(
+			"imported_url",
+			[
+				'contentType' => 'application/pdf',
+				'title' => 'bbb'
+			],
+			$key, $this, 'key'
+		);
+		$annotationKey = API::createAnnotationItem(
+			'image',
+			['annotationComment' => 'ccc'],
+			$attachmentKey,
+			$this,
+			'key'
+		);
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$attachmentKey"
+		);
+		$json = API::getJSONFromResponse($response);
+		$this->assertEquals(1, $json['meta']['numChildren']);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$attachmentKey/children"
+		);
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertCount(1, $json);
+		$this->assertEquals('ccc', $json[0]['data']['annotationComment']);
 	}
 	
 	

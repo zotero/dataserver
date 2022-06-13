@@ -307,6 +307,9 @@ class API3 {
 		if ($annotationType == 'highlight') {
 			$json->annotationText = 'This is highlighted text.';
 		}
+		if (isset($data['annotationComment'])) {
+			$json->annotationComment = $data['annotationComment'];
+		}
 		$json->annotationColor = '#ff8c19';
 		$json->annotationSortIndex = '00015|002431|00000';
 		$json->annotationPosition = json_encode([
