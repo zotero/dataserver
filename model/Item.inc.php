@@ -848,7 +848,7 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	
 	public function isPDFAttachment() {
-		if (!$this->isAttachment()) return false;
+		if (!$this->isFileAttachment()) return false;
 		return $this->attachmentContentType == 'application/pdf';
 	}
 	
