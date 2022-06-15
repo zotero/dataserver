@@ -934,4 +934,16 @@ class TagTests extends APITests {
 		$this->assertContains(["tag" => "ëtest"], $data['tags']);
 		$this->assertContains(["tag" => "etest"], $data['tags']);
 	}
+	
+	
+	public function test_should_create_a_0_tag() {
+		$data = API::createItem("book", [
+			"tags" => [
+				["tag" => "0"],
+			]
+		], $this, 'jsonData');
+		
+		$this->assertCount(1, $data['tags']);
+		$this->assertEquals("0", $data['tags'][0]['tag']);
+	}
 }

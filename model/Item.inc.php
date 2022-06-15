@@ -4574,7 +4574,7 @@ class Zotero_Item extends Zotero_DataObject {
 				if ($tags) {
 					foreach ($tags as $tag) {
 						// Skip empty tags that are still in the database
-						if (!trim($tag->name)) {
+						if (trim($tag->name) === "") {
 							continue;
 						}
 						$t = array(
