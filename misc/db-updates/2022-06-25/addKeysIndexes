@@ -1,0 +1,7 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+Zotero_Admin_DB::query("CREATE INDEX lastUsed ON `keys`(lastUsed)");
+Zotero_Admin_DB::query("CREATE INDEX timestamp ON keyAccessLog(timestamp)");
