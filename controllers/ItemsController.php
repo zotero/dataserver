@@ -789,12 +789,6 @@ class ItemsController extends ApiController {
 			header("Zotero-File-Compressed: " . ($info['zip'] ? 'Yes' : 'No'));
 			
 			StatsD::increment("storage.download", 1);
-			Zotero_Storage::logDownload(
-				$item,
-				// TODO: support anonymous download if necessary
-				$this->userID,
-				IPAddress::getIP()
-			);
 			$this->redirect($url);
 			exit;
 		}
@@ -1116,8 +1110,7 @@ class ItemsController extends ApiController {
 					}
 				}
 				Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info);
-				
-				Zotero_Storage::logUpload($this->userID, $item, $uploadKey, IPAddress::getIP());
+				Zotero_Storage::markUploadAsCompleted($uploadKey);
 				
 				Zotero_DB::commit();
 				
@@ -1170,8 +1163,7 @@ class ItemsController extends ApiController {
 				}
 				
 				Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, true);
-				
-				Zotero_Storage::logUpload($this->userID, $item, $uploadKey, IPAddress::getIP());
+				Zotero_Storage::markUploadAsCompleted($uploadKey);
 				
 				Zotero_DB::commit();
 				

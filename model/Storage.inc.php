@@ -179,35 +179,6 @@ class Zotero_Storage {
 		}
 	}
 	
-	public static function logDownload($item, $downloadUserID, $ipAddress) {
-		$libraryID = $item->libraryID;
-		$ownerUserID = Zotero_Libraries::getOwner($libraryID);
-		
-		$info = self::getLocalFileItemInfo($item);
-		$storageFileID = $info['storageFileID'];
-		$filename = $info['filename'];
-		$size = $info['size'];
-		
-		$sql = "INSERT INTO storageDownloadLog
-				(ownerUserID, downloadUserID, ipAddress, storageFileID, filename, size)
-				VALUES (?, ?, INET_ATON(?), ?, ?, ?)";
-		Zotero_DB::query(
-			$sql,
-			[
-				$ownerUserID,
-				$downloadUserID,
-				$ipAddress,
-				$storageFileID,
-				$filename,
-				$size
-			],
-			0,
-			[
-				'writeInReadMode' => true
-			]
-		);
-	}
-	
 	
 	public static function uploadFile(Zotero_StorageFileInfo $info, $file, $contentType) {
 		if (!file_exists($file)) {
@@ -278,27 +249,9 @@ class Zotero_Storage {
 	}
 	
 	
-	public static function logUpload($uploadUserID, $item, $key, $ipAddress) {
-		$libraryID = $item->libraryID;
-		$ownerUserID = Zotero_Libraries::getOwner($libraryID);
-		
-		$info = self::getUploadInfo($key);
-		if (!$info) {
-			throw new Exception("Upload key '$key' not found in queue");
-		}
-		
-		$info = self::getLocalFileItemInfo($item);
-		$storageFileID = $info['storageFileID'];
-		$filename = $info['filename'];
-		$size = $info['size'];
-		
+	public static function markUploadAsCompleted($key) {
 		$sql = "DELETE FROM storageUploadQueue WHERE uploadKey=?";
 		Zotero_DB::query($sql, $key);
-		
-		$sql = "INSERT INTO storageUploadLog
-				(ownerUserID, uploadUserID, ipAddress, storageFileID, filename, size)
-				VALUES (?, ?, INET_ATON(?), ?, ?, ?)";
-		Zotero_DB::query($sql, array($ownerUserID, $uploadUserID, $ipAddress, $storageFileID, $filename, $size));
 	}
 	
 	
