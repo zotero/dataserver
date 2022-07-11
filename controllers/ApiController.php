@@ -73,11 +73,6 @@ class ApiController extends Controller {
 	
 	public function init($extra) {
 		$this->startTime = microtime(true);
-		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
-		
-		if (!Z_CONFIG::$API_ENABLED) {
-			$this->e503(Z_CONFIG::$MAINTENANCE_MESSAGE);
-		}
 		
 		if (!empty(Z_CONFIG::$BACKOFF)) {
 			header("Backoff: " . Z_CONFIG::$BACKOFF);
@@ -109,6 +104,7 @@ class ApiController extends Controller {
 		register_shutdown_function(array($this, 'checkForFatalError'));
 		register_shutdown_function(array($this, 'addHeaders'));
 		$this->method = $_SERVER['REQUEST_METHOD'];
+		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		
 		if (!in_array($this->method, array('HEAD', 'OPTIONS', 'GET', 'PUT', 'POST', 'DELETE', 'PATCH'))) {
 			$this->e501();
@@ -149,6 +145,10 @@ class ApiController extends Controller {
 				$this->end();
 			}
 			$this->e400("Invalid endpoint");
+		}
+		
+		if (!Z_CONFIG::$API_ENABLED) {
+			$this->e503(Z_CONFIG::$MAINTENANCE_MESSAGE);
 		}
 		
 		if ($this->isWriteMethod() && Z_CONFIG::$READ_ONLY) {
