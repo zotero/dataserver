@@ -137,7 +137,7 @@ class ApiController extends Controller {
 			$this->end();
 		}
 		
-		if ($_SERVER['HTTP_HOST'] == 'sync.zotero.org') {
+		if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] == 'sync.zotero.org') {
 			if ($this->method == 'GET' || $this->method == 'POST') {
 				header("Content-Type: text/xml");
 				header("HTTP/1.1 400");
