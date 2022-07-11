@@ -110,8 +110,10 @@ class Z_MemcachedClientLocal {
 			$results = $this->client->get($keys);
 		}
 		if ($this->client->getResultCode() != Memcached::RES_SUCCESS
-				&& $this->client->getResultCode() != Memcached::RES_NOTFOUND) {
-			error_log("Memcached error: " . $this->client->getResultMessage());
+				&& $this->client->getResultCode() != Memcached::RES_NOTFOUND
+				&& !$this->errorLogged) {
+			Z_Core::logError("Memcached error: " . $this->client->getResultMessage());
+			$this->errorLogged = true;
 		}
 		
 		$this->requestTime += microtime(true) - $t;
