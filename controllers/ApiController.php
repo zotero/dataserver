@@ -378,7 +378,9 @@ class ApiController extends Controller {
 		if (strpos($_SERVER['HTTP_X_ZOTERO_VERSION'] ?? '', '5.0') === 0) {
 			require_once '../model/ToolkitVersionComparator.inc.php';
 			
-			if (ToolkitVersionComparator::compare($_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.61" ) < 0) {
+			if (ToolkitVersionComparator::compare($_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78" ) < 0
+					// Allow /keys request, since prefs didn't display proper error
+					&& strpos($this->uri, '/keys') === false) {
 				$this->e400("This version of Zotero is too old to sync. Please upgrade to a "
 					. "current version to continue syncing.", Z_ERROR_INVALID_INPUT);
 			}
