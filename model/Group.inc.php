@@ -641,6 +641,11 @@ class Zotero_Group {
 			Zotero_Notifier::trigger('add', 'apikey-library', array_map(function ($key) {
 				return $key->id . "-" . $this->libraryID;
 			}, $apiKeys));
+			
+			if ($currentOwner) {
+				Zotero_Storage::clearUserUsage($currentOwner);
+			}
+			Zotero_Storage::clearUserUsage($newOwner);
 		}
 		
 		Zotero_DB::commit();
