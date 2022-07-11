@@ -484,6 +484,10 @@ class ApiController extends Controller {
 		
 		$this->apiVersion = $version = $this->queryParams['v'];
 		
+		if ($this->objectLibraryID) {
+			Zotero_DB::close();
+		}
+		
 		header("Zotero-API-Version: " . $version);
 		StatsD::increment("api.request.version.v" . $version, 0.25);
 		
