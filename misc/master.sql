@@ -86,7 +86,7 @@ CREATE TABLE `groups` (
   `libraryEditing` enum('admins','members') NOT NULL DEFAULT 'admins',
   `libraryReading` enum('members','all') NOT NULL DEFAULT 'all',
   `fileEditing` enum('none','admins','members') NOT NULL DEFAULT 'admins',
-  `description` text NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `url` varchar(255) NOT NULL,
   `hasImage` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `dateAdded` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
