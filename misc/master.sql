@@ -238,18 +238,6 @@ CREATE TABLE `storageAccounts` (
 
 
 
-CREATE TABLE `storageDownloadLog` (
-  `ownerUserID` int(10) unsigned NOT NULL,
-  `downloadUserID` int(10) unsigned DEFAULT NULL,
-  `ipAddress` int(10) unsigned NULL,
-  `storageFileID` int(10) unsigned NOT NULL,
-  `filename` varchar(1024) NOT NULL,
-  `size` int(10) unsigned NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-
 CREATE TABLE `storageFiles` (
   `storageFileID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `hash` char(32) NOT NULL,
@@ -283,18 +271,6 @@ CREATE TABLE `storageLastSync` (
   `userID` int(10) unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`userID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-
-CREATE TABLE `storageUploadLog` (
-  `ownerUserID` int(10) unsigned NOT NULL,
-  `uploadUserID` int(10) unsigned NOT NULL,
-  `ipAddress` int(10) unsigned NULL,
-  `storageFileID` int(10) unsigned NOT NULL,
-  `filename` varchar(1024) NOT NULL,
-  `size` int(10) unsigned NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
