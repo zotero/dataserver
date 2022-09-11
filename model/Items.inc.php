@@ -43,6 +43,7 @@ class Zotero_Items {
 	public static $maxAnnotationTextLength = 25000;
 	public static $maxAnnotationPageLabelLength = 50;
 	public static $maxAnnotationPositionLength = 65535;
+	public static $defaultAnnotationColor = '#ffd400';
 	
 	/**
 	 *

@@ -1469,6 +1469,11 @@ class Zotero_Item extends Zotero_DataObject {
 						);
 					}
 					
+					// Default color to yellow if not specified
+					if (!$this->annotationColor) {
+						$this->annotationColor = Zotero_Items::$defaultAnnotationColor;
+					}
+					
 					$color = $this->annotationColor;
 					if ($color) {
 						// Strip '#' from hex color

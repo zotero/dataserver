@@ -571,6 +571,33 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_use_default_yellow_if_color_not_specified() {
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$attachmentKey,
+			'annotationType' => 'highlight',
+			'annotationText' => '',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$jsonData = $json['successful'][0]['data'];
+		$this->assertEquals('#ffd400', $jsonData['annotationColor']);
+	}
+	
+	
 	public function test_should_reject_invalid_color_value() {
 		$json = [
 			'itemType' => 'annotation',
