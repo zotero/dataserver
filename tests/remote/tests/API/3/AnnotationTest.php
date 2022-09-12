@@ -514,12 +514,12 @@ class AnnotationTest extends APITests {
 	}
 	
 	
-	public function test_should_reject_long_text() {
+	public function test_should_truncate_long_text() {
 		$json = [
 			'itemType' => 'annotation',
 			'parentItem' => self::$attachmentKey,
 			'annotationType' => 'highlight',
-			'annotationText' => str_repeat('a', 50000),
+			'annotationText' => str_repeat("这是一个测试。", 5000),
 			'annotationSortIndex' => '00015|002431|00000',
 			'annotationColor' => '#ff8c19',
 			'annotationPosition' => json_encode([
@@ -535,12 +535,10 @@ class AnnotationTest extends APITests {
 			json_encode([$json]),
 			["Content-Type: application/json"]
 		);
-		// TEMP: See note in Item.inc.php
-		//$this->assert413ForObject(
-		$this->assert400ForObject(
-			$response, "Annotation text '" . str_repeat('a', 50) . "…' is too long for attachment "
-				. self::$attachmentKey, 0
-		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response);
+		$jsonData = $json['successful'][0]['data'];
+		$this->assertEquals(7500, mb_strlen($jsonData['annotationText']));
 	}
 	
 	
