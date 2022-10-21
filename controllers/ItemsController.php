@@ -760,12 +760,26 @@ class ItemsController extends ApiController {
 				$this->e404();
 			}
 			
+			// Return 404 to non-members for files in PublicClosed groups
+			// TODO: Move this into Permissions
+			$type = Zotero_Libraries::getType($this->objectLibraryID);
+			if ($type == 'group') {
+				$groupID = Zotero_Groups::getGroupIDFromLibraryID($this->objectLibraryID);
+				$group = Zotero_Groups::get($groupID);
+				if ($group->type == 'PublicClosed'
+						&& !$this->permissions->canAccess($this->objectLibraryID, 'files')) {
+					$this->e404();
+				}
+			}
+			
 			// File viewing
 			if ($this->fileView || $this->fileViewURL) {
+				
 				$url = Zotero_Attachments::getTemporaryURL($item);
 				if (!$url) {
 					$this->e500();
 				}
+				
 				if ($this->fileViewURL) {
 					header('Content-Type: text/plain');
 					echo $url . "\n";
