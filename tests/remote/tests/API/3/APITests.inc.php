@@ -44,6 +44,7 @@ class APITests extends \APITests {
 		}
 		self::$nsZAPI = 'http://zotero.org/ns/api';
 		
+		API::useAPIKey(self::$config['apiKey']);
 		API::useAPIVersion(3);
 		API::resetSchemaVersion();
 		
