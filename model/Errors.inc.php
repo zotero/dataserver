@@ -109,6 +109,7 @@ class Zotero_Errors {
 			case Z_ERROR_COLLECTION_NOT_FOUND:
 			case Z_ERROR_ITEM_NOT_FOUND:
 			case Z_ERROR_TAG_NOT_FOUND:
+				$log = true;
 				if ($errorCode == Z_ERROR_COLLECTION_NOT_FOUND) {
 					preg_match("/Collection \d+\/([^ ]+) doesn't exist/", $msg, $matches);
 					if ($matches) {
@@ -131,13 +132,16 @@ class Zotero_Errors {
 						$error['code'] = 409;
 						$error['message'] = "Parent item {$matches[1]} not found";
 						$error['data']['parentItem'] = $matches[1];
+						$log = false;
 					}
 				}
 				if (!isset($error['code'])) {
 					// TODO: Change to 409
 					$error['code'] = 400;
 				}
-				$error['log'] = true;
+				if ($log) {
+					$error['log'] = true;
+				}
 				break;
 			
 			case Z_ERROR_INVALID_ITEM_PARENT:
