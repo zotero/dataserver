@@ -1061,6 +1061,11 @@ class Zotero_Item extends Zotero_DataObject {
 				$sqlColumns = array();
 				$sqlValues = array();
 				
+				// Fail fast on missing parents, so we don't burn ids or do unnecessary work
+				if ($this->isAttachment() || $this->isNote() || $this->isAnnotation()) {
+					$this->getSource();
+				}
+				
 				//
 				// Primary fields
 				//

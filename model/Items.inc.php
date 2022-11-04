@@ -2059,8 +2059,18 @@ class Zotero_Items {
 					if ($apiVersion < 2) {
 						throw new Exception("Invalid property '$key'", Z_ERROR_INVALID_INPUT);
 					}
-					if (!Zotero_ID::isValidKey($val) && $val !== false) {
-						throw new Exception("'$key' must be a valid item key or false", Z_ERROR_INVALID_INPUT);
+					if ($val !== false) {
+						if (!Zotero_ID::isValidKey($val)) {
+							throw new Exception("'$key' must be a valid item key or false", Z_ERROR_INVALID_INPUT);
+						}
+						// Make sure 'key' != 'parentItem'
+						if (isset($json->key) && $val == $json->key) {
+							// Keep in sync with Zotero_Errors::parseException
+							throw new Exception(
+								"Item $libraryID/$val cannot be a child of itself",
+								Z_ERROR_ITEM_PARENT_SET_TO_SELF
+							);
+						}
 					}
 					break;
 				
