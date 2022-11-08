@@ -41,6 +41,15 @@ class PermissionsTest extends APITests {
 	}
 	
 	
+	public function tearDown(): void {
+		parent::tearDown();
+		API::resetKey(self::$config['apiKey']);
+		API::setKeyUserPermission(self::$config['apiKey'], 'library', true);
+		API::setKeyUserPermission(self::$config['apiKey'], 'write', true);
+		API::setKeyGroupPermission(self::$config['apiKey'], 0, 'write', true);
+	}
+	
+	
 	public function testUserGroupsAnonymousJSON() {
 		API::useAPIKey(false);
 		$response = API::get("users/" . self::$config['userID'] . "/groups");
