@@ -459,46 +459,58 @@ class Zotero_Users {
 		if (!$userID) {
 			throw new Exception("Invalid user");
 		}
-		
-		$cacheKey = "validUser_" . $userID;
-		$valid = Z_Core::$MC->get($cacheKey);
+		$valid = self::getValidUserCached($userID);
 		if ($valid === 1) {
 			return true;
 		}
-		else if ($valid === 0) {
+		if ($valid === 0) {
 			return false;
 		}
-		
-		$valid = !!self::getValidUsersDB(array($userID));
-		
-		Z_Core::$MC->set($cacheKey, $valid ? 1 : 0, 300);
-		
+		$valid = !!self::getValidUsersDB([$userID]);
 		return $valid;
 	}
 	
 	
 	public static function getValidUsers($userIDs) {
-		if (!$userIDs) {
-			return array();
-		}
-		
-		$newUserIDs = array();
-		foreach ($userIDs as $id) {
-			if (Zotero_Users::isValidUser($id)) {
-				$newUserIDs[] = $id;
+		$validUserIDs = [];
+		$toCheck = [];
+		// First check memcached
+		foreach ($userIDs as $userID) {
+			$valid = self::getValidUserCached($userID);
+			if ($valid === 1) {
+				$validUserIDs[] = $userID;
+				continue;
 			}
+			else if ($valid === 0) {
+				continue;
+			}
+			$toCheck[] = $userID;
 		}
-		
-		return $newUserIDs;
+		// And check DB for any that aren't cached
+		if ($toCheck) {
+			$validUserIDs = array_merge($validUserIDs, self::getValidUsersDB($toCheck));
+		}
+		return $validUserIDs;
 	}
 	
 	
-	public static function getValidUsersDB($userIDs) {
+	private static function getValidUserCached($userID) {
+		$cacheKey = "validUser_" . $userID;
+		return Z_Core::$MC->get($cacheKey);
+	}
+	
+	private static function setValidUserCached($userID, $valid) {
+		$cacheKey = "validUser_" . $userID;
+		Z_Core::$MC->set($cacheKey, $valid ? 1 : 0, 300);
+	}
+	
+	
+	private static function getValidUsersDB($userIDs) {
 		if (!$userIDs) {
-			return array();
+			return [];
 		}
 		
-		$invalid = array();
+		$invalidUserIDs = [];
 		
 		// Get any of these users that are known to be invalid
 		$sql = "SELECT UserID FROM GDN_User WHERE Banned=1 AND UserID IN ("
@@ -506,13 +518,19 @@ class Zotero_Users {
 			. ")";
 		
 		try {
-			$invalid = Zotero_WWW_DB_2::columnQuery($sql, $userIDs);
+			$started = microtime(true);
+			$invalidUserIDs = Zotero_WWW_DB_2::columnQuery($sql, $userIDs);
+			$timing = microtime(true) - $started;
+			if ($timing > 1) {
+				error_log("Banned-user check took " . round($timing, 2) . " seconds");
+			}
+			StatsD::timing("api.db.invalidUsers", $timing * 1000);
 			Zotero_WWW_DB_2::close();
 		}
 		catch (Exception $e) {
 			try {
 				Z_Core::logError("WARNING: $e -- retrying on primary");
-				$invalid = Zotero_WWW_DB_1::columnQuery($sql, $userIDs);
+				$invalidUserIDs = Zotero_WWW_DB_1::columnQuery($sql, $userIDs);
 				Zotero_WWW_DB_1::close();
 			}
 			catch (Exception $e2) {
@@ -522,8 +540,18 @@ class Zotero_Users {
 			}
 		}
 		
-		if ($invalid) {
-			$userIDs = array_diff($userIDs, $invalid);
+		if ($invalidUserIDs) {
+			$userIDs = array_diff($userIDs, $invalidUserIDs);
+			
+			// Cache invalid users
+			foreach ($invalidUserIDs as $userID) {
+				self::setValidUserCached($userID, false);
+			}
+		}
+		
+		// Cache valid users
+		foreach ($userIDs as $userID) {
+			self::setValidUserCached($userID, true);
 		}
 		
 		return $userIDs;
