@@ -2402,6 +2402,8 @@ class FileTests extends APITests {
 		$this->assert404($response);
 		$response = API::get("groups/$groupID/items/$attachmentKey/file/view/url");
 		$this->assert404($response);
+		
+		API::deleteGroup($groupID);
 	}
 	
 	
