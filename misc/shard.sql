@@ -55,7 +55,7 @@ CREATE TABLE `collections` (
 
 
 CREATE TABLE `creators` (
-  `creatorID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `creatorID` bigint unsigned NOT NULL AUTO_INCREMENT,
   `libraryID` int(10) unsigned NOT NULL,
   `creatorDataHash` char(32) CHARACTER SET ascii DEFAULT NULL,
   `firstName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -144,7 +144,7 @@ CREATE TABLE `itemAnnotations` (
 
 CREATE TABLE `itemCreators` (
   `itemID` int(10) unsigned NOT NULL,
-  `creatorID` int(10) unsigned NOT NULL,
+  `creatorID` bigint unsigned NOT NULL,
   `creatorTypeID` smallint(5) unsigned NOT NULL,
   `orderIndex` smallint(5) unsigned NOT NULL,
   PRIMARY KEY (`itemID`,`creatorID`,`orderIndex`),
