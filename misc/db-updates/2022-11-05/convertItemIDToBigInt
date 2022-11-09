@@ -1,0 +1,82 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=86400
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+$shardHostID = $argv[1];
+$startShard = $argv[2];
+$stopShard = $argv[3];
+
+Z_Core::$debug = true;
+
+$shardIDs = Zotero_DB::columnQuery("SELECT shardID FROM shards WHERE shardHostID=? AND shardID >= ? AND shardID <= ? ORDER BY shardID", [$shardHostID, $startShard, $stopShard]);
+
+foreach ($shardIDs as $shardID) {
+	echo "Shard: $shardID\n";
+	
+	echo "Setting shard to read-only\n";
+	Zotero_DB::query("UPDATE shards SET state='readonly' WHERE shardID=?", $shardID);
+	
+	echo "Waiting 10 seconds for requests to stop\n";
+	sleep(10);
+	
+	// Drop foreign keys
+	echo "\n";
+	Zotero_Admin_DB::query("ALTER TABLE `collectionItems` DROP FOREIGN KEY `collectionItems_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `deletedItems` DROP FOREIGN KEY `deletedItems_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `groupItems` DROP FOREIGN KEY `groupItems_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `publicationsItems` DROP FOREIGN KEY `publicationsItems_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAnnotations` DROP FOREIGN KEY `itemAnnotations_ibfk_1`, DROP FOREIGN KEY `itemAnnotations_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAttachments` DROP FOREIGN KEY `itemAttachments_ibfk_1`, DROP FOREIGN KEY `itemAttachments_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` DROP FOREIGN KEY `itemCreators_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemFulltext` DROP FOREIGN KEY `itemFulltext_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemData` DROP FOREIGN KEY `itemData_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemNotes` DROP FOREIGN KEY `itemNotes_ibfk_1`, DROP FOREIGN KEY `itemNotes_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemRelated` DROP FOREIGN KEY `itemRelated_ibfk_1`, DROP FOREIGN KEY `itemRelated_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemSortFields` DROP FOREIGN KEY `itemSortFields_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP FOREIGN KEY `itemTags_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTopLevel` DROP FOREIGN KEY `itemTopLevel_ibfk_1`, DROP FOREIGN KEY `itemTopLevel_ibfk_2`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `storageFileItems` DROP FOREIGN KEY `storageFileItems_ibfk_2`", false, $shardID);
+	
+	// Change itemID columns
+	echo "Changing columns for $shardID\n";
+	Zotero_Admin_DB::query("ALTER TABLE `collectionItems` CHANGE `itemID` `itemID` bigint unsigned NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `deletedItems` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `groupItems` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `publicationsItems` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAttachments` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL, CHANGE `sourceItemID` `sourceItemID` BIGINT UNSIGNED DEFAULT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAnnotations` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL, CHANGE `parentItemID` `parentItemID` BIGINT UNSIGNED DEFAULT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemData` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemFulltext` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemNotes` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL, CHANGE `sourceItemID` `sourceItemID` BIGINT UNSIGNED DEFAULT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemRelated` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL, CHANGE `linkedItemID` `linkedItemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `items` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemSortFields` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTags` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTopLevel` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL, CHANGE `topLevelItemID` `topLevelItemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `storageFileItems` CHANGE `itemID` `itemID` BIGINT UNSIGNED NOT NULL", false, $shardID);
+	
+	// Add foreign keys back
+	echo "\n";
+	Zotero_Admin_DB::query("ALTER TABLE `collectionItems` ADD CONSTRAINT `collectionItems_ibfk_2` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `deletedItems` ADD CONSTRAINT `deletedItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `groupItems` ADD CONSTRAINT `groupItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `publicationsItems` ADD CONSTRAINT `publicationsItems_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAnnotations` ADD CONSTRAINT `itemAnnotations_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, ADD CONSTRAINT `itemAnnotations_ibfk_2` FOREIGN KEY (`parentItemID`) REFERENCES `itemAttachments` (`itemID`)", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemAttachments` ADD CONSTRAINT `itemAttachments_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, ADD CONSTRAINT `itemAttachments_ibfk_2` FOREIGN KEY (`sourceItemID`) REFERENCES `items` (`itemID`) ON DELETE SET NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` ADD CONSTRAINT `itemCreators_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemFulltext` ADD CONSTRAINT `itemFulltext_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `itemAttachments` (`itemID`)", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemData` ADD CONSTRAINT `itemData_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemNotes` ADD CONSTRAINT `itemNotes_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, ADD CONSTRAINT `itemNotes_ibfk_2` FOREIGN KEY (`sourceItemID`) REFERENCES `items` (`itemID`) ON DELETE SET NULL", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemRelated` ADD CONSTRAINT `itemRelated_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, ADD CONSTRAINT `itemRelated_ibfk_2` FOREIGN KEY (`linkedItemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemSortFields` ADD CONSTRAINT `itemSortFields_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTags` ADD CONSTRAINT `itemTags_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTopLevel` ADD CONSTRAINT `itemTopLevel_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE, ADD CONSTRAINT `itemTopLevel_ibfk_2` FOREIGN KEY (`topLevelItemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `storageFileItems` ADD CONSTRAINT `storageFileItems_ibfk_2` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE", false, $shardID);
+	
+	echo "Bringing shard back up\n";
+	Zotero_DB::query("UPDATE shards SET state='up' WHERE shardID=?", $shardID);
+	echo "Done with shard $shardID\n\n";
+	sleep(1);
+}
