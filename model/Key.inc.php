@@ -470,8 +470,7 @@ class Zotero_Key {
 		$json['key'] = $this->key;
 		$json['userID'] = $this->userID;
 		$json['username'] = Zotero_Users::getUsername($this->userID);
-		$displayName = Zotero_Users::getRealName($this->userID);
-		$json['displayName'] = $displayName ? $displayName : "";
+		$json['displayName'] = Zotero_Users::getRealName($this->userID);
 		$json['name'] = $this->name;
 		
 		if ($this->permissions) {

@@ -194,13 +194,13 @@ class Zotero_Users {
 	
 	
 	public static function getRealName($userID) {
-		if (!empty(self::$realNamesByID[$userID])) {
+		if (isset(self::$realNamesByID[$userID])) {
 			return self::$realNamesByID[$userID];
 		}
 		
 		$cacheKey = "userRealNameByID2_" . $userID;
 		$name = Z_Core::$MC->get($cacheKey);
-		if ($name) {
+		if ($name !== false) {
 			self::$realNamesByID[$userID] = $name;
 			return $name;
 		}
@@ -223,9 +223,8 @@ class Zotero_Users {
 		}
 		
 		if (!$name) {
-			return false;
+			$name = '';
 		}
-		
 		self::$realNamesByID[$userID] = $name;
 		Z_Core::$MC->set($cacheKey, $name, 43200);
 		
@@ -250,7 +249,7 @@ class Zotero_Users {
 		$json = [
 			'id' => $userID,
 			'username' => Zotero_Users::getUsername($userID),
-			'name' => $realName !== false ? $realName : ""
+			'name' => $realName
 		];
 		$json['links'] = [
 			'alternate' => [
