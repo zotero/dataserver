@@ -24,6 +24,7 @@ class Z_CONFIG {
 	public static $S3_BUCKET = '';
 	public static $S3_BUCKET_CACHE = '';
 	public static $S3_BUCKET_FULLTEXT = '';
+	public static $S3_BUCKET_ERRORS = '';
 	public static $SNS_ALERT_TOPIC = '';
 
 	public static $REDIS_HOSTS = [
@@ -80,7 +81,8 @@ class Z_CONFIG {
 	// Set some things manually for running via command line
 	public static $CLI_PHP_PATH = '/usr/bin/php';
 	
-	public static $ERROR_PATH = '/var/log/httpd/errors/';
+	// Alternative to S3_BUCKET_ERRORS
+	//public static $ERROR_PATH = '/var/log/httpd/errors/';
 	
 	public static $CACHE_VERSION_ATOM_ENTRY = 1;
 	public static $CACHE_VERSION_BIB = 1;
