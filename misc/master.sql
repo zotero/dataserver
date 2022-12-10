@@ -289,7 +289,8 @@ CREATE TABLE `storageUploadQueue` (
   `charset` varchar(25) DEFAULT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`uploadKey`),
-  KEY `userID` (`userID`)
+  KEY `userID` (`userID`),
+  KEY `time` (`time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
