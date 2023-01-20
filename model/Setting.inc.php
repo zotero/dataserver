@@ -123,10 +123,12 @@ class Zotero_Setting {
 		}
 		
 		// Only allow lastPageIndex in user libraries
-		if (strpos($this->name, 'lastPageIndex_') === 0) {
+		if (strpos($this->name, 'lastPageIndex_') === 0
+				|| strpos($this->name, 'lastRead_') === 0) {
 			$libraryType = Zotero_Libraries::getType($this->libraryID);
 			if ($libraryType != 'user') {
-				throw new Exception("lastPageIndex can only be set in user library", Z_ERROR_INVALID_INPUT);
+				$name = explode('_', $this->name)[0];
+				throw new Exception("$name can only be set in user library", Z_ERROR_INVALID_INPUT);
 			}
 		}
 		

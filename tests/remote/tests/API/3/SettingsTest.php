@@ -143,6 +143,9 @@ class SettingsTests extends APITests {
 			],
 			"lastPageIndex_g1234567890_ABCD2345" => [
 				"value" => 123
+			],
+			"lastRead_g1234567890_ABCD2345" => [
+				"value" => 1674251397
 			]
 		];
 		$settingKeys = array_keys($json);
