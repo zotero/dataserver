@@ -382,7 +382,7 @@ class ApiController extends Controller {
 			if (ToolkitVersionComparator::compare($_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78" ) < 0
 					// Allow /keys and /users/:userID/groups requests, since prefs didn't display
 					// proper error
-					&& strpos($this->path, '/keys') === 0
+					&& strpos($this->path, '/keys') !== 0
 					&& !preg_match('%^/users/\d+/groups%', $this->path)) {
 				$this->e400("This version of Zotero is too old to sync. Please upgrade to a "
 					. "current version to continue syncing.", Z_ERROR_INVALID_INPUT);
