@@ -105,6 +105,7 @@ class ApiController extends Controller {
 		register_shutdown_function(array($this, 'addHeaders'));
 		$this->method = $_SERVER['REQUEST_METHOD'];
 		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
+		$this->path = $_SERVER["REQUEST_URI"];
 		
 		if (!in_array($this->method, array('HEAD', 'OPTIONS', 'GET', 'PUT', 'POST', 'DELETE', 'PATCH'))) {
 			$this->e501();
@@ -379,9 +380,10 @@ class ApiController extends Controller {
 			require_once '../model/ToolkitVersionComparator.inc.php';
 			
 			if (ToolkitVersionComparator::compare($_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78" ) < 0
-					// Allow /keys and /groups requests, since prefs didn't display proper error
-					&& strpos($this->uri, '/keys') === false
-					&& strpos($this->uri, '/groups') === false) {
+					// Allow /keys and /users/:userID/groups requests, since prefs didn't display
+					// proper error
+					&& strpos($this->path, '/keys') === 0
+					&& !preg_match('%^/users/\d+/groups%', $this->path)) {
 				$this->e400("This version of Zotero is too old to sync. Please upgrade to a "
 					. "current version to continue syncing.", Z_ERROR_INVALID_INPUT);
 			}
