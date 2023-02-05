@@ -1227,7 +1227,7 @@ class Zotero_Items {
 			}
 			
 			$val = $item->getField('date', true, true, true);
-			if ($val !== '') {
+			if (!is_null($val) && $val !== '') {
 				// TODO: Make sure all stored values are multipart strings
 				if (!Zotero_Date::isMultipart($val)) {
 					$val = Zotero_Date::strToMultipart($val);

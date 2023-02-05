@@ -181,7 +181,7 @@ class Zotero_Utilities {
 		$parts = preg_split(
 			'/\s*("[^"]*")\s*|"\s|\s"|^"|"$|\'\s|\s\'|^\'|\'$|\s/m',
 			$str,
-			null,
+			-1,
 			PREG_SPLIT_DELIM_CAPTURE
 		);
 		$parsed = [];

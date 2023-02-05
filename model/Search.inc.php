@@ -219,7 +219,7 @@ class Zotero_Search extends Zotero_DataObject {
 	}
 	
 	
-	public function toResponseJSON($requestParams=[], Zotero_Permissions $permissions) {
+	public function toResponseJSON(array $requestParams, Zotero_Permissions $permissions) {
 		$t = microtime(true);
 		
 		$this->loadPrimaryData();

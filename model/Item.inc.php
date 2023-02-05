@@ -1508,7 +1508,8 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Sort fields
 				$sortTitle = Zotero_Items::getSortTitle($this->getDisplayTitle(true));
-				if (mb_substr($sortTitle, 0, 5) == mb_substr($this->getField('title', false, true), 0, 5)) {
+				$title = $this->getField('title', false, true);
+				if (mb_substr($sortTitle ?? '', 0, 5) == mb_substr($title ?? '', 0, 5)) {
 					$sortTitle = null;
 				}
 				$creatorSummary = $this->isRegularItem()
@@ -2050,7 +2051,8 @@ class Zotero_Item extends Zotero_DataObject {
 					$params = array();
 					
 					$sortTitle = Zotero_Items::getSortTitle($this->getDisplayTitle(true));
-					if (mb_substr($sortTitle, 0, 5) == mb_substr($this->getField('title', false, true), 0, 5)) {
+					$title = $this->getField('title', false, true);
+					if (mb_substr($sortTitle ?? '', 0, 5) == mb_substr($title ?? '', 0, 5)) {
 						$sortTitle = null;
 					}
 					$params[] = $sortTitle;
@@ -3827,7 +3829,7 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function toHTML($asSimpleXML = false, $requestParams) {
+	public function toHTML(bool $asSimpleXML, $requestParams) {
 		$html = new SimpleXMLElement('<table/>');
 		
 		/*
@@ -4112,7 +4114,7 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function toResponseJSON($requestParams=[], Zotero_Permissions $permissions, $sharedData=null) {
+	public function toResponseJSON(array $requestParams, Zotero_Permissions $permissions, $sharedData=null) {
 		$t = microtime(true);
 		
 		if (!$this->loaded['primaryData']) {
@@ -4312,7 +4314,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		foreach ($include as $type) {
 			if ($type == 'html') {
-				$json[$type] = trim($this->toHTML($requestParams));
+				$json[$type] = trim($this->toHTML(false, $requestParams));
 			}
 			else if ($type == 'citation') {
 				if (isset($sharedData[$type][$this->libraryID . "/" . $this->key])) {

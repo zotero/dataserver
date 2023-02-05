@@ -922,13 +922,13 @@ class ItemsController extends ApiController {
 					$this->e400("Files above 4 GB are not currently supported");
 				}
 				
-				$info->contentType = isset($_REQUEST['contentType']) ? $_REQUEST['contentType'] : null;
-				if (!preg_match("/^[a-zA-Z0-9\-\/]+$/", $info->contentType)) {
+				$info->contentType = $_REQUEST['contentType'] ?? null;
+				if ($info->contentType && !preg_match("/^[a-zA-Z0-9\-\/]+$/", $info->contentType)) {
 					$info->contentType = null;
 				}
 				
-				$info->charset = isset($_REQUEST['charset']) ? $_REQUEST['charset'] : null;
-				if (!preg_match("/^[a-zA-Z0-9\-]+$/", $info->charset)) {
+				$info->charset = $_REQUEST['charset'] ?? null;
+				if ($info->charset && !preg_match("/^[a-zA-Z0-9\-]+$/", $info->charset)) {
 					$info->charset = null;
 				}
 				

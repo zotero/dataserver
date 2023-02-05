@@ -938,7 +938,13 @@ class Zotero_DB {
 			
 			$mystmt = $stmt->getDriverStatement();
 			
-			return (self::getIntegerColumns($mystmt) && strlen($row[0]) < 10) ? (is_null($row[0]) ? null : (int) $row[0]) : $row[0];
+			if (is_null($row[0])) {
+				return null;
+			}
+			if (self::getIntegerColumns($mystmt) && strlen($row[0]) < 10) {
+				return (int) $row[0];
+			}
+			return $row[0];
 		}
 		catch (Exception $e) {
 			self::error($e, $stmt->sql, $params, $stmt->shardID);

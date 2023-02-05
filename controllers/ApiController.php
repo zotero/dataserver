@@ -1105,7 +1105,7 @@ class ApiController extends Controller {
 		}
 		
 		if (!empty($arguments[0])) {
-			echo htmlspecialchars($arguments[0]);
+			echo htmlspecialchars($arguments[0], ENT_COMPAT);
 		}
 		else {
 			// Default messages for some codes

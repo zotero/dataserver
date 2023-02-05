@@ -89,7 +89,8 @@ class Zotero_Results {
 			$obj = [
 				'key' => $error['key'],
 				'code' => $error['code'],
-				'message' => htmlspecialchars($error['message'])
+				// TODO: Stop treating as HTML?
+				'message' => htmlspecialchars($error['message'], ENT_COMPAT)
 			];
 			if (isset($error['data'])) {
 				$obj['data'] = $error['data'];
