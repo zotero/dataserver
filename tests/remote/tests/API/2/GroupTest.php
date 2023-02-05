@@ -49,7 +49,7 @@ class GroupTests extends APITests {
 	public function testUpdateMetadata() {
 		$response = API::userGet(
 			self::$config['userID'],
-			"groups?content=json&key=" . self::$config['apiKey']
+			"groups?fq=GroupType:PublicOpen&content=json&key=" . self::$config['apiKey']
 		);
 		$this->assert200($response);
 		

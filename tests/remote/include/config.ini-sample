@@ -15,10 +15,6 @@ libraryID = 0
 username = "phpunit"
 displayName = "Real Name"
 password = ""
-; Should have libraryEditing='members'
-ownedPrivateGroupID = 0
-ownedPrivateGroupLibraryID = 0
-ownedPrivateGroupName = "Private Test Group"
 
 ; Should be in user 1's private group
 [user2]
@@ -26,6 +22,3 @@ userID2 = 0
 username2 = "phpunit2"
 displayName2 = "Real Name 2"
 password2 = ""
-; User 1 should not be a member
-ownedPrivateGroupID2 = 0
-ownedPrivateGroupLibraryID2 = 0
