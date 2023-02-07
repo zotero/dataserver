@@ -918,24 +918,9 @@ class Zotero_Storage {
 		$usage = [];
 		$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
 		
-		if (true) {
-			$sql = "SELECT SUM(size) AS bytes FROM storageFileItems "
-					. "JOIN items USING (itemID) WHERE libraryID=?";
-			$libraryBytes = Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
-			$usage['library'] = $libraryBytes;
-			
-			// TEMP
-			$sql = "SELECT storageUsage FROM shardLibraries WHERE libraryID=?";
-			$tmpLibraryBytes = Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
-			if ($libraryBytes != $tmpLibraryBytes) {
-				Z_Core::logError("Storage usage doesn't match for libraryID $libraryID ($libraryBytes != $tmpLibraryBytes)");
-			}
-		}
-		else {
-			$sql = "SELECT storageUsage FROM shardLibraries WHERE libraryID=?";
-			$libraryBytes = Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
-			$usage['library'] = $libraryBytes;
-		}
+		$sql = "SELECT storageUsage FROM shardLibraries WHERE libraryID=?";
+		$libraryBytes = Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
+		$usage['library'] = $libraryBytes;
 		
 		$groupBytes = 0;
 		$usage['groups'] = array();
@@ -945,21 +930,11 @@ class Zotero_Storage {
 			$shardIDs = Zotero_Groups::getUserGroupShards($userID);
 			
 			foreach ($shardIDs as $shardID) {
-				if (true) {
-					$sql = "SELECT libraryID, SUM(size) AS `bytes` FROM storageFileItems
-							JOIN items I USING (itemID)
-							WHERE libraryID IN
-							(" . implode(', ', array_fill(0, sizeOf($ownedLibraries), '?')) . ")
-							GROUP BY libraryID WITH ROLLUP";
-					$libraries = Zotero_DB::query($sql, $ownedLibraries, $shardID);
-				}
-				else {
-					$sql = "SELECT libraryID, storageUsage AS `bytes` FROM shardLibraries
-							WHERE libraryID IN
-							(" . implode(', ', array_fill(0, sizeOf($ownedLibraries), '?')) . ")
-							GROUP BY libraryID WITH ROLLUP";
-					$libraries = Zotero_DB::query($sql, $ownedLibraries, $shardID);
-				}
+				$sql = "SELECT libraryID, storageUsage AS `bytes` FROM shardLibraries
+					WHERE libraryID IN
+					(" . implode(', ', array_fill(0, sizeOf($ownedLibraries), '?')) . ")
+					GROUP BY libraryID WITH ROLLUP";
+				$libraries = Zotero_DB::query($sql, $ownedLibraries, $shardID);
 				if ($libraries) {
 					foreach ($libraries as $library) {
 						if ($library['libraryID']) {
