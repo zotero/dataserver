@@ -473,11 +473,13 @@ class CollectionTests extends APITests {
 	}
 	
 	
-	public function test_should_delete_collection_with_15_levels_below_it() {
+	// MySQL FK cascade limit is 15, so 15 would prevent deleting all collections with just the
+	// libraryID
+	public function test_should_delete_collection_with_14_levels_below_it() {
 		$json = API::createCollection("0", false, $this, 'json');
 		$topCollectionKey = $json['key'];
 		$parentCollectionKey = $topCollectionKey;
-		for ($i = 0; $i < 15; $i++) {
+		for ($i = 0; $i < 14; $i++) {
 			$json = API::createCollection("$i", $parentCollectionKey, $this, 'json');
 			$parentCollectionKey = $json['key'];
 		}
