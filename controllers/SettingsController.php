@@ -119,7 +119,7 @@ class SettingsController extends ApiController {
 			
 			$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
 			
-			// Create a setting
+			// Create/update a setting
 			if ($this->method == 'POST') {
 				$obj = $this->jsonDecode($this->body);
 				$changed = Zotero_Settings::updateMultipleFromJSON(
