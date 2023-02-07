@@ -2467,33 +2467,6 @@ class Zotero_Items {
 					break;
 				
 				case 'dateAdded':
-					if (!Zotero_Date::isSQLDateTime($val) && !Zotero_Date::isISO8601($val)) {
-						throw new Exception("'$key' must be in ISO 8601 or UTC 'YYYY-MM-DD hh:mm:ss' format", Z_ERROR_INVALID_INPUT);
-					}
-					
-					if (!$isNew) {
-						// Convert ISO date to SQL date for equality comparison
-						if (Zotero_Date::isISO8601($val)) {
-							$val = Zotero_Date::iso8601ToSQL($val);
-						}
-						// Don't allow dateAdded to change
-						if ($val != $item->$key && empty($json->relations->{Zotero_Relations::$deletedItemPredicate})) {
-							// If passed dateAdded is exactly one hour or one day off, assume it's from
-							// a DST bug we haven't yet tracked down
-							// (https://github.com/zotero/zotero/issues/1201) and ignore it
-							$absTimeDiff = abs(strtotime($val) - strtotime($item->$key));
-							if ($absTimeDiff == 3600 || $absTimeDiff == 86400
-									// Allow for Quick Start Guide items from <=4.0
-									|| $item->key == 'ABCD2345' || $item->key == 'ABCD3456') {
-								$json->$key = $item->$key;
-							}
-							else {
-								throw new Exception("'$key' cannot be modified for existing items", Z_ERROR_INVALID_INPUT);
-							}
-						}
-					}
-					break;
-				
 				case 'dateModified':
 					if (!Zotero_Date::isSQLDateTime($val) && !Zotero_Date::isISO8601($val)) {
 						throw new Exception("'$key' must be in ISO 8601 or UTC 'YYYY-MM-DD hh:mm:ss' format ($val)", Z_ERROR_INVALID_INPUT);

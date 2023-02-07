@@ -127,37 +127,6 @@ class ItemTests extends APITests {
 	}
 	
 	
-	public function testDateAdded() {
-		// In case this is ever extended to other objects
-		$objectType = 'item';
-		$objectTypePlural = API::getPluralObjectType($objectType);
-		
-		switch ($objectType) {
-		case 'item':
-			$itemData = array(
-				"title" => "Test"
-			);
-			$xml = API::createItem("videoRecording", $itemData, $this, 'atom');
-			break;
-		}
-		
-		$newDateAdded = "2013-03-03 21:33:53";
-		
-		$data = API::parseDataFromAtomEntry($xml);
-		$objectKey = $data['key'];
-		$json = json_decode($data['content'], true);
-		
-		$json['title'] = "Test 2";
-		$json['dateAdded'] = $newDateAdded;
-		$response = API::userPut(
-			self::$config['userID'],
-			"$objectTypePlural/$objectKey?key=" . self::$config['apiKey'],
-			json_encode($json)
-		);
-		$this->assert400($response, "'dateAdded' cannot be modified for existing $objectTypePlural");
-	}
-	
-	
 	public function testDateModified() {
 		// In case this is ever extended to other objects
 		$objectType = 'item';
