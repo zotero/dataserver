@@ -4,6 +4,9 @@
 // and delete any others
 //
 require_once __DIR__ . '/api3.inc.php';
+
+$resetGroups = false;
+
 $response = API3::superGet(
 	"users/" . $config['userID'] . "/groups"
 );
@@ -20,6 +23,11 @@ foreach ($groups as $group) {
 	$type = $data['type'];
 	$owner = $data['owner'];
 	$libraryReading = $data['libraryReading'];
+	
+	if ($resetGroups) {
+		$toDelete[] = $id;
+		continue;
+	}
 	
 	if (!$config['ownedPublicGroupID']
 			&& $type == 'PublicOpen'
