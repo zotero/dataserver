@@ -451,6 +451,7 @@ ALTER TABLE `savedSearchConditions`
 ALTER TABLE `savedSearches`
   ADD CONSTRAINT `savedSearches_ibfk_1` FOREIGN KEY (`libraryID`) REFERENCES `shardLibraries` (`libraryID`) ON DELETE CASCADE;
 
+-- Keep in sync with fkd_items_storageUsage trigger
 ALTER TABLE `storageFileItems`
   ADD CONSTRAINT `storageFileItems_ibfk_2` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
