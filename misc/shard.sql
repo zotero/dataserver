@@ -295,10 +295,11 @@ CREATE TABLE `settings` (
 
 
 CREATE TABLE `shardLibraries` (
-  `libraryID` int(10) unsigned NOT NULL,
+  `libraryID` int unsigned NOT NULL,
   `libraryType` enum('user','group','publications') NOT NULL,
   `lastUpdated` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `version` int(10) unsigned NOT NULL DEFAULT '1',
+  `version` int unsigned NOT NULL DEFAULT '1',
+  `storageUsage` bigint NOT NULL DEFAULT '0',
   PRIMARY KEY (`libraryID`),
   KEY `libraryType` (`libraryType`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
