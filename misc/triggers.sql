@@ -224,7 +224,7 @@ DROP TRIGGER IF EXISTS fku_storageFileItems_size;//
 CREATE TRIGGER fku_storageFileItems_size
   AFTER UPDATE ON storageFileItems
   FOR EACH ROW BEGIN
-    UPDATE items JOIN shardLibraries USING (libraryID) SET storageUsage = storageUsage + (NEW.size - IFNULL(OLD.size, 0)) WHERE itemID=NEW.itemID;
+    UPDATE items JOIN shardLibraries USING (libraryID) SET storageUsage = storageUsage + (CAST(NEW.size AS SIGNED) - CAST(IFNULL(OLD.size, 0) AS SIGNED)) WHERE itemID=NEW.itemID;
   END;//
 
 DROP TRIGGER IF EXISTS fkd_storageFileItems_size;//
@@ -240,7 +240,7 @@ CREATE TRIGGER fkd_items_storageUsage
   BEFORE DELETE ON items
   FOR EACH ROW BEGIN
     IF OLD.itemTypeID = 14 THEN
-      UPDATE storageFileItems JOIN items USING (itemID) JOIN shardLibraries USING (libraryID) SET storageUsage = storageUsage - IFNULL(size, 0) WHERE itemID=OLD.itemID;
+      UPDATE storageFileItems JOIN items USING (itemID) JOIN shardLibraries USING (libraryID) SET storageUsage = storageUsage - CAST(IFNULL(size, 0) AS SIGNED) WHERE itemID=OLD.itemID;
 	END IF;
   END;//
 
