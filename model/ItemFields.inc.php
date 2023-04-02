@@ -45,7 +45,7 @@ class Zotero_ItemFields {
 			return self::$fieldIDCache[$fieldOrFieldID];
 		}
 		
-		$cacheKey = "itemFieldID_" . $fieldOrFieldID;
+		$cacheKey = "itemFieldID_{$fieldOrFieldID}_" . \Zotero\Schema::getVersion();
 		$fieldID = Z_Core::$MC->get($cacheKey);
 		if ($fieldID) {
 			// casts are temporary until memcached reload
@@ -69,9 +69,7 @@ class Zotero_ItemFields {
 			return self::$fieldNameCache[$fieldOrFieldID];
 		}
 		
-		$cacheVersion = 1;
-		
-		$cacheKey = "itemFieldName_" . $fieldOrFieldID . "_$cacheVersion";
+		$cacheKey = "itemFieldName_{$fieldOrFieldID}_" . \Zotero\Schema::getVersion();
 		$fieldName = Z_Core::$MC->get($cacheKey);
 		if ($fieldName) {
 			self::$fieldNameCache[$fieldOrFieldID] = $fieldName;
@@ -166,8 +164,7 @@ class Zotero_ItemFields {
 		}
 		
 		// Check memcached
-		$cacheKey = "isValidForType_" . $itemTypeID . "_" . $fieldID . "_"
-			. \Zotero\Schema::getVersion();
+		$cacheKey = "isValidForType_{$itemTypeID}_{$fieldID}_" . \Zotero\Schema::getVersion();
 		$valid = Z_Core::$MC->get($cacheKey);
 		if ($valid !== false) {
 			if (!isset(self::$isValidForTypeCache[$itemTypeID])) {
@@ -218,7 +215,7 @@ class Zotero_ItemFields {
 			return self::$itemTypeFieldsCache[$itemTypeID];
 		}
 		
-		$cacheKey = "itemTypeFields_" . $itemTypeID;
+		$cacheKey = "itemTypeFields_{$itemTypeID}_" . \Zotero\Schema::getVersion();
 		$fields = Z_Core::$MC->get($cacheKey);
 		if ($fields !== false) {
 			self::$itemTypeFieldsCache[$itemTypeID] = $fields;
@@ -252,7 +249,7 @@ class Zotero_ItemFields {
 			return self::$isBaseFieldCache[$fieldID];
 		}
 		
-		$cacheKey = "isBaseField_" . $fieldID;
+		$cacheKey = "isBaseField_{$fieldID}_" . \Zotero\Schema::getVersion();
 		$isBase = Z_Core::$MC->get($cacheKey);
 		if ($isBase !== false) {
 			self::$isBaseFieldCache[$fieldID] = !!$isBase;
@@ -318,7 +315,7 @@ class Zotero_ItemFields {
 		}
 		
 		// Check memcached
-		$cacheKey = "itemTypeBaseFieldID_" . $itemTypeID . "_" . $baseFieldID;
+		$cacheKey = "itemTypeBaseFieldID_{$itemTypeID}_{$baseFieldID}_" . \Zotero\Schema::getVersion();
 		$fieldID = Z_Core::$MC->get($cacheKey);
 		if ($fieldID !== false) {
 			if (!isset(self::$itemTypeBaseFieldIDCache[$itemTypeID])) {
@@ -421,7 +418,7 @@ class Zotero_ItemFields {
 				return self::$typeFieldNamesByBaseCache[$baseFieldID];
 			}
 			
-			$cacheKey = "itemTypeFieldNamesByBase_" . $baseFieldID;
+			$cacheKey = "itemTypeFieldNamesByBase_{$baseFieldID}_" . \Zotero\Schema::getVersion();
 			$fieldNames = Z_Core::$MC->get($cacheKey);
 			if ($fieldNames) {
 				self::$typeFieldNamesByBaseCache[$baseFieldID] = $fieldNames;
@@ -446,7 +443,7 @@ class Zotero_ItemFields {
 			return self::$typeFieldIDsByBaseCache[$baseFieldID];
 		}
 		
-		$cacheKey = "itemTypeFieldIDsByBase_" . $baseFieldID;
+		$cacheKey = "itemTypeFieldIDsByBase_{$baseFieldID}_" . \Zotero\Schema::getVersion();
 		$fieldIDs = Z_Core::$MC->get($cacheKey);
 		if ($fieldIDs) {
 			self::$typeFieldIDsByBaseCache[$baseFieldID] = $fieldIDs;
