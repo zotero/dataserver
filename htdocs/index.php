@@ -40,7 +40,7 @@ $extra = !empty($params['extra']) ? $params['extra'] : array();
 
 // Attempt to load controller
 $controllerFile = Z_ENV_CONTROLLER_PATH . $directory . $controllerName . 'Controller.php';
-Z_Core::debug($_SERVER['REQUEST_METHOD'] . " to " . Z_ENV_SELF);
+Z_Core::debug($_SERVER['REQUEST_METHOD'] . " to " . $_SERVER['REQUEST_URI']);
 Z_Core::debug("Controller is $controllerFile");
 
 if (file_exists($controllerFile)) {
