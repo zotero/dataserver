@@ -33,6 +33,8 @@ RewriteRule ^zotero-schema/schema\.json.gz$ - [T=application/json,E=no-gzip:1]
   Header append Content-Encoding gzip
   # Force proxies to cache gzipped & non-gzipped schema file separately
   Header append Vary Accept-Encoding
+  # CORS
+  Header set Access-Control-Allow-Origin "*"
 </Files>
 
 # If file or directory doesn't exist, pass to director for MVC redirections
