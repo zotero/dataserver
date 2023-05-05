@@ -56,6 +56,8 @@ class Zotero_NotifierObserver {
 	
 	
 	public static function notify($event, $type, $ids, $extraData) {
+		$index = 0;
+		$last_index = count($ids) - 1;
 		if ($type == "library" || $type == "publications") {
 			switch ($event) {
 			case "modify":
@@ -69,7 +71,6 @@ class Zotero_NotifierObserver {
 			default:
 				return;
 			}
-			
 			foreach ($ids as $id) {
 				$libraryID = $id;
 				// For most libraries, get topic from URI
@@ -102,7 +103,8 @@ class Zotero_NotifierObserver {
 				];
 				
 				if (self::$continued) {
-					$message['continued'] = true;
+					//Set continued=false for the last item
+					$message['continued'] = ($index != $last_index);
 				}
 				
 				if (!empty($extraData[$id])) {
@@ -110,6 +112,7 @@ class Zotero_NotifierObserver {
 						$message[$key] = $val;
 					}
 				}
+				$index++;
 				self::send($topic, $message);
 			}
 		}
@@ -140,7 +143,8 @@ class Zotero_NotifierObserver {
 				];
 				
 				if (self::$continued) {
-					$message['continued'] = true;
+					//Set continued=false for the last item
+					$message['continued'] = ($index != $last_index);
 				}
 				
 				if (!empty($extraData[$id])) {
@@ -148,7 +152,7 @@ class Zotero_NotifierObserver {
 						$message[$key] = $val;
 					}
 				}
-				
+				$index++;
 				self::send("api-key:$apiKeyID", $message);
 			}
 		}
