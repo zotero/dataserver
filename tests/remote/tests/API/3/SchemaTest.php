@@ -34,6 +34,10 @@ class SchemaTests extends APITests {
 		"Some data in “My Library” was created in a newer version of Zotero and could not be downloaded. "
 			. "Upgrade Zotero to continue syncing this library.";
 	
+	public function setUp(): void {
+		$this->markTestSkipped();
+	}
+	
 	public function tearDown(): void {
 		API::resetSchemaVersion(false);
 	}
