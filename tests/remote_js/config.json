@@ -1,0 +1,35 @@
+{
+    "verbose": 1,
+    "syncURLPrefix": "http://dataserver/",
+    "apiURLPrefix": "http://localhost/",
+    "rootUsername": "YtTnrHcWUC0FqP27xuaa",
+    "rootPassword": "esFEIngwxnyp1kuTrUpKpH72gEftHbkiWneoeimV",
+    "awsRegion": "us-east-1",
+    "s3Bucket": "zotero",
+    "awsAccessKey": "",
+    "awsSecretKey": "",
+    "filesystemStorage": 1,
+    "syncVersion": 9,
+    
+        
+	"userID": 1,
+	"libraryID": 1,
+	"username": "testuser",
+	"password": "letmein",
+	"displayName": "testuser",
+	"emailPrimary": "test@test.com",
+	"emailSecondary": "test@test.com",
+	"ownedPrivateGroupID": 1,
+	"ownedPrivateGroupLibraryID": 1,
+	"ownedPrivateGroupName": "Test Group",
+
+
+	"userID2": 2,
+	"username2": "testuser2",
+	"password2": "letmein2",
+	"displayName2": "testuser2",
+	"ownedPrivateGroupID2": 0,
+	"ownedPrivateGroupLibraryID2": 0
+        
+    
+}
