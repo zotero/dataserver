@@ -80,7 +80,6 @@ describe('ObjectTests', function () {
 		const responseDelete = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
-			JSON.stringify({}),
 			{ 'If-Unmodified-Since-Version': objectVersion }
 		);
 		Helpers.assertStatusCode(responseDelete, 204);
@@ -126,7 +125,6 @@ describe('ObjectTests', function () {
 	
 		response = await API.userDelete(config.userID,
 			`${objectTypePlural}?key=${config.apiKey}&${keyProp}=${deleteKeys.join(',')}`,
-			JSON.stringify({}),
 			{ "If-Unmodified-Since-Version": libraryVersion }
 		);
 		Helpers.assertStatusCode(response, 204);
@@ -139,7 +137,6 @@ describe('ObjectTests', function () {
 	
 		response = await API.userDelete(config.userID,
 			`${objectTypePlural}?key=${config.apiKey}&${keyProp}=${keepKeys.join(',')},`,
-			JSON.stringify({}),
 			{ "If-Unmodified-Since-Version": libraryVersion });
 		Helpers.assertStatusCode(response, 204);
 	
@@ -153,19 +150,19 @@ describe('ObjectTests', function () {
 		let conditions = [];
 		const objectType = 'collection';
 		let json1 = { name: "Test" };
-		let json2 = { name: "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123" };
+		let json2 = { name: "1234567890".repeat(6554) };
 		let json3 = { name: "Test" };
 		switch (objectType) {
 			case 'collection':
 				json1 = { name: "Test" };
-				json2 = { name: "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123" };
+				json2 = { name: "1234567890".repeat(6554) };
 				json3 = { name: "Test" };
 				break;
 			case 'item':
 				json1 = await API.getItemTemplate('book');
 				json2 = { ...json1 };
 				json3 = { ...json1 };
-				json2.title = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123";
+				json2.title = "1234567890".repeat(6554);
 				break;
 			case 'search':
 				conditions = [
@@ -176,7 +173,7 @@ describe('ObjectTests', function () {
 					}
 				];
 				json1 = { name: "Test", conditions: conditions };
-				json2 = { name: "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123", conditions: conditions };
+				json2 = { name: "1234567890".repeat(6554), conditions: conditions };
 				json3 = { name: "Test", conditions: conditions };
 				break;
 		}
@@ -377,7 +374,6 @@ describe('ObjectTests', function () {
 			const objectTypePlural = await API.getPluralObjectType(objectType);
 			const response = await API.userDelete(config.userID,
 				`${objectTypePlural}?key=${config.apiKey}${url}`,
-				JSON.stringify({}),
 				{ "If-Unmodified-Since-Version": libraryVersion });
 			Helpers.assertStatusCode(response, 204);
 			return response.headers["last-modified-version"][0];
@@ -437,7 +433,6 @@ describe('ObjectTests', function () {
 		response = await API.userDelete(
 			config.userID,
 			`tags?key=${config.apiKey}&tag=${objectKeys.tag.join('%20||%20')}`,
-			JSON.stringify({}),
 			{ "If-Unmodified-Since-Version": libraryVersion3 }
 		);
 		Helpers.assertStatusCode(response, 204);

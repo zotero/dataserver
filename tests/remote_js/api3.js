@@ -6,11 +6,16 @@ const fs = require("fs");
 
 class API3 extends API2 {
 	static schemaVersion;
-	
+
 	static apiVersion = 3;
 
+	static apiKey = this.config.apiKey;
 
-	static async get(url, headers = [], auth = false) {
+	static useAPIKey(key) {
+		this.apiKey = key;
+	}
+
+	static async get(url, headers = {}, auth = false) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
@@ -18,8 +23,8 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.get(url, headers, auth);
 		if (this.config.verbose >= 2) {
@@ -28,7 +33,11 @@ class API3 extends API2 {
 		return response;
 	}
 
-	static async head(url, headers = [], auth = false) {
+	static async userGet(userID, suffix, headers = {}, auth = null) {
+		return this.get(`users/${userID}/${suffix}`, headers, auth);
+	}
+
+	static async head(url, headers = {}, auth = false) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
@@ -36,8 +45,8 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.head(url, headers, auth);
 		if (this.config.verbose >= 2) {
@@ -60,7 +69,7 @@ class API3 extends API2 {
 	}
 
 
-	static async delete(url, data, headers = [], auth = false) {
+	static async delete(url, headers = {}, auth = false) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
@@ -68,14 +77,14 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
-		let response = await HTTP.delete(url, data, headers, auth);
+		let response = await HTTP.delete(url, headers, auth);
 		return response;
 	}
 
-	static async post(url, data, headers = [], auth = false) {
+	static async post(url, data, headers = {}, auth = false) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
@@ -83,8 +92,8 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.post(url, data, headers, auth);
 		return response;
@@ -106,8 +115,8 @@ class API3 extends API2 {
 		});
 	}
 
-	static async superDelete(url, data, headers = {}) {
-		return this.delete(url, data, headers, {
+	static async superDelete(url, headers = {}) {
+		return this.delete(url, headers, {
 			username: this.config.rootUsername,
 			password: this.config.rootPassword
 		});
@@ -219,7 +228,7 @@ class API3 extends API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${this.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -253,7 +262,7 @@ class API3 extends API2 {
 		}
 		delete json.access.groups;
 		response = await this.put(
-			`users/${this.config.userID}/keys/${this.config.apiKey}`,
+			`users/${this.config.userID}/keys/${this.apiKey}`,
 			JSON.stringify(json),
 			[],
 			{
@@ -300,7 +309,7 @@ class API3 extends API2 {
 
 		response = await this.userPost(
 			this.config.userID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${this.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -330,7 +339,8 @@ class API3 extends API2 {
 
 
 	static async getCollection(keys, context = null, format = false, groupID = false) {
-		return this.getObject("collection", keys, context, format, groupID);
+		const module = this || context;
+		return module.getObject("collection", keys, context, format, groupID);
 	}
 
 	static async patch(url, data, headers = {}, auth = false) {
@@ -341,8 +351,8 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.patch(apiUrl, data, headers, auth);
 		return response;
@@ -371,7 +381,7 @@ class API3 extends API2 {
 		return null;
 	};
 
-	static async put(url, data, headers = [], auth = false) {
+	static async put(url, data, headers = {}, auth = false) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
@@ -379,8 +389,8 @@ class API3 extends API2 {
 		if (this.schemaVersion) {
 			headers["Zotero-Schema-Version"] = this.schemaVersion;
 		}
-		if (!auth && this.config.apiKey) {
-			headers.Authorization = "Bearer " + this.config.apiKey;
+		if (!auth && this.apiKey) {
+			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.put(url, data, headers, auth);
 		return response;
@@ -406,7 +416,7 @@ class API3 extends API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${this.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -444,10 +454,10 @@ class API3 extends API2 {
 		return this.delete(url, headers, auth);
 	}
 
-	static async getSuccessfulKeysFromResponse(response) {
+	static getSuccessfulKeysFromResponse(response) {
 		let json = this.getJSONFromResponse(response);
-		return json.successful.map((o) => {
-			return o.key;
+		return Object.keys(json.successful).map((o) => {
+			return json.successful[o].key;
 		});
 	}
 
@@ -475,19 +485,21 @@ class API3 extends API2 {
 	}
 
 	static async getSearchResponse(keys, context = null, format = false, groupID = false) {
-		return this.getObjectResponse('search', keys, context, format, groupID);
+		const module = this || context;
+		return module.getObjectResponse('search', keys, context, format, groupID);
 	}
 
 	// Atom
 
 	static async getSearch(keys, context = null, format = false, groupID = false) {
-		return this.getObject('search', keys, context, format, groupID);
+		const module = this || context;
+		return module.getObject('search', keys, context, format, groupID);
 	}
 
 	static async createCollection(name, data = {}, context = null, returnFormat = 'responseJSON') {
 		let parent, relations;
 
-		if (Array.isArray(data)) {
+		if (typeof data == 'object') {
 			parent = data.parentCollection ? data.parentCollection : false;
 			relations = data.relations ? data.relations : {};
 		}
@@ -508,7 +520,7 @@ class API3 extends API2 {
 			json[0].deleted = data.deleted;
 		}
 
-		let response = this.postObjects('collection', json);
+		let response = await this.postObjects('collection', json);
 		return this.handleCreateResponse('collection', response, returnFormat, context);
 	}
 
@@ -589,7 +601,7 @@ class API3 extends API2 {
 
 		let headers = {
 			"Content-Type": "application/json",
-			"Zotero-API-Key": this.config.apiKey
+			"Zotero-API-Key": this.apiKey
 		};
 
 		let requestBody = JSON.stringify([json]);
@@ -640,7 +652,7 @@ class API3 extends API2 {
 			}
 
 			response = await this.put(
-				"keys/" + this.config.apiKey,
+				"keys/" + this.apiKey,
 				JSON.stringify(json),
 				{},
 				{
@@ -691,7 +703,7 @@ class API3 extends API2 {
 			}
 
 			response = await this.put(
-				"keys/" + this.config.apiKey,
+				"keys/" + this.apiKey,
 				xml.outterHTML,
 				{},
 				{
@@ -874,7 +886,7 @@ class API3 extends API2 {
 		if (single) {
 			url += `/${keys}`;
 		}
-		url += `?key=${this.config.apiKey}`;
+		url += `?key=${this.apiKey}`;
 		if (!single) {
 			url += `&${objectType}Key=${keys.join(',')}&order=${objectType}KeyList`;
 		}

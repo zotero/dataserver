@@ -108,7 +108,7 @@ class Helpers {
 	};
 
 	static assertContentType = (response, contentType) => {
-		assert.include(response.headers['content-type'], contentType.toLowerCase());
+		assert.include(response?.headers['content-type'], contentType.toLowerCase());
 	};
 
 
@@ -125,17 +125,41 @@ class Helpers {
 		this.assertStatusCode(response, 400);
 	};
 
-	static assert400ForObject = (response, message) => {
-		this.assertStatusForObject(response, 'failed', 0, 400, message);
+	static assert403 = (response) => {
+		this.assertStatusCode(response, 403);
 	};
 
-	static assert200ForObject = (response) => {
-		this.assertStatusForObject(response, 'success', 0);
+	static assert428 = (response) => {
+		this.assertStatusCode(response, 428);
+	};
+
+	static assert404 = (response) => {
+		this.assertStatusCode(response, 404);
+	};
+
+	static assert400ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 400, message);
+	};
+
+	static assert200ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'success', index, message);
+	};
+	
+	static assert409ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 409, message);
+	};
+
+	static assert413ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 413, message);
 	};
 
 	// Methods to help during conversion
 	static assertEquals = (one, two) => {
 		assert.equal(two, one);
+	};
+
+	static assertCount = (count, object) => {
+		assert.lengthOf(Object.keys(object), count);
 	};
 }
 

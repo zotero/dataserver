@@ -32,12 +32,14 @@ module.exports = {
 		config.apiKey = credentials.user1.apiKey;
 		config.user2APIKey = credentials.user2.apiKey;
 		await API3.useAPIVersion(3);
+		await API3.useAPIKey(config.apiKey);
 		await API3.resetSchemaVersion();
 		await API3.setKeyUserPermission(config.apiKey, 'notes', true);
 		await API3.setKeyUserPermission(config.apiKey, 'write', true);
 		await API.userClear(config.userID);
 	},
 	API3WrapUp: async () => {
+		await API3.useAPIKey(config.apiKey);
 		await API.userClear(config.userID);
 	}
 };

@@ -136,7 +136,6 @@ describe('TagTests', function () {
 		response = await API.userDelete(
 			config.userID,
 			`tags?key=${config.apiKey}&content=json&tag=${tags1.concat(tags2).map(tag => encodeURIComponent(tag)).join("%20||%20")}`,
-			JSON.stringify({}),
 			{ "If-Unmodified-Since-Version": `${libraryVersion - 1}` }
 		);
 		Helpers.assertStatusCode(response, 412);
@@ -145,7 +144,6 @@ describe('TagTests', function () {
 		response = await API.userDelete(
 			config.userID,
 			`tags?key=${config.apiKey}&content=json&tag=${tags1.concat(tags2).map(tag => encodeURIComponent(tag)).join("%20||%20")}`,
-			JSON.stringify({}),
 			{ "If-Unmodified-Since-Version": `${libraryVersion}` }
 		);
 		Helpers.assertStatusCode(response, 204);

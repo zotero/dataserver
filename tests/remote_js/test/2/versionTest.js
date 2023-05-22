@@ -145,21 +145,18 @@ describe('VersionsTests', function () {
 		assert.equal(parseInt(newLibraryVersion), parseInt(newObjectVersion3));
 		response = await API.userDelete(
 			config.userID,
-			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
-			JSON.stringify({})
+			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`
 		);
 		Helpers.assertStatusCode(response, 428);
 		response = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
-			JSON.stringify({}),
 			{ 'If-Unmodified-Since-Version': objectVersion }
 		);
 		Helpers.assertStatusCode(response, 412);
 		response = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
-			JSON.stringify({}),
 			{ 'If-Unmodified-Since-Version': newObjectVersion2 }
 		);
 		Helpers.assertStatusCode(response, 204);
@@ -556,7 +553,6 @@ describe('VersionsTests', function () {
 		response = await API.userDelete(
 			config.userID,
 			`items/${data1.key}?key=${config.apiKey}`,
-			JSON.stringify({}),
 			{
 				"If-Unmodified-Since-Version": data1.version
 			}

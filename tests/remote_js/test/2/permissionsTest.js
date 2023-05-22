@@ -70,7 +70,6 @@ describe('PermissionsTests', function () {
 		response = await API.userDelete(
 			config.userID,
 			`tags?tag=A&key=${config.apiKey}`,
-			JSON.stringify({}),
 			{ 'If-Unmodified-Since-Version': libraryVersion }
 		);
 		Helpers.assertStatusCode(response, 204);

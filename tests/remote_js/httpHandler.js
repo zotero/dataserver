@@ -60,8 +60,8 @@ class HTTP {
 		return this.request('OPTIONS', url, headers, {}, auth);
 	}
 
-	static delete(url, data = {}, headers = {}, auth = false) {
-		return this.request('DELETE', url, headers, data, auth);
+	static delete(url, headers = {}, auth = false) {
+		return this.request('DELETE', url, headers, "", auth);
 	}
 }
 

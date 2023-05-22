@@ -473,16 +473,16 @@ class API2 {
 		return this.patch(`users/${userID}/${suffix}`, data, headers);
 	}
 
-	static async delete(url, data, headers = {}, auth = null) {
+	static async delete(url, headers = {}, auth = null) {
 		url = this.config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
-		return HTTP.delete(url, data, headers, auth);
+		return HTTP.delete(url, headers, auth);
 	}
 
-	static async userDelete(userID, suffix, data, headers = {}) {
-		return this.delete(`users/${userID}/${suffix}`, data, headers);
+	static async userDelete(userID, suffix, headers = {}) {
+		return this.delete(`users/${userID}/${suffix}`, headers);
 	}
 
 	static async head(url, headers = {}, auth = null) {
