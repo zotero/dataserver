@@ -7,43 +7,9 @@ const { API2Setup, API2WrapUp } = require("../shared.js");
 
 describe('CollectionTests', function () {
 	this.timeout(config.timeout);
-
+	let keyObj = {};
 	before(async function () {
 		await API2Setup();
-	});
-
-	after(async function () {
-		await API2WrapUp();
-	});
-
-	it('testFeedURIs', async function () {
-		const userID = config.userID;
-		
-		const response = await API.userGet(
-			userID,
-			"items?key=" + config.apiKey
-		);
-		Helpers.assertStatusCode(response, 200);
-		const xml = await API.getXMLFromResponse(response);
-		const links = Helpers.xpathEval(xml, '/atom:feed/atom:link', true, true);
-		assert.equal(config.apiURLPrefix + "users/" + userID + "/items", links[0].getAttribute('href'));
-	
-		// 'order'/'sort' should stay as-is, not turn into 'sort'/'direction'
-		const response2 = await API.userGet(
-			userID,
-			"items?key=" + config.apiKey + "&order=dateModified&sort=asc"
-		);
-		Helpers.assertStatusCode(response2, 200);
-		const xml2 = await API.getXMLFromResponse(response2);
-		const links2 = Helpers.xpathEval(xml2, '/atom:feed/atom:link', true, true);
-		assert.equal(config.apiURLPrefix + "users/" + userID + "/items?order=dateModified&sort=asc", links2[0].getAttribute('href'));
-	});
-
-
-	//Requires citation server to run
-	it('testMultiContent', async function () {
-		this.skip();
-		const keyObj = {};
 		const item1 = {
 			title: 'Title',
 			creators: [
@@ -92,6 +58,40 @@ describe('CollectionTests', function () {
 			+ '{"itemKey":"","itemVersion":0,"itemType":"book","title":"Title 2","creators":[{"creatorType":"author","firstName":"First","lastName":"Last"},{"creatorType":"editor","firstName":"Ed","lastName":"McEditor"}],"abstractNote":"","series":"","seriesNumber":"","volume":"","numberOfVolumes":"","edition":"","place":"","publisher":"","date":"","numPages":"","language":"","ISBN":"","shortTitle":"","url":"","accessDate":"","archive":"","archiveLocation":"","libraryCatalog":"","callNumber":"","rights":"","extra":"","tags":[],"collections":[],"relations":{}}'
 			+ '</zapi:subcontent></content>';
 		keyObj[key2] = itemXml2;
+	});
+
+	after(async function () {
+		await API2WrapUp();
+	});
+
+	it('testFeedURIs', async function () {
+		const userID = config.userID;
+		
+		const response = await API.userGet(
+			userID,
+			"items?key=" + config.apiKey
+		);
+		Helpers.assertStatusCode(response, 200);
+		const xml = await API.getXMLFromResponse(response);
+		const links = Helpers.xpathEval(xml, '/atom:feed/atom:link', true, true);
+		assert.equal(config.apiURLPrefix + "users/" + userID + "/items", links[0].getAttribute('href'));
+	
+		// 'order'/'sort' should stay as-is, not turn into 'sort'/'direction'
+		const response2 = await API.userGet(
+			userID,
+			"items?key=" + config.apiKey + "&order=dateModified&sort=asc"
+		);
+		Helpers.assertStatusCode(response2, 200);
+		const xml2 = await API.getXMLFromResponse(response2);
+		const links2 = Helpers.xpathEval(xml2, '/atom:feed/atom:link', true, true);
+		assert.equal(config.apiURLPrefix + "users/" + userID + "/items?order=dateModified&sort=asc", links2[0].getAttribute('href'));
+	});
+
+
+	//Requires citation server to run
+	it('testMultiContent', async function () {
+		this.skip();
+
 	
 		const keys = Object.keys(keyObj);
 		const keyStr = keys.join(',');

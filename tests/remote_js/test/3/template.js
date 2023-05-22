@@ -1,18 +1,18 @@
 const chai = require('chai');
 const assert = chai.assert;
 const config = require("../../config.js");
-const API = require('../../api2.js');
-const Helpers = require('../../helpers.js');
-const { API2Setup, API2WrapUp } = require("../shared.js");
+const API = require('../../api3.js');
+const Helpers = require('../../helpers3.js');
+const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('Tests', function () {
 	this.timeout(config.timeout);
 
 	before(async function () {
-		await API2Setup();
+		await API3Setup();
 	});
 
 	after(async function () {
-		await API2WrapUp();
+		await API3WrapUp();
 	});
 });

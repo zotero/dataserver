@@ -578,6 +578,7 @@ class API2 {
 		const version = this.arrayGetFirst(entryXML.getElementsByTagName('zapi:version'));
 		const content = this.arrayGetFirst(entryXML.getElementsByTagName('content'));
 		if (content === null) {
+			console.log(entryXML.outerHTML);
 			throw new Error("Atom response does not contain <content>");
 		}
 

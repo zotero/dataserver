@@ -1,7 +1,6 @@
 
 const config = require('./config');
 const API3 = require('./api3.js');
-const API2 = require('./api2.js');
 
 const resetGroups = async () => {
 	let resetGroups = true;
@@ -9,7 +8,7 @@ const resetGroups = async () => {
 	let response = await API3.superGet(
 		`users/${config.userID}/groups`
 	);
-	let groups = await API2.getJSONFromResponse(response);
+	let groups = await API3.getJSONFromResponse(response);
 	config.ownedPublicGroupID = null;
 	config.ownedPublicNoAnonymousGroupID = null;
 	config.ownedPrivateGroupID = null;
@@ -94,7 +93,7 @@ const resetGroups = async () => {
 
 	for (let group of groups) {
 		if (!toDelete.includes(group.id)) {
-			await API2.groupClear(group.id);
+			await API3.groupClear(group.id);
 		}
 	}
 };

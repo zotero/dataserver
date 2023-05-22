@@ -4,16 +4,22 @@ const assert = chai.assert;
 const crypto = require('crypto');
 
 class Helpers {
+	static isV3 = false;
+
+	static useV3 = () => {
+		this.isV3 = true;
+	};
+
 	static uniqueToken = () => {
 		const id = crypto.randomBytes(16).toString("hex");
 		const hash = crypto.createHash('md5').update(id).digest('hex');
 		return hash;
 	};
 
-	static uniqueID = () => {
+	static uniqueID = (count = 8) => {
 		const chars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Z'];
 		let result = "";
-		for (let i = 0; i < 8; i++) {
+		for (let i = 0; i < count; i++) {
 			result += chars[crypto.randomInt(chars.length)];
 		}
 		return result;
@@ -99,6 +105,37 @@ class Helpers {
 		const doc = new JSDOM(response.data, { url: "http://localhost/" });
 		const totalResults = this.xpathEval(doc.window.document, "//zapi:totalResults", false, true);
 		assert.equal(parseInt(totalResults[0]), expectedResults);
+	};
+
+	static assertContentType = (response, contentType) => {
+		assert.include(response.headers['content-type'], contentType.toLowerCase());
+	};
+
+
+	//Assert codes
+	static assert200 = (response) => {
+		this.assertStatusCode(response, 200);
+	};
+	
+	static assert204 = (response) => {
+		this.assertStatusCode(response, 204);
+	};
+
+	static assert400 = (response) => {
+		this.assertStatusCode(response, 400);
+	};
+
+	static assert400ForObject = (response, message) => {
+		this.assertStatusForObject(response, 'failed', 0, 400, message);
+	};
+
+	static assert200ForObject = (response) => {
+		this.assertStatusForObject(response, 'success', 0);
+	};
+
+	// Methods to help during conversion
+	static assertEquals = (one, two) => {
+		assert.equal(two, one);
 	};
 }
 
