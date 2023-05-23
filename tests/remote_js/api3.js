@@ -359,7 +359,7 @@ class API3 extends API2 {
 	}
 
 	static createDataObject = async (objectType, data = false, context = false, format = 'json') => {
-		let template = this.createUnsavedDataObject(objectType);
+		let template = await this.createUnsavedDataObject(objectType);
 		if (data) {
 			for (let key in data) {
 				template[key] = data[key];
@@ -778,7 +778,7 @@ class API3 extends API2 {
 
 			case "item":
 				// Convert to array
-				json = JSON.parse(JSON.stringify(this.getItemTemplate("book")));
+				json = JSON.parse(JSON.stringify(await this.getItemTemplate("book")));
 				break;
 
 			case "search":

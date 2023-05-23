@@ -15,4 +15,11 @@ describe('Tests', function () {
 	after(async function () {
 		await API3WrapUp();
 	});
+	beforeEach(async function () {
+		await API.userClear(config.userID);
+	});
+
+	afterEach(async function () {
+		await API.userClear(config.userID);
+	});
 });

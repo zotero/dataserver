@@ -7,6 +7,7 @@ const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('ObjectTests', function () {
 	this.timeout(0);
+	let types = ['collection', 'search', 'item'];
 
 	before(async function () {
 		await API3Setup();
@@ -16,11 +17,11 @@ describe('ObjectTests', function () {
 		await API3WrapUp();
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await API.userClear(config.userID);
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.userClear(config.userID);
 	});
 
@@ -480,6 +481,309 @@ describe('ObjectTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		json = JSON.parse(response.data);
 		await verifyKeys(json, 'tag', objectKeys.tag);
+	});
+
+
+	it('test_patch_with_deleted_should_clear_trash_state', async function () {
+		for (let type of types) {
+			const dataObj = {
+				deleted: true,
+			};
+			const json = await API.createDataObject(type, dataObj, this);
+			// TODO: Change to true in APIv4
+			if (type === 'item') {
+				assert.equal(json.data.deleted, 1);
+			}
+			else {
+				assert.ok(json.data.deleted);
+			}
+			const data = [
+				{
+					key: json.key,
+					version: json.version,
+					deleted: false
+				}
+			];
+			const response = await API.postObjects(type, data);
+			const jsonResponse = await API.getJSONFromResponse(response);
+			assert.notProperty(jsonResponse.successful[0].data, 'deleted');
+		}
+	});
+
+	const _testResponseJSONPut = async (objectType) => {
+		const objectPlural = API.getPluralObjectType(objectType);
+		let json1, conditions;
+
+		switch (objectType) {
+			case 'collection':
+				json1 = { name: 'Test 1' };
+				break;
+
+			case 'item':
+				json1 = await API.getItemTemplate('book');
+				json1.title = 'Test 1';
+				break;
+
+			case 'search':
+				conditions = [
+					{
+						condition: 'title',
+						operator: 'contains',
+						value: 'value'
+					}
+				];
+				json1 = { name: 'Test 1', conditions };
+				break;
+		}
+
+		let response = await API.userPost(
+			config.userID,
+			`${objectPlural}`,
+			JSON.stringify([json1]),
+			{ 'Content-Type': 'application/json' }
+		);
+
+		Helpers.assert200(response);
+
+		let json = await API.getJSONFromResponse(response);
+		Helpers.assert200ForObject(response);
+		const objectKey = json.successful[0].key;
+
+		response = await API.userGet(
+			config.userID,
+			`${objectPlural}/${objectKey}`
+		);
+
+		Helpers.assert200(response);
+		json = API.getJSONFromResponse(response);
+
+		switch (objectType) {
+			case 'item':
+				json.data.title = 'Test 2';
+				break;
+
+			case 'collection':
+			case 'search':
+				json.data.name = 'Test 2';
+				break;
+		}
+
+		response = await API.userPut(
+			config.userID,
+			`${objectPlural}/${objectKey}`,
+			JSON.stringify(json),
+			{ 'Content-Type': 'application/json' }
+		);
+
+		Helpers.assert204(response);
+		//check
+		response = await API.userGet(
+			config.userID,
+			`${objectPlural}/${objectKey}`
+		);
+
+		Helpers.assert200(response);
+		json = await API.getJSONFromResponse(response);
+
+		switch (objectType) {
+			case 'item':
+				assert.equal(json.data.title, 'Test 2');
+				break;
+
+			case 'collection':
+			case 'search':
+				assert.equal(json.data.name, 'Test 2');
+				break;
+		}
+	};
+
+	it('testResponseJSONPut', async function () {
+		await _testResponseJSONPut('collection');
+		await _testResponseJSONPut('item');
+		await _testResponseJSONPut('search');
+	});
+
+	it('testCreateByPut', async function () {
+		await _testCreateByPut('collection');
+		await _testCreateByPut('item');
+		await _testCreateByPut('search');
+	});
+
+	const _testCreateByPut = async (objectType) => {
+		const objectTypePlural = API.getPluralObjectType(objectType);
+		const json = await API.createUnsavedDataObject(objectType);
+		const key = Helpers.uniqueID();
+		const response = await API.userPut(
+			config.userID,
+			`${objectTypePlural}/${key}`,
+			JSON.stringify(json),
+			{
+				'Content-Type': 'application/json',
+				'If-Unmodified-Since-Version': '0'
+			}
+		);
+		Helpers.assert204(response);
+	};
+
+	const _testEmptyVersionsResponse = async (objectType) => {
+		const objectTypePlural = API.getPluralObjectType(objectType);
+		const keyProp = objectType + 'Key';
+
+		const response = await API.userGet(
+			config.userID,
+			`${objectTypePlural}?format=versions&${keyProp}=NNNNNNNN`,
+			{ 'Content-Type': 'application/json' }
+		);
+
+		Helpers.assert200(response);
+
+		const json = JSON.parse(response.data);
+
+		assert.isObject(json);
+		assert.lengthOf(Object.keys(json), 0);
+	};
+
+	const _testResponseJSONPost = async (objectType) => {
+		await API.userClear(config.userID);
+
+		let objectTypePlural = await API.getPluralObjectType(objectType);
+		let json1, json2, conditions;
+		switch (objectType) {
+			case "collection":
+				json1 = { name: "Test 1" };
+				json2 = { name: "Test 2" };
+				break;
+
+			case "item":
+				json1 = await API.getItemTemplate("book");
+				json2 = { ...json1 };
+				json1.title = "Test 1";
+				json2.title = "Test 2";
+				break;
+
+			case "search":
+				conditions = [
+					{ condition: "title", operator: "contains", value: "value" },
+				];
+				json1 = { name: "Test 1", conditions: conditions };
+				json2 = { name: "Test 2", conditions: conditions };
+				break;
+		}
+
+		let response = await API.userPost(
+			config.userID,
+			objectTypePlural,
+			JSON.stringify([json1, json2]),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert200(response);
+		let json = await API.getJSONFromResponse(response);
+		Helpers.assert200ForObject(response, false, 0);
+		Helpers.assert200ForObject(response, false, 1);
+
+		response = await API.userGet(config.userID, objectTypePlural);
+		Helpers.assert200(response);
+		json = await API.getJSONFromResponse(response);
+		switch (objectType) {
+			case "item":
+				json[0].data.title
+					= json[0].data.title === "Test 1" ? "Test A" : "Test B";
+				json[1].data.title
+					= json[1].data.title === "Test 2" ? "Test B" : "Test A";
+				break;
+
+			case "collection":
+			case "search":
+				json[0].data.name
+					= json[0].data.name === "Test 1" ? "Test A" : "Test B";
+				json[1].data.name
+					= json[1].data.name === "Test 2" ? "Test B" : "Test A";
+				break;
+		}
+
+		response = await API.userPost(
+			config.userID,
+			objectTypePlural,
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert200(response);
+		json = await API.getJSONFromResponse(response);
+		Helpers.assert200ForObject(response, false, 0);
+		Helpers.assert200ForObject(response, false, 1);
+
+		// Check
+		response = await API.userGet(config.userID, objectTypePlural);
+		Helpers.assert200(response);
+		json = await API.getJSONFromResponse(response);
+
+		switch (objectTypePlural) {
+			case "item":
+				Helpers.assertEquals("Test A", json[0].data.title);
+				Helpers.assertEquals("Test B", json[1].data.title);
+				break;
+
+			case "collection":
+			case "search":
+				Helpers.assertEquals("Test A", json[0].data.name);
+				Helpers.assertEquals("Test B", json[1].data.name);
+				break;
+		}
+	};
+
+	it('test_patch_of_object_should_set_trash_state', async function () {
+		for (let type of types) {
+			let json = await API.createDataObject(type);
+			const data = [
+				{
+					key: json.key,
+					version: json.version,
+					deleted: true
+				}
+			];
+			const response = await API.postObjects(type, data);
+			Helpers.assert200ForObject(response);
+			json = API.getJSONFromResponse(response);
+			assert.property(json.successful[0].data, 'deleted');
+			if (type == 'item') {
+				assert.equal(json.successful[0].data.deleted, 1);
+			}
+			else {
+				assert.property(json.successful[0].data, 'deleted');
+			}
+		}
+	});
+
+	it('testResponseJSONPost', async function () {
+		await _testResponseJSONPost('collection');
+		await _testResponseJSONPost('item');
+		await _testResponseJSONPost('search');
+	});
+
+	it('testEmptyVersionsResponse', async function () {
+		await _testEmptyVersionsResponse('collection');
+		await _testEmptyVersionsResponse('item');
+		await _testEmptyVersionsResponse('search');
+	});
+
+	it('test_patch_of_object_in_trash_without_deleted_should_not_remove_it_from_trash', async function () {
+		for (let i = 0; i < types.length; i++) {
+			const json = await API.createItem("book", {
+				deleted: true
+			}, this, 'json');
+			const data = [
+				{
+					key: json.key,
+					version: json.version,
+					title: "A"
+				}
+			];
+			const response = await API.postItems(data);
+			const jsonResponse = await API.getJSONFromResponse(response);
+
+			assert.property(jsonResponse.successful[0].data, 'deleted');
+			assert.equal(jsonResponse.successful[0].data.deleted, 1);
+		}
 	});
 });
 

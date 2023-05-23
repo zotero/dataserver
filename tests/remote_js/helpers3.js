@@ -16,12 +16,12 @@ class Helpers3 extends Helpers {
 			const json = JSON.parse(response.data);
 			assert.lengthOf(Object.keys(json), expectedResults);
 		}
-		else if (contentType == 'text/plain') {
-			const rows = response.data.split("\n").trim();
+		else if (contentType.includes('text/plain')) {
+			const rows = response.data.trim().split("\n");
 			assert.lengthOf(rows, expectedResults);
 		}
 		else if (contentType == 'application/x-bibtex') {
-			let matched = response.getBody().match(/^@[a-z]+{/gm);
+			let matched = response.data.match(/^@[a-z]+{/gm);
 			assert.equal(matched, expectedResults);
 		}
 		else if (contentType == 'application/atom+xml') {
@@ -33,5 +33,11 @@ class Helpers3 extends Helpers {
 			throw new Error(`Unknonw content type" ${contentType}`);
 		}
 	};
+
+	static assertRegExp(exp, val) {
+		if (!exp.test(val)) {
+			throw new Error(`${val} does not match regular expression`)
+		}
+	}
 }
 module.exports = Helpers3;
