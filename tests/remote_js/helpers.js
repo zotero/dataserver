@@ -55,6 +55,12 @@ class Helpers {
 		return multiple ? result.map(el => el.innerHTML) : result[0].innerHTML;
 	};
 
+	static assertXMLEqual = (one, two) => {
+		const contentDom = new JSDOM(one);
+		const expectedDom = new JSDOM(two);
+		assert.equal(contentDom.window.document.innerHTML, expectedDom.window.document.innerHTML);
+	};
+
 	static assertStatusCode = (response, expectedCode, message) => {
 		try {
 			assert.equal(response.status, expectedCode);

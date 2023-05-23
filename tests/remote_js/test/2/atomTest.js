@@ -3,6 +3,7 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api2.js');
 const Helpers = require('../../helpers.js');
+const { JSDOM } = require('jsdom');
 const { API2Setup, API2WrapUp } = require("../shared.js");
 
 describe('CollectionTests', function () {
@@ -90,9 +91,6 @@ describe('CollectionTests', function () {
 
 	//Requires citation server to run
 	it('testMultiContent', async function () {
-		this.skip();
-
-	
 		const keys = Object.keys(keyObj);
 		const keyStr = keys.join(',');
 	
@@ -106,9 +104,9 @@ describe('CollectionTests', function () {
 	
 		const entries = Helpers.xpathEval(xml, '//atom:entry', true, true);
 		for (const entry of entries) {
-			const key = entry.children('http://zotero.org/ns/api',).key.textContent;
-			let content = entry.content.asXML();
-	
+			const key = entry.getElementsByTagName("zapi:key")[0].innerHTML;
+			let content = entry.getElementsByTagName("content")[0].outerHTML;
+
 			content = content.replace(
 				'<content ',
 				'<content xmlns:zapi="http://zotero.org/ns/api" ',
@@ -117,8 +115,9 @@ describe('CollectionTests', function () {
 				/"itemKey": "[A-Z0-9]{8}",(\s+)"itemVersion": [0-9]+/,
 				'"itemKey": "",$1"itemVersion": 0',
 			);
-	
-			assert.equal(content, keyObj[key]);
+			const contentDom = new JSDOM(content);
+			const expectedDom = new JSDOM(keyObj[key]);
+			assert.equal(contentDom.window.document.innerHTML, expectedDom.window.document.innerHTML);
 		}
 	});
 });

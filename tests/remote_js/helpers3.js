@@ -22,7 +22,7 @@ class Helpers3 extends Helpers {
 		}
 		else if (contentType == 'application/x-bibtex') {
 			let matched = response.data.match(/^@[a-z]+{/gm);
-			assert.equal(matched, expectedResults);
+			assert.lengthOf(matched, expectedResults);
 		}
 		else if (contentType == 'application/atom+xml') {
 			const doc = new JSDOM(response.data, { url: "http://localhost/" });

@@ -313,9 +313,7 @@ describe('ParamsTests', function () {
 		}
 	};
 
-	// items requires translation to run
 	it('testPagination', async function () {
-		this.skip();
 		await _testPagination('collection');
 		await _testPagination('group');
 		
