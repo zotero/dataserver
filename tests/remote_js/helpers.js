@@ -55,6 +55,12 @@ class Helpers {
 		return multiple ? result.map(el => el.innerHTML) : result[0].innerHTML;
 	};
 
+	static assertRegExp(exp, val) {
+		if (!exp.test(val)) {
+			throw new Error(`${val} does not match regular expression`)
+		}
+	}
+
 	static assertXMLEqual = (one, two) => {
 		const contentDom = new JSDOM(one);
 		const expectedDom = new JSDOM(two);
@@ -122,9 +128,17 @@ class Helpers {
 	static assert200 = (response) => {
 		this.assertStatusCode(response, 200);
 	};
+
+	static assert201 = (response) => {
+		this.assertStatusCode(response, 201);
+	};
 	
 	static assert204 = (response) => {
 		this.assertStatusCode(response, 204);
+	};
+
+	static assert302 = (response) => {
+		this.assertStatusCode(response, 302);
 	};
 
 	static assert400 = (response) => {
@@ -133,6 +147,10 @@ class Helpers {
 
 	static assert403 = (response) => {
 		this.assertStatusCode(response, 403);
+	};
+
+	static assert412 = (response) => {
+		this.assertStatusCode(response, 412);
 	};
 
 	static assert428 = (response) => {

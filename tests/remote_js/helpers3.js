@@ -33,11 +33,5 @@ class Helpers3 extends Helpers {
 			throw new Error(`Unknonw content type" ${contentType}`);
 		}
 	};
-
-	static assertRegExp(exp, val) {
-		if (!exp.test(val)) {
-			throw new Error(`${val} does not match regular expression`)
-		}
-	}
 }
 module.exports = Helpers3;

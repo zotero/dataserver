@@ -1,9 +1,9 @@
 const chai = require('chai');
 const assert = chai.assert;
 const config = require("../../config.js");
-const API = require('../../api2.js');
-const Helpers = require('../../helpers.js');
-const { API2Setup, API2WrapUp } = require("../shared.js");
+const API = require('../../api3.js');
+const Helpers = require('../../helpers3.js');
+const { API3Setup, API3WrapUp } = require("../shared.js");
 const { S3Client, DeleteObjectsCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 const HTTP = require('../../httpHandler.js');
@@ -17,7 +17,7 @@ describe('FileTestTests', function () {
 	const s3Client = new S3Client({ region: "us-east-1" });
 
 	before(async function () {
-		await API2Setup();
+		await API3Setup();
 		try {
 			fs.mkdirSync("./work");
 		}
@@ -25,7 +25,7 @@ describe('FileTestTests', function () {
 	});
 
 	after(async function () {
-		await API2WrapUp();
+		await API3WrapUp();
 		fs.rmdirSync("./work", { recursive: true, force: true });
 		if (toDelete.length > 0) {
 			const commandInput = {
@@ -51,14 +51,15 @@ describe('FileTestTests', function () {
 	};
 
 	const testNewEmptyImportedFileAttachmentItem = async () => {
-		let xml = await API.createAttachmentItem("imported_file", [], false, this);
-		let data = await API.parseDataFromAtomEntry(xml);
-		return data;
+		return API.createAttachmentItem("imported_file", [], false, this, 'key');
 	};
 
 	const testGetFile = async () => {
 		const addFileData = await testAddFileExisting();
-		const userGetViewModeResponse = await API.userGet(config.userID, `items/${addFileData.key}/file/view?key=${config.apiKey}`);
+		const userGetViewModeResponse = await API.userGet(
+			config.userID,
+			`items/${addFileData.key}/file/view`
+		);
 		Helpers.assert302(userGetViewModeResponse);
 		const location = userGetViewModeResponse.headers.location[0];
 		Helpers.assertRegExp(/^https?:\/\/[^/]+\/[a-zA-Z0-9%]+\/[a-f0-9]{64}\/test_/, location);
@@ -67,7 +68,10 @@ describe('FileTestTests', function () {
 		const viewModeResponse = await HTTP.get(location);
 		Helpers.assert200(viewModeResponse);
 		assert.equal(addFileData.md5, md5(viewModeResponse.data));
-		const userGetDownloadModeResponse = await API.userGet(config.userID, `items/${addFileData.key}/file?key=${config.apiKey}`);
+		const userGetDownloadModeResponse = await API.userGet(
+			config.userID,
+			`items/${addFileData.key}/file`
+		);
 		Helpers.assert302(userGetDownloadModeResponse);
 		const downloadModeLocation = userGetDownloadModeResponse.headers.location;
 		const s3Response = await HTTP.get(downloadModeLocation);
@@ -80,8 +84,7 @@ describe('FileTestTests', function () {
 	};
 
 	it('testAddFileLinkedAttachment', async function () {
-		let xml = await API.createAttachmentItem("linked_file", [], false, this);
-		let data = await API.parseDataFromAtomEntry(xml);
+		let key = await API.createAttachmentItem("linked_file", [], false, this, 'key');
 
 		let file = "./work/file";
 		let fileContents = getRandomUnicodeString();
@@ -96,7 +99,7 @@ describe('FileTestTests', function () {
 		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: hash,
 				filename: filename,
@@ -113,15 +116,13 @@ describe('FileTestTests', function () {
 		Helpers.assert400(response);
 	});
 
-	// Skipped as there may or may not be an error
-	it('testAddFileFullParams', async function () {
-		this.skip();
-		let xml = await API.createAttachmentItem("imported_file", [], false, this);
+	it('testAddFileFormDataFullParams', async function () {
+		let json = await API.createAttachmentItem("imported_file", [], false, this, 'json');
+		let attachmentKey = json.key;
 
-		let data = await API.parseDataFromAtomEntry(xml);
-		let serverDateModified = Helpers.xpathEval(xml, '//atom:entry/atom:updated');
 		await new Promise(r => setTimeout(r, 2000));
-		let originalVersion = data.version;
+
+		let originalVersion = json.version;
 		let file = "./work/file";
 		let fileContents = getRandomUnicodeString();
 		await fs.promises.writeFile(file, fileContents);
@@ -134,7 +135,7 @@ describe('FileTestTests', function () {
 
 		let response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			implodeParams({
 				md5: hash,
 				filename: filename,
@@ -151,7 +152,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertContentType(response, "application/json");
-		let json = JSON.parse(response.data);
+		json = JSON.parse(response.data);
 		assert.ok(json);
 		toDelete.push(hash);
 
@@ -173,7 +174,7 @@ describe('FileTestTests', function () {
 		
 		response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			"upload=" + json.uploadKey,
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -181,21 +182,19 @@ describe('FileTestTests', function () {
 			}
 		);
 		Helpers.assert204(response);
+
 		response = await API.userGet(
 			config.userID,
-			`items/${data.key}?key=${config.apiKey}&content=json`
+			`items/${attachmentKey}`
 		);
-		xml = API.getXMLFromResponse(response);
-		data = await API.parseDataFromAtomEntry(xml);
-		json = JSON.parse(data.content);
+		json = API.getJSONFromResponse(response).data;
 		assert.equal(hash, json.md5);
 		assert.equal(filename, json.filename);
 		assert.equal(mtime, json.mtime);
 		assert.equal(contentType, json.contentType);
 		assert.equal(charset, json.charset);
-		const updated = Helpers.xpathEval(xml, '/atom:entry/atom:updated');
-		assert.notEqual(serverDateModified, updated);
-		assert.notEqual(originalVersion, data.version);
+
+		assert.notEqual(originalVersion, json.version);
 	});
 
 	const getRandomUnicodeString = function () {
@@ -209,16 +208,15 @@ describe('FileTestTests', function () {
 		let size = fileContents.length;
 
 		let parentKey = await API.createItem("book", false, this, 'key');
-		let xml = await API.createAttachmentItem("imported_file", [], parentKey, this);
-		let data = await API.parseDataFromAtomEntry(xml);
-		let key = data.key;
+		let json = await API.createAttachmentItem("imported_file", [], parentKey, this, 'jsonData');
+		let key = json.key;
 		let mtime = Date.now();
 		let contentType = 'text/plain';
 		let charset = 'utf-8';
 
 		let response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: hash,
 				filename,
@@ -234,7 +232,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertContentType(response, "application/json");
-		let json = JSON.parse(response.data);
+		json = JSON.parse(response.data);
 		assert.isOk(json);
 
 		toDelete.push(`${hash}/${filename}`);
@@ -247,7 +245,7 @@ describe('FileTestTests', function () {
 		await s3Client.send(putCommand);
 		response = await API.userPost(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			`upload=${json.uploadKey}`,
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -258,7 +256,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userGet(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`
+			`items/${key}/file`
 		);
 		Helpers.assert302(response);
 		let location = response.headers.location[0];
@@ -266,13 +264,15 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(2, matches.length);
 		Helpers.assertEquals(hash, matches[1]);
 
+		// Get upload authorization for the same file and filename on another item, which should
+		// result in 'exists', even though we uploaded to the old-style location
 		parentKey = await API.createItem("book", false, this, 'key');
-		xml = await API.createAttachmentItem("imported_file", [], parentKey, this);
-		data = await API.parseDataFromAtomEntry(xml);
-		key = data.key;
+		json = await API.createAttachmentItem("imported_file", [], parentKey, this, 'jsonData');
+
+		key = json.key;
 		response = await API.userPost(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: hash,
 				filename,
@@ -293,7 +293,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userGet(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`
+			`items/${key}/file`
 		);
 		Helpers.assert302(response);
 		location = response.headers.location[0];
@@ -306,14 +306,16 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(fileContents, response.data);
 		Helpers.assertEquals(`${contentType}; charset=${charset}`, response.headers['content-type'][0]);
 
+		// Get upload authorization for the same file and different filename on another item,
+		// which should result in 'exists' and a copy of the file to the hash-only location
 		parentKey = await API.createItem("book", false, this, 'key');
-		xml = await API.createAttachmentItem("imported_file", [], parentKey, this);
-		data = await API.parseDataFromAtomEntry(xml);
-		key = data.key;
+		json = await API.createAttachmentItem("imported_file", [], parentKey, this, 'jsonData');
+
+		key = json.key;
 		contentType = 'application/x-custom';
 		response = await API.userPost(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: hash,
 				filename: "test2.txt",
@@ -333,7 +335,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userGet(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`
+			`items/${key}/file`
 		);
 		Helpers.assert302(response);
 		location = response.headers.location[0];
@@ -347,12 +349,11 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(contentType, response.headers['content-type'][0]);
 	});
 
-	const testAddFileFull = async () => {
-		let xml = await API.createItem("book", false, this);
-		let data = await API.parseDataFromAtomEntry(xml);
-		let parentKey = data.key;
-		xml = await API.createAttachmentItem("imported_file", [], parentKey, this);
-		data = await API.parseDataFromAtomEntry(xml);
+	const testAddFileFormDataFull = async () => {
+		let parentKey = await API.createItem("book", false, this, 'key');
+		let json = await API.createAttachmentItem("imported_file", [], parentKey, this, 'json');
+		let attachmentKey = json.key;
+
 		let file = "./work/file";
 		let fileContents = getRandomUnicodeString();
 		fs.writeFileSync(file, fileContents);
@@ -365,7 +366,7 @@ describe('FileTestTests', function () {
 
 		let response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			implodeParams({
 				md5: hash,
 				filename: filename,
@@ -381,9 +382,20 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertContentType(response, "application/json");
-		let json = JSON.parse(response.data);
+		json = JSON.parse(response.data);
 		assert.isOk(json);
 		toDelete.push(`${hash}`);
+
+		const wrongContent = fileContents.split('').reverse().join("");
+		response = await HTTP.post(
+			json.url,
+			json.prefix + wrongContent + json.suffix,
+			{
+				"Content-Type": `${json.contentType}`
+			}
+		);
+		Helpers.assert400(response);
+		assert.include(response.data, "The Content-MD5 you specified did not match what we received.");
 
 		response = await HTTP.post(
 			json.url,
@@ -396,7 +408,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			`upload=${json.uploadKey}`,
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -406,7 +418,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			`upload=invalidUploadKey`,
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -417,7 +429,7 @@ describe('FileTestTests', function () {
 
 		response = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${attachmentKey}/file`,
 			`upload=${json.uploadKey}`,
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -428,11 +440,9 @@ describe('FileTestTests', function () {
 
 		response = await API.userGet(
 			config.userID,
-			`items/${data.key}?key=${config.apiKey}&content=json`
+			`items/${attachmentKey}`
 		);
-		xml = await API.getXMLFromResponse(response);
-		data = await API.parseDataFromAtomEntry(xml);
-		json = JSON.parse(data.content);
+		json = API.getJSONFromResponse(response).data;
 
 		assert.equal(hash, json.md5);
 		assert.equal(filename, json.filename);
@@ -441,14 +451,14 @@ describe('FileTestTests', function () {
 		assert.equal(charset, json.charset);
 
 		return {
-			key: data.key,
+			key: attachmentKey,
 			json: json,
 			size: size
 		};
 	};
 
 	it('testAddFileAuthorizationErrors', async function () {
-		const data = await testNewEmptyImportedFileAttachmentItem();
+		const parentKey = await testNewEmptyImportedFileAttachmentItem();
 		const fileContents = getRandomUnicodeString();
 		const hash = md5(fileContents);
 		const mtime = Date.now();
@@ -470,7 +480,7 @@ describe('FileTestTests', function () {
 			const exclude = requiredParams[i];
 			const response = await API.userPost(
 				config.userID,
-				`items/${data.key}/file?key=${config.apiKey}`,
+				`items/${parentKey}/file`,
 				implodeParams(fileParams, [exclude]),
 				{
 					"Content-Type": "application/x-www-form-urlencoded",
@@ -483,7 +493,7 @@ describe('FileTestTests', function () {
 		const fileParams2 = { ...fileParams, mtime: Math.round(mtime / 1000) };
 		const _ = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${parentKey}/file`,
 			implodeParams(fileParams2),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -496,7 +506,7 @@ describe('FileTestTests', function () {
 		// Invalid If-Match
 		const response3 = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${parentKey}/file`,
 			implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -507,7 +517,7 @@ describe('FileTestTests', function () {
 		// Missing If-None-Match
 		const response4 = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${parentKey}/file`,
 			implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded"
@@ -517,7 +527,7 @@ describe('FileTestTests', function () {
 		// Invalid If-None-Match
 		const response5 = await API.userPost(
 			config.userID,
-			`items/${data.key}/file?key=${config.apiKey}`,
+			`items/${parentKey}/file}`,
 			implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -540,14 +550,13 @@ describe('FileTestTests', function () {
 		const getFileData = await testGetFile();
 		const response = await API.userGet(
 			config.userID,
-			`items/${getFileData.key}?key=${config.apiKey}&content=json`
+			`items/${getFileData.key}`
 		);
-		const xml = await API.getXMLFromResponse(response);
+		let json = await API.getJSONFromResponse(response).data;
 
 		await new Promise(resolve => setTimeout(resolve, 1000));
 
-		const data = API.parseDataFromAtomEntry(xml);
-		const originalVersion = data.version;
+		const originalVersion = json.version;
 
 		const oldFilename = "./work/old";
 		const fileContents = getFileData.response.data;
@@ -576,7 +585,7 @@ describe('FileTestTests', function () {
 
 			const postResponse = await API.userPost(
 				config.userID,
-				`items/${getFileData.key}/file?key=${config.apiKey}`,
+				`items/${getFileData.key}/file`,
 				implodeParams(fileParams),
 				{
 					"Content-Type": "application/x-www-form-urlencoded",
@@ -601,7 +610,7 @@ describe('FileTestTests', function () {
 
 			let response = await API.userPatch(
 				config.userID,
-				`items/${getFileData.key}/file?key=${config.apiKey}&algorithm=${algo}&upload=${json.uploadKey}`,
+				`items/${getFileData.key}/file?algorithm=${algo}&upload=${json.uploadKey}`,
 				patch,
 				{
 					"If-Match": md5File(oldFilename),
@@ -613,20 +622,19 @@ describe('FileTestTests', function () {
 			fs.renameSync(newFilename, oldFilename);
 			response = await API.userGet(
 				config.userID,
-				`items/${getFileData.key}?key=${config.apiKey}&content=json`
+				`items/${getFileData.key}`
 			);
-			const xml = API.getXMLFromResponse(response);
-			const data = API.parseDataFromAtomEntry(xml);
-			json = JSON.parse(data.content);
+			json = API.getJSONFromResponse(response).data;
+
 			Helpers.assertEquals(fileParams.md5, json.md5);
 			Helpers.assertEquals(fileParams.mtime, json.mtime);
 			Helpers.assertEquals(fileParams.contentType, json.contentType);
 			Helpers.assertEquals(fileParams.charset, json.charset);
-			assert.notEqual(originalVersion, data.version);
+			assert.notEqual(originalVersion, json.version);
 
 			const fileResponse = await API.userGet(
 				config.userID,
-				`items/${getFileData.key}/file?key=${config.apiKey}`
+				`items/${getFileData.key}/file`
 			);
 			Helpers.assert302(fileResponse);
 			const location = fileResponse.headers.location[0];
@@ -643,7 +651,7 @@ describe('FileTestTests', function () {
 	});
 
 	const testAddFileExisting = async () => {
-		const addFileData = await testAddFileFull();
+		const addFileData = await testAddFileFormDataFull();
 		const key = addFileData.key;
 		const json = addFileData.json;
 		const md5 = json.md5;
@@ -652,7 +660,7 @@ describe('FileTestTests', function () {
 		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: json.md5,
 				filename: json.filename,
@@ -674,7 +682,7 @@ describe('FileTestTests', function () {
 		// Get upload authorization for existing file with different filename
 		response = await API.userPost(
 			config.userID,
-			`items/${key}/file?key=${config.apiKey}`,
+			`items/${key}/file`,
 			implodeParams({
 				md5: json.md5,
 				filename: json.filename + "等", // Unicode 1.1 character, to test signature generation

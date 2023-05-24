@@ -178,7 +178,7 @@ describe('FullTextTests', function () {
 		assert.equal(contentVersion2, json[key2]);
 	});
 
-	//Requires s3 setup
+	//Requires ES
 	it('testSearchItemContent', async function() {
 		this.skip();
 	});

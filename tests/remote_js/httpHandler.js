@@ -8,6 +8,8 @@ class HTTP {
 		let options = {
 			method: method,
 			headers: headers,
+			follow: 0,
+			redirect: 'manual',
 			body: ["POST", "PUT", "PATCH", "DELETE"].includes(method) ? data : null
 		};
 
@@ -17,6 +19,11 @@ class HTTP {
 
 		if (config.verbose >= 1) {
 			console.log(`\n${method} ${url}\n`);
+		}
+
+		//Hardcoded for running tests against containers
+		if (url.includes("172.16.0.11")) {
+			url = url.replace('172.16.0.11', 'localhost');
 		}
 
 		let response = await fetch(url, options);
