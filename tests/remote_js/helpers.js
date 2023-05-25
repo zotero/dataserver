@@ -29,13 +29,14 @@ class Helpers {
 		let ns = {
 			atom: 'http://www.w3.org/2005/Atom',
 			zapi: 'http://zotero.org/ns/api',
-			zxfer: 'http://zotero.org/ns/transfer'
+			zxfer: 'http://zotero.org/ns/transfer',
+			html: 'http://www.w3.org/1999/xhtml'
 		};
 		return ns[prefix] || null;
 	};
 
-	static xpathEval = (document, xpath, returnHtml = false, multiple = false) => {
-		const xpathData = document.evaluate(xpath, document, this.namespaceResolver, 5, null);
+	static xpathEval = (document, xpath, returnHtml = false, multiple = false, element = null) => {
+		const xpathData = document.evaluate(xpath, (element || document), this.namespaceResolver, 5, null);
 		if (!multiple && xpathData.snapshotLength != 1) {
 			throw new Error("No single xpath value fetched");
 		}
@@ -56,6 +57,9 @@ class Helpers {
 	};
 
 	static assertRegExp(exp, val) {
+		if (typeof exp == "string") {
+			exp = new RegExp(exp);
+		}
 		if (!exp.test(val)) {
 			throw new Error(`${val} does not match regular expression`)
 		}
@@ -163,6 +167,10 @@ class Helpers {
 
 	static assert404 = (response) => {
 		this.assertStatusCode(response, 404);
+	};
+
+	static assert405 = (response) => {
+		this.assertStatusCode(response, 405);
 	};
 
 	static assert500 = (response) => {

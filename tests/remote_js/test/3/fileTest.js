@@ -3,7 +3,7 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp, APISetCredentials } = require("../shared.js");
+const { API3Setup, API3WrapUp } = require("../shared.js");
 const { S3Client, DeleteObjectsCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 const HTTP = require('../../httpHandler.js');
@@ -43,17 +43,9 @@ describe('FileTestTests', function () {
 	});
 
 	beforeEach(async () => {
-		await APISetCredentials();
+		API.useAPIKey(config.apiKey);
 	});
 
-	const md5 = (str) => {
-		return crypto.createHash('md5').update(str).digest('hex');
-	};
-
-	const md5File = (fileName) => {
-		const data = fs.readFileSync(fileName);
-		return crypto.createHash('md5').update(data).digest('hex');
-	};
 
 	const testNewEmptyImportedFileAttachmentItem = async () => {
 		return API.createAttachmentItem("imported_file", [], false, this, 'key');
@@ -72,7 +64,7 @@ describe('FileTestTests', function () {
 		assert.equal(filenameEncoded, location.substring(location.length - filenameEncoded.length));
 		const viewModeResponse = await HTTP.get(location);
 		Helpers.assert200(viewModeResponse);
-		assert.equal(addFileData.md5, md5(viewModeResponse.data));
+		assert.equal(addFileData.md5, Helpers.md5(viewModeResponse.data));
 		const userGetDownloadModeResponse = await API.userGet(
 			config.userID,
 			`items/${addFileData.key}/file`
@@ -81,7 +73,7 @@ describe('FileTestTests', function () {
 		const downloadModeLocation = userGetDownloadModeResponse.headers.location;
 		const s3Response = await HTTP.get(downloadModeLocation);
 		Helpers.assert200(s3Response);
-		assert.equal(addFileData.md5, md5(s3Response.data));
+		assert.equal(addFileData.md5, Helpers.md5(s3Response.data));
 		return {
 			key: addFileData.key,
 			response: s3Response
@@ -92,9 +84,9 @@ describe('FileTestTests', function () {
 		let key = await API.createAttachmentItem("linked_file", [], false, this, 'key');
 
 		let file = "./work/file";
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, fileContents);
-		let hash = md5File(file);
+		let hash = Helpers.md5File(file);
 		let filename = "test_" + fileContents;
 		let mtime = fs.statSync(file).mtimeMs;
 		let size = fs.statSync(file).size;
@@ -105,7 +97,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: filename,
 				filesize: size,
@@ -129,9 +121,9 @@ describe('FileTestTests', function () {
 
 		let originalVersion = json.version;
 		let file = "./work/file";
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		await fs.promises.writeFile(file, fileContents);
-		let hash = md5File(file);
+		let hash = Helpers.md5File(file);
 		let filename = "test_" + fileContents;
 		let mtime = parseInt((await fs.promises.stat(file)).mtimeMs);
 		let size = parseInt((await fs.promises.stat(file)).size);
@@ -141,7 +133,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: filename,
 				filesize: size,
@@ -161,7 +153,7 @@ describe('FileTestTests', function () {
 		assert.ok(json);
 		toDelete.push(hash);
 
-		let boundary = "---------------------------" + md5(Helpers.uniqueID());
+		let boundary = "---------------------------" + Helpers.md5(Helpers.uniqueID());
 		let prefix = "";
 		for (let key in json.params) {
 			prefix += "--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + key + "\"\r\n\r\n" + json.params[key] + "\r\n";
@@ -202,16 +194,12 @@ describe('FileTestTests', function () {
 		assert.notEqual(originalVersion, json.version);
 	});
 
-	const getRandomUnicodeString = function () {
-		const rand = crypto.randomInt(10, 100);
-		return "Âéìøü 这是一个测试。 " + Helpers.uniqueID(rand);
-	};
 
 	const generateZip = async (file, fileContents, archiveName) => {
 		const zip = new JSZIP();
 
 		zip.file(file, fileContents);
-		zip.file("file.css", getRandomUnicodeString());
+		zip.file("file.css", Helpers.getRandomUnicodeString());
 
 		const content = await zip.generateAsync({
 			type: "nodebuffer",
@@ -223,15 +211,15 @@ describe('FileTestTests', function () {
 		// Because when the file is sent, the buffer is stringified, we have to hash the stringified
 		// fileContents and get the size of stringified buffer here, otherwise they wont match.
 		return {
-			hash: md5(content.toString()),
+			hash: Helpers.md5(content.toString()),
 			zipSize: Buffer.from(content.toString()).byteLength,
 			fileContent: fs.readFileSync(archiveName)
 		};
 	};
 
 	it('testExistingFileWithOldStyleFilename', async function () {
-		let fileContents = getRandomUnicodeString();
-		let hash = md5(fileContents);
+		let fileContents = Helpers.getRandomUnicodeString();
+		let hash = Helpers.md5(fileContents);
 		let filename = 'test.txt';
 		let size = fileContents.length;
 
@@ -245,7 +233,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename,
 				filesize: size,
@@ -301,7 +289,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename,
 				filesize: size,
@@ -344,7 +332,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: "test2.txt",
 				filesize: size,
@@ -383,9 +371,9 @@ describe('FileTestTests', function () {
 		let attachmentKey = json.key;
 
 		let file = "./work/file";
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, fileContents);
-		let hash = md5File(file);
+		let hash = Helpers.md5File(file);
 		let filename = "test_" + fileContents;
 		let mtime = fs.statSync(file).mtime * 1000;
 		let size = fs.statSync(file).size;
@@ -395,7 +383,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: filename,
 				filesize: size,
@@ -487,8 +475,8 @@ describe('FileTestTests', function () {
 
 	it('testAddFileAuthorizationErrors', async function () {
 		const parentKey = await testNewEmptyImportedFileAttachmentItem();
-		const fileContents = getRandomUnicodeString();
-		const hash = md5(fileContents);
+		const fileContents = Helpers.getRandomUnicodeString();
+		const hash = Helpers.md5(fileContents);
 		const mtime = Date.now();
 		const size = fileContents.length;
 		const filename = `test_${fileContents}`;
@@ -509,7 +497,7 @@ describe('FileTestTests', function () {
 			const response = await API.userPost(
 				config.userID,
 				`items/${parentKey}/file`,
-				implodeParams(fileParams, [exclude]),
+				Helpers.implodeParams(fileParams, [exclude]),
 				{
 					"Content-Type": "application/x-www-form-urlencoded",
 					"If-None-Match": "*"
@@ -522,7 +510,7 @@ describe('FileTestTests', function () {
 		const _ = await API.userPost(
 			config.userID,
 			`items/${parentKey}/file`,
-			implodeParams(fileParams2),
+			Helpers.implodeParams(fileParams2),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
 				"If-None-Match": "*"
@@ -535,10 +523,10 @@ describe('FileTestTests', function () {
 		const response3 = await API.userPost(
 			config.userID,
 			`items/${parentKey}/file`,
-			implodeParams(fileParams),
+			Helpers.implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"If-Match": md5("invalidETag")
+				"If-Match": Helpers.md5("invalidETag")
 			});
 		Helpers.assert412(response3);
 
@@ -546,7 +534,7 @@ describe('FileTestTests', function () {
 		const response4 = await API.userPost(
 			config.userID,
 			`items/${parentKey}/file`,
-			implodeParams(fileParams),
+			Helpers.implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded"
 			});
@@ -556,7 +544,7 @@ describe('FileTestTests', function () {
 		const response5 = await API.userPost(
 			config.userID,
 			`items/${parentKey}/file}`,
-			implodeParams(fileParams),
+			Helpers.implodeParams(fileParams),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
 				"If-None-Match": "invalidETag"
@@ -564,15 +552,6 @@ describe('FileTestTests', function () {
 		Helpers.assert400(response5);
 	});
 
-	const implodeParams = (params, exclude = []) => {
-		let parts = [];
-		for (const [key, value] of Object.entries(params)) {
-			if (!exclude.includes(key)) {
-				parts.push(key + "=" + encodeURIComponent(value));
-			}
-		}
-		return parts.join("&");
-	};
 
 	it('testAddFilePartial', async function () {
 		const getFileData = await testGetFile();
@@ -600,8 +579,8 @@ describe('FileTestTests', function () {
 		};
 
 		for (let [algo, cmd] of Object.entries(algorithms)) {
-			fs.writeFileSync(newFilename, getRandomUnicodeString() + Helpers.uniqueID());
-			const newHash = md5File(newFilename);
+			fs.writeFileSync(newFilename, Helpers.getRandomUnicodeString() + Helpers.uniqueID());
+			const newHash = Helpers.md5File(newFilename);
 			const fileParams = {
 				md5: newHash,
 				filename: `test_${fileContents}`,
@@ -614,10 +593,10 @@ describe('FileTestTests', function () {
 			const postResponse = await API.userPost(
 				config.userID,
 				`items/${getFileData.key}/file`,
-				implodeParams(fileParams),
+				Helpers.implodeParams(fileParams),
 				{
 					"Content-Type": "application/x-www-form-urlencoded",
-					"If-Match": md5File(oldFilename),
+					"If-Match": Helpers.md5File(oldFilename),
 				}
 			);
 			Helpers.assert200(postResponse);
@@ -641,7 +620,7 @@ describe('FileTestTests', function () {
 				`items/${getFileData.key}/file?algorithm=${algo}&upload=${json.uploadKey}`,
 				patch,
 				{
-					"If-Match": md5File(oldFilename),
+					"If-Match": Helpers.md5File(oldFilename),
 				}
 			);
 			Helpers.assert204(response);
@@ -669,7 +648,7 @@ describe('FileTestTests', function () {
 
 			const getFileResponse = await HTTP.get(location);
 			Helpers.assert200(getFileResponse);
-			Helpers.assertEquals(fileParams.md5, md5(getFileResponse.data));
+			Helpers.assertEquals(fileParams.md5, Helpers.md5(getFileResponse.data));
 			Helpers.assertEquals(
 				`${fileParams.contentType}${fileParams.contentType && fileParams.charset ? `; charset=${fileParams.charset}` : ""
 				}`,
@@ -689,7 +668,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: json.md5,
 				filename: json.filename,
 				filesize: size,
@@ -711,7 +690,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: json.md5,
 				filename: json.filename + "等", // Unicode 1.1 character, to test signature generation
 				filesize: size,
@@ -792,14 +771,14 @@ describe('FileTestTests', function () {
 		Helpers.assert404(response3);
 
 
-		const { hash, zipSize, fileContent } = await generateZip(fileFilename, getRandomUnicodeString(), `work/${key}.zip`);
+		const { hash, zipSize, fileContent } = await generateZip(fileFilename, Helpers.getRandomUnicodeString(), `work/${key}.zip`);
 
 		const filename = `${key}.zip`;
 
 		const response4 = await API.userPost(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: filename,
 				filesize: zipSize,
@@ -869,7 +848,7 @@ describe('FileTestTests', function () {
 		const response9 = await API.userPost(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename,
 				filesize: zipSize,
@@ -892,9 +871,9 @@ describe('FileTestTests', function () {
 
 	it('test_should_not_allow_anonymous_access_to_file_in_public_closed_group_with_library_reading_for_all', async function () {
 		let file = "work/file";
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, fileContents);
-		let hash = md5File(file);
+		let hash = Helpers.md5File(file);
 		let filename = `test_${fileContents}`;
 		let mtime = parseInt(fs.statSync(file).mtimeMs);
 		let size = fs.statSync(file).size;
@@ -924,7 +903,7 @@ describe('FileTestTests', function () {
 		let response = await API.groupPost(
 			groupID,
 			`items/${attachmentKey}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime,
 				filename,
@@ -995,14 +974,14 @@ describe('FileTestTests', function () {
 
 		let filename = "test.html";
 		let mtime = Date.now();
-		let size = fs.statSync("data/test.html.zip").size;
+		//let size = fs.statSync("data/test.html.zip").size;
 		let md5 = "af625b88d74e98e33b78f6cc0ad93ed0";
-		let zipMD5 = "f56e3080d7abf39019a9445d7aab6b24";
+		//let zipMD5 = "f56e3080d7abf39019a9445d7aab6b24";
 
 		let fileContents = fs.readFileSync("data/test.html.zip");
-		//let zipMD5 = md5File("data/test.html.zip");
+		let zipMD5 = Helpers.md5File("data/test.html.zip");
 		let zipFilename = attachmentKey + ".zip";
-		//let size = Buffer.from(fileContents.toString()).byteLength;
+		let size = Buffer.from(fileContents.toString()).byteLength;
 
 		// Create attachment item
 		let response = await API.userPost(
@@ -1035,7 +1014,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			"items/" + attachmentKey + "/file",
-			implodeParams({
+			Helpers.implodeParams({
 				md5: md5,
 				mtime: mtime,
 				filename: filename,
@@ -1095,11 +1074,11 @@ describe('FileTestTests', function () {
 		await API.userClear(config.userID);
 
 		const file = 'work/file';
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		const contentType = 'text/plain';
 		const charset = 'utf-8';
 		fs.writeFileSync(file, fileContents);
-		const hash = md5File(file);
+		const hash = Helpers.md5File(file);
 		const filename = `test_${fileContents}`;
 		const mtime = fs.statSync(file).mtimeMs;
 		let size = 0;
@@ -1115,7 +1094,7 @@ describe('FileTestTests', function () {
 		const response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime,
 				filename,
@@ -1146,13 +1125,13 @@ describe('FileTestTests', function () {
 
 	it('test_updating_attachment_hash_should_clear_associated_storage_file', async function () {
 		let file = "work/file";
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		let contentType = "text/html";
 		let charset = "utf-8";
 
 		fs.writeFileSync(file, fileContents);
 
-		let hash = md5File(file);
+		let hash = Helpers.md5File(file);
 		let filename = "test_" + fileContents;
 		let mtime = parseInt(fs.statSync(file).mtime * 1000);
 		let size = parseInt(fs.statSync(file).size);
@@ -1167,7 +1146,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1207,7 +1186,7 @@ describe('FileTestTests', function () {
 
 		filename = "test.pdf";
 		mtime = Date.now();
-		hash = md5(Helpers.uniqueID());
+		hash = Helpers.md5(Helpers.uniqueID());
 
 		response = await API.userPatch(
 			config.userID,
@@ -1237,10 +1216,10 @@ describe('FileTestTests', function () {
 		const noteKey = await API.createNoteItem("", null, this, 'key');
 
 		const file = "work/file";
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		const contentType = "image/png";
 		fs.writeFileSync(file, fileContents);
-		const hash = md5(fileContents);
+		const hash = Helpers.md5(fileContents);
 		const filename = "image.png";
 		const mtime = fs.statSync(file).mtime * 1000;
 		const size = fs.statSync(file).size;
@@ -1257,7 +1236,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1319,12 +1298,12 @@ describe('FileTestTests', function () {
 	it('testAddFileClientV5Zip', async function () {
 		await API.userClear(config.userID);
 
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		const contentType = "text/html";
 		const charset = "utf-8";
 		const filename = "file.html";
 		const mtime = Date.now() / 1000 | 0;
-		const hash = md5(fileContents);
+		const hash = Helpers.md5(fileContents);
 
 		// Get last storage sync
 		let response = await API.userGet(config.userID, "laststoragesync");
@@ -1339,7 +1318,7 @@ describe('FileTestTests', function () {
 		}, key, this, 'jsonData');
 		key = json.key;
 
-		const zipData = await generateZip(filename, getRandomUnicodeString(), `work/${key}.zip`);
+		const zipData = await generateZip(filename, Helpers.getRandomUnicodeString(), `work/${key}.zip`);
 
 		const zipFilename = `${key}.zip`;
 
@@ -1347,7 +1326,7 @@ describe('FileTestTests', function () {
 		//
 		// Get upload authorization
 		//
-		response = await API.userPost(config.userID, `items/${key}/file`, implodeParams({
+		response = await API.userPost(config.userID, `items/${key}/file`, Helpers.implodeParams({
 			md5: hash,
 			mtime: mtime,
 			filename: filename,
@@ -1420,7 +1399,7 @@ describe('FileTestTests', function () {
 		// File exists
 		response = await API.userPost(config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename,
@@ -1442,12 +1421,12 @@ describe('FileTestTests', function () {
 	});
 
 	it('test_updating_compressed_attachment_hash_should_clear_associated_storage_file', async function () {
-		let fileContents = getRandomUnicodeString();
+		let fileContents = Helpers.getRandomUnicodeString();
 		let contentType = "text/html";
 		let charset = "utf-8";
 		let filename = "file.html";
 		let mtime = Math.floor(Date.now() / 1000);
-		let hash = md5(fileContents);
+		let hash = Helpers.md5(fileContents);
 
 		let json = await API.createAttachmentItem("imported_file", {
 			contentType: contentType,
@@ -1466,7 +1445,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1511,9 +1490,9 @@ describe('FileTestTests', function () {
 		Helpers.assert204(response);
 		let newVersion = response.headers['last-modified-version'];
 
-		hash = md5(Helpers.uniqueID());
+		hash = Helpers.md5(Helpers.uniqueID());
 		mtime = Date.now();
-		zipHash = md5(Helpers.uniqueID());
+		zipHash = Helpers.md5(Helpers.uniqueID());
 		zipSize += 1;
 		response = await API.userPatch(
 			config.userID,
@@ -1543,11 +1522,11 @@ describe('FileTestTests', function () {
 		await API.userClear(config.userID);
 
 		const file = "work/file";
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		const contentType = "text/html";
 		const charset = "utf-8";
 		fs.writeFileSync(file, fileContents);
-		const hash = md5File(file);
+		const hash = Helpers.md5File(file);
 		const filename = "test_" + fileContents;
 		const mtime = fs.statSync(file).mtime * 1000;
 		const size = fs.statSync(file).size;
@@ -1562,7 +1541,7 @@ describe('FileTestTests', function () {
 		const response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1615,9 +1594,9 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(charset, metaDataJson.data.charset);
 		// update file
 		const newFileContents
-			= getRandomUnicodeString() + getRandomUnicodeString();
+			= Helpers.getRandomUnicodeString() + Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, newFileContents);
-		const newHash = md5File(file);
+		const newHash = Helpers.md5File(file);
 		const newFilename = "test_" + newFileContents;
 		const newMtime = fs.statSync(file).mtime * 1000;
 		const newSize = fs.statSync(file).size;
@@ -1627,7 +1606,7 @@ describe('FileTestTests', function () {
 			= await API.userPost(
 				config.userID,
 				`items/${key}/file`,
-				implodeParams({
+				Helpers.implodeParams({
 					md5: newHash,
 					mtime: newMtime,
 					filename: newFilename,
@@ -1682,7 +1661,7 @@ describe('FileTestTests', function () {
 
 	it('testClientV5ShouldReturn404GettingAuthorizationForMissingFile', async function () {
 		let params = {
-			md5: md5('qzpqBjLddCc6UhfX'),
+			md5: Helpers.md5('qzpqBjLddCc6UhfX'),
 			mtime: 1477002989206,
 			filename: 'test.pdf',
 			filesize: 12345,
@@ -1694,7 +1673,7 @@ describe('FileTestTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			'items/UP24VFQR/file',
-			implodeParams(params),
+			Helpers.implodeParams(params),
 			headers
 		);
 		Helpers.assert404(response);
@@ -1714,7 +1693,7 @@ describe('FileTestTests', function () {
 		await API.userClear(config.userID);
 
 		const file = "work/file";
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		const contentType = "text/html";
 		const charset = "utf-8";
 		fs.writeFileSync(file, fileContents);
@@ -1752,7 +1731,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1768,7 +1747,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime,
 				filename: filename,
@@ -1878,7 +1857,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename,
@@ -1896,7 +1875,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename,
@@ -1904,7 +1883,7 @@ describe('FileTestTests', function () {
 			}),
 			{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"If-Match": md5("invalid")
+				"If-Match": Helpers.md5("invalid")
 			}
 		);
 		Helpers.assert412(response, "ETag does not match current version of file");
@@ -1914,7 +1893,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename,
@@ -1931,7 +1910,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename,
@@ -1952,7 +1931,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				mtime: mtime + 1000,
 				filename: filename + '等',
@@ -2014,7 +1993,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			"items/" + attachmentKey + "/file",
-			implodeParams({
+			Helpers.implodeParams({
 				md5: md5,
 				mtime: mtime,
 				filename: filename,
@@ -2116,7 +2095,7 @@ describe('FileTestTests', function () {
 		Helpers.assert404(response);
 
 		const file = 'work/file';
-		const fileContents = getRandomUnicodeString();
+		const fileContents = Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, fileContents);
 		const hash = crypto.createHash('md5').update(fileContents).digest('hex');
 		const filename = `test_${fileContents}`;
@@ -2127,7 +2106,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${json.key}/file?auth=1&iskey=1&version=1`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename,
 				filesize: size,
@@ -2228,7 +2207,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${json.key}/file?auth=1&iskey=1&version=1`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename,
 				filesize: size,
@@ -2247,7 +2226,7 @@ describe('FileTestTests', function () {
 		response = await API.userPost(
 			config.userID,
 			`items/${json.key}/file?auth=1&iskey=1&version=1`,
-			implodeParams({
+			Helpers.implodeParams({
 				md5: hash,
 				filename: `${filename}等`, // Unicode 1.1 character, to test signature generation
 				filesize: size,

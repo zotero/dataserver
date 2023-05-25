@@ -3,6 +3,7 @@ const { JSDOM } = require("jsdom");
 const API2 = require("./api2.js");
 const Helpers = require("./helpers");
 const fs = require("fs");
+const wgxpath = require('wgxpath');
 
 class API3 extends API2 {
 	static schemaVersion;
@@ -186,26 +187,25 @@ class API3 extends API2 {
 
 	static async getContentFromAtomResponse(response, type = null) {
 		let xml = this.getXMLFromResponse(response);
-		let content = Helpers.xpathEval(xml, '//atom:entry/atom:content');
+		let content = Helpers.xpathEval(xml, '//atom:entry/atom:content', true);
 		if (!content) {
-			console.log(xml.asXML());
+			console.log(content.documentElement.outerHTML);
 			throw new Error("Atom response does not contain <content>");
 		}
-
-		let subcontent = Helpers.xpathEval(content, '//zapi:subcontent');
+		let subcontent = Helpers.xpathEval(xml, '//atom:entry/atom:content/zapi:subcontent', true, true);
 		if (subcontent) {
 			if (!type) {
 				throw new Error('$type not provided for multi-content response');
 			}
-			let html;
+			let component;
 			switch (type) {
 				case 'json':
-					return JSON.parse(subcontent[0].xpath('//zapi:subcontent[@zapi:type="json"]')[0]);
+					component = subcontent.filter(node => node.getAttribute('zapi:type') == 'json')[0];
+					return JSON.parse(component.innerHTML);
 
 				case 'html':
-					html = Helpers.xpathEval(subcontent[0], '//zapi:subcontent[@zapi:type="html"]');
-					html.registerXPathNamespace('html', 'http://www.w3.org/1999/xhtml');
-					return html;
+					component = subcontent.filter(node => node.getAttribute('zapi:type') == 'html')[0];
+					return component;
 
 				default:
 					throw new Error("Unknown data type '$type'");
@@ -281,9 +281,9 @@ class API3 extends API2 {
 	};
 
 	static async parseLinkHeader(response) {
-		let header = response.getHeader('Link');
+		let header = response.headers.link;
 		let links = {};
-		header.split(',').forEach(function (val) {
+		header.forEach(function (val) {
 			let matches = val.match(/<([^>]+)>; rel="([^"]+)"/);
 			links[matches[2]] = matches[1];
 		});
