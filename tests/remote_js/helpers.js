@@ -145,6 +145,10 @@ class Helpers {
 		this.assertStatusCode(response, 400);
 	};
 
+	static assert401 = (response) => {
+		this.assertStatusCode(response, 401);
+	};
+
 	static assert403 = (response) => {
 		this.assertStatusCode(response, 403);
 	};
@@ -159,6 +163,10 @@ class Helpers {
 
 	static assert404 = (response) => {
 		this.assertStatusCode(response, 404);
+	};
+
+	static assert500 = (response) => {
+		this.assertStatusCode(response, 500);
 	};
 
 	static assert400ForObject = (response, { index = 0, message = null } = {}) => {

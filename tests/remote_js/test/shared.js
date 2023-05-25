@@ -4,6 +4,13 @@ const API3 = require('../api3.js');
 
 module.exports = {
 
+	APISetCredentials: async () => {
+		const credentials = await API.login();
+		config.apiKey = credentials.user1.apiKey;
+		config.user2APIKey = credentials.user2.apiKey;
+		await API3.useAPIKey(config.apiKey);
+	},
+
 	API1Setup: async () => {
 		const credentials = await API.login();
 		config.apiKey = credentials.user1.apiKey;

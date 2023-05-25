@@ -406,7 +406,7 @@ class API3 extends API2 {
 
 	static groupCreateAttachmentItem = async (groupID, linkMode, data = [], parentKey = false, context = false, returnFormat = 'responseJSON') => {
 		let response = await this.get(`items/new?itemType=attachment&linkMode=${linkMode}`);
-		let json = await response.json();
+		let json = this.getJSONFromResponse(response);
 		for (let key in data) {
 			json[key] = data[key];
 		}
