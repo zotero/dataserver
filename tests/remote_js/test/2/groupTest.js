@@ -3,9 +3,8 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api2.js');
 const Helpers = require('../../helpers.js');
-const { API2Setup, API2WrapUp } = require("../shared.js");
+const { API2Setup, API2WrapUp, resetGroups } = require("../shared.js");
 const { JSDOM } = require("jsdom");
-const { resetGroups } = require("../../groupsSetup.js");
 
 describe('GroupTests', function () {
 	this.timeout(config.timeout);

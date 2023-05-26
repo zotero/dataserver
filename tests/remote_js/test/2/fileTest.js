@@ -115,7 +115,6 @@ describe('FileTestTests', function () {
 
 	// Skipped as there may or may not be an error
 	it('testAddFileFullParams', async function () {
-		this.skip();
 		let xml = await API.createAttachmentItem("imported_file", [], false, this);
 
 		let data = await API.parseDataFromAtomEntry(xml);

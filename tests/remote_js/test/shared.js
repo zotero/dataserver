@@ -1,7 +1,7 @@
 const config = require("../config.js");
 const API = require('../api2.js');
 const API3 = require('../api3.js');
-
+const { resetGroups } = require("../groupsSetup.js");
 
 // To fix socket hang up errors
 const retryIfNeeded = async (action) => {
@@ -26,6 +26,13 @@ const retryIfNeeded = async (action) => {
 };
 
 module.exports = {
+
+	resetGroups: async () => {
+		await retryIfNeeded(async () => {
+			await resetGroups();
+		});
+	},
+	
 
 	API1Setup: async () => {
 		const credentials = await API.login();

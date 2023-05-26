@@ -3,8 +3,7 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api2.js');
 const Helpers = require('../../helpers.js');
-const { API2Setup, API2WrapUp } = require("../shared.js");
-const { resetGroups } = require("../../groupsSetup.js");
+const { API2Setup, API2WrapUp, resetGroups } = require("../shared.js");
 
 describe('PermissionsTests', function () {
 	this.timeout(config.timeout);

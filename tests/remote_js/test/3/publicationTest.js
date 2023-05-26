@@ -3,11 +3,10 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Setup, API3WrapUp, resetGroups } = require("../shared.js");
 const { S3Client, DeleteObjectsCommand } = require("@aws-sdk/client-s3");
 const HTTP = require('../../httpHandler.js');
 const fs = require('fs');
-const { resetGroups } = require("../../groupsSetup.js");
 const { JSDOM } = require("jsdom");
 
 

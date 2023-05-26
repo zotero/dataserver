@@ -236,10 +236,9 @@ class API3 extends API2 {
 	}
 
 	static async resetKey(key) {
-		let response;
-		response = await this.get(
+		let response = await this.get(
 			`keys/${key}`,
-			[],
+			{},
 			{
 				username: `${this.config.rootUsername}`,
 				password: `${this.config.rootPassword}`
@@ -249,7 +248,7 @@ class API3 extends API2 {
 			console.log(response.data);
 			throw new Error(`GET returned ${response.status}`);
 		}
-		let json = this.getJSONFromResponse(response, true);
+		let json = this.getJSONFromResponse(response);
 
 
 		const resetLibrary = (lib) => {
@@ -262,9 +261,9 @@ class API3 extends API2 {
 		}
 		delete json.access.groups;
 		response = await this.put(
-			`users/${this.config.userID}/keys/${this.apiKey}`,
+			`users/${this.config.userID}/keys/${this.config.apiKey}`,
 			JSON.stringify(json),
-			[],
+			{},
 			{
 				username: `${this.config.rootUsername}`,
 				password: `${this.config.rootPassword}`
@@ -424,13 +423,13 @@ class API3 extends API2 {
 		return this.handleCreateResponse('item', response, returnFormat, context, groupID);
 	};
 
-	static async getFirstSuccessKeyFromResponse(response) {
+	static getFirstSuccessKeyFromResponse(response) {
 		let json = this.getJSONFromResponse(response);
 		if (!json.success) {
 			console.log(response.body);
 			throw new Error("No success keys found in response");
 		}
-		return json.success.shift();
+		return json.success[0];
 	}
 
 	static async groupGet(groupID, suffix, headers = {}, auth = false) {
@@ -527,7 +526,7 @@ class API3 extends API2 {
 	static async setKeyGroupPermission(key, groupID, permission, _) {
 		let response = await this.get(
 			"keys/" + key,
-			[],
+			{},
 			{
 				username: this.config.rootUsername,
 				password: this.config.rootPassword
@@ -545,11 +544,12 @@ class API3 extends API2 {
 		if (!json.access.groups) {
 			json.access.groups = {};
 		}
+		json.access.groups[groupID] = json.access.groups[groupID] || {};
 		json.access.groups[groupID][permission] = true;
 		response = await this.put(
 			"keys/" + key,
 			JSON.stringify(json),
-			[],
+			{},
 			{
 				username: this.config.rootUsername,
 				password: this.config.rootPassword
@@ -630,23 +630,29 @@ class API3 extends API2 {
 
 			switch (permission) {
 				case 'library':
-					if (json.access.user && value == !json.access.user.library) {
+					if (json.access?.user && value == json.access?.user.library) {
 						break;
 					}
+					json.access = json.access || {};
+					json.access.user = json.access.user || {};
 					json.access.user.library = value;
 					break;
 
 				case 'write':
-					if (json.access.user && value == !json.access.user.write) {
+					if (json.access?.user && value == json.access?.user.write) {
 						break;
 					}
+					json.access = json.access || {};
+					json.access.user = json.access.user || {};
 					json.access.user.write = value;
 					break;
 
 				case 'notes':
-					if (json.access.user && value == !json.access.user.notes) {
+					if (json.access?.user && value == json.access?.user.notes) {
 						break;
 					}
+					json.access = json.access || {};
+					json.access.user = json.access.user || {};
 					json.access.user.notes = value;
 					break;
 			}

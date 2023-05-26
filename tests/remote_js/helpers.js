@@ -61,7 +61,7 @@ class Helpers {
 			exp = new RegExp(exp);
 		}
 		if (!exp.test(val)) {
-			throw new Error(`${val} does not match regular expression`)
+			throw new Error(`${val} does not match regular expression`);
 		}
 	}
 
@@ -141,12 +141,16 @@ class Helpers {
 		this.assertStatusCode(response, 204);
 	};
 
+	static assert300 = (response) => {
+		this.assertStatusCode(response, 300);
+	};
+
 	static assert302 = (response) => {
 		this.assertStatusCode(response, 302);
 	};
 
-	static assert400 = (response) => {
-		this.assertStatusCode(response, 400);
+	static assert400 = (response, message) => {
+		this.assertStatusCode(response, 400, message);
 	};
 
 	static assert401 = (response) => {
@@ -191,6 +195,10 @@ class Helpers {
 
 	static assert413ForObject = (response, { index = 0, message = null } = {}) => {
 		this.assertStatusForObject(response, 'failed', index, 413, message);
+	};
+
+	static assertUnchangedForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'unchanged', index, null, message);
 	};
 
 	// Methods to help during conversion
