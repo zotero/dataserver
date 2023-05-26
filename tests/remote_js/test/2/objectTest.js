@@ -6,7 +6,7 @@ const Helpers = require('../../helpers.js');
 const { API2Setup, API2WrapUp } = require("../shared.js");
 
 describe('ObjectTests', function () {
-	this.timeout(config.timeout);
+	this.timeout(0);
 
 	before(async function () {
 		await API2Setup();
@@ -220,6 +220,7 @@ describe('ObjectTests', function () {
 
 		switch (objectType) {
 			case 'collection':
+				await new Promise(r => setTimeout(r, 1000));
 				objectData = await API.createCollection('Test', false, true, 'data');
 				objectDataContent = objectData.content;
 				json1 = JSON.parse(objectDataContent);

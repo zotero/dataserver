@@ -28,7 +28,6 @@ describe('StorageAdminTests', function () {
 			});
 		Helpers.assertStatusCode(response, 200);
 		let xml = API.getXMLFromResponse(response);
-		console.log(xml.documentElement.innerHTML);
 		let xmlQuota = xml.getElementsByTagName("quota")[0].innerHTML;
 		assert.equal(xmlQuota, expectedQuota);
 		if (expiration != 0) {
