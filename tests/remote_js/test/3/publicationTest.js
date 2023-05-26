@@ -26,6 +26,7 @@ describe('PublicationTests', function () {
 
 	after(async function () {
 		await API3WrapUp();
+		fs.rmdirSync("./work", { recursive: true, force: true });
 		if (toDelete.length > 0) {
 			const commandInput = {
 				Bucket: config.s3Bucket,
