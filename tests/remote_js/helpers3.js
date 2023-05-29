@@ -18,6 +18,10 @@ class Helpers3 extends Helpers {
 		const contentType = response.headers['content-type'][0];
 		if (contentType == 'application/json') {
 			const json = JSON.parse(response.data);
+			if (Array.isArray(json)) {
+				assert.equal(json.length, expectedResults);
+				return;
+			}
 			assert.lengthOf(Object.keys(json), expectedResults);
 		}
 		else if (contentType.includes('text/plain')) {
@@ -96,7 +100,7 @@ class Helpers3 extends Helpers {
 	}
 
 	static assertNotificationCount(expected, response) {
-		let headerArr = response.headers[this.notificationHeader];
+		let headerArr = response.headers[this.notificationHeader] || [];
 		let header = headerArr.length > 0 ? headerArr[0] : "";
 		try {
 			if (expected === 0) {

@@ -189,12 +189,24 @@ class Helpers {
 		this.assertStatusForObject(response, 'success', index, message);
 	};
 	
+	static assert404ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 404, message);
+	};
+
 	static assert409ForObject = (response, { index = 0, message = null } = {}) => {
 		this.assertStatusForObject(response, 'failed', index, 409, message);
 	};
 
+	static assert412ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 412, message);
+	};
+
 	static assert413ForObject = (response, { index = 0, message = null } = {}) => {
 		this.assertStatusForObject(response, 'failed', index, 413, message);
+	};
+
+	static assert428ForObject = (response, { index = 0, message = null } = {}) => {
+		this.assertStatusForObject(response, 'failed', index, 428, message);
 	};
 
 	static assertUnchangedForObject = (response, { index = 0, message = null } = {}) => {

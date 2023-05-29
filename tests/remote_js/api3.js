@@ -475,12 +475,10 @@ class API3 extends API2 {
 	}
 
 	static async superPut(url, data, headers) {
-		let postData = {
+		return this.put(url, data, headers, {
 			username: this.config.rootUsername,
 			password: this.config.rootPassword
-		};
-		Object.assign(postData, data);
-		return this.put(url, postData, headers);
+		});
 	}
 
 	static async getSearchResponse(keys, context = null, format = false, groupID = false) {
@@ -784,7 +782,7 @@ class API3 extends API2 {
 
 			case "item":
 				// Convert to array
-				json = JSON.parse(JSON.stringify(await this.getItemTemplate("book")));
+				json = await this.getItemTemplate("book");
 				break;
 
 			case "search":
