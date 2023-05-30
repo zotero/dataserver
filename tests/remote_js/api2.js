@@ -381,11 +381,6 @@ class API2 {
 		return this.getXMLFromResponse(response);
 	}
 
-	static async getXMLFromFirstSuccessItem(response) {
-		const key = this.getFirstSuccessKeyFromResponse(response);
-		return this.getItemXML(key);
-	}
-
 	static async getCollectionXML(keys, context = null) {
 		return this.getObjectXML('collection', keys, context);
 	}

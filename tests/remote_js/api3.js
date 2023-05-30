@@ -1,11 +1,11 @@
 const HTTP = require("./httpHandler");
 const { JSDOM } = require("jsdom");
-const API2 = require("./api2.js");
-const Helpers = require("./helpers");
+const Helpers = require("./helpers3");
 const fs = require("fs");
 var config = require('config');
+const wgxpath = require('wgxpath');
 
-class API3 extends API2 {
+class API3 {
 	static schemaVersion;
 
 	static apiVersion = 3;
@@ -15,6 +15,41 @@ class API3 extends API2 {
 	static useAPIKey(key) {
 		this.apiKey = key;
 	}
+
+	static useAPIVersion(version) {
+		this.apiVersion = version;
+	}
+
+	static async login() {
+		const response = await HTTP.post(
+			`${config.apiURLPrefix}test/setup?u=${config.userID}&u2=${config.userID2}`,
+			" ",
+			{}, {
+				username: config.rootUsername,
+				password: config.rootPassword
+			});
+		if (!response.data) {
+			throw new Error("Could not fetch credentials!");
+		}
+		return JSON.parse(response.data);
+	}
+
+	static async getLibraryVersion() {
+		const response = await this.userGet(
+			config.userID,
+			`items?key=${config.apiKey}&format=keys&limit=1`
+		);
+		return response.headers["last-modified-version"][0];
+	}
+
+	static async getGroupLibraryVersion(groupID) {
+		const response = await this.groupGet(
+			groupID,
+			`items?key=${config.apiKey}&format=keys&limit=1`
+		);
+		return response.headers["last-modified-version"][0];
+	}
+
 
 	static async get(url, headers = {}, auth = false) {
 		url = config.apiURLPrefix + url;
@@ -37,6 +72,11 @@ class API3 extends API2 {
 	static async userGet(userID, suffix, headers = {}, auth = null) {
 		return this.get(`users/${userID}/${suffix}`, headers, auth);
 	}
+
+	static async userPost(userID, suffix, data, headers = {}, auth = null) {
+		return this.post(`users/${userID}/${suffix}`, data, headers, auth);
+	}
+
 
 	static async head(url, headers = {}, auth = false) {
 		url = config.apiURLPrefix + url;
@@ -279,6 +319,56 @@ class API3 extends API2 {
 		return this.getObject('item', keys, context, 'atom');
 	};
 
+	static async groupGetItemXML(groupID, keys, context = null) {
+		if (typeof keys === 'string' || typeof keys === 'number') {
+			keys = [keys];
+		}
+
+		const response = await this.groupGet(
+			groupID,
+			`items?key=${config.apiKey}&itemKey=${keys.join(',')}&order=itemKeyList&content=json`
+		);
+		if (context && response.status != 200) {
+			throw new Error("Group set request failed.");
+		}
+		return this.getXMLFromResponse(response);
+	}
+
+	static async userClear(userID) {
+		const response = await this.userPost(
+			userID,
+			"clear",
+			"",
+			{},
+			{
+				username: config.rootUsername,
+				password: config.rootPassword
+			}
+		);
+		if (response.status !== 204) {
+			console.log(response.data);
+			throw new Error(`Error clearing user ${userID}`);
+		}
+	}
+
+	static async groupClear(groupID) {
+		const response = await this.groupPost(
+			groupID,
+			"clear",
+			"",
+			{},
+			{
+				username: config.rootUsername,
+				password: config.rootPassword
+			}
+		);
+
+		if (response.status !== 204) {
+			console.log(response.data);
+			throw new Error(`Error clearing group ${groupID}`);
+		}
+	}
+
 	static async parseLinkHeader(response) {
 		let header = response.headers.link;
 		let links = {};
@@ -330,11 +420,6 @@ class API3 extends API2 {
 			{ "Content-Type": "application/json" }
 		);
 	}
-
-	static getXMLFromFirstSuccessItem = async (response) => {
-		let key = await this.getFirstSuccessKeyFromResponse(response);
-		await this.getItemXML(key);
-	};
 
 
 	static async getCollection(keys, context = null, format = false, groupID = false) {
@@ -423,21 +508,16 @@ class API3 extends API2 {
 		return this.handleCreateResponse('item', response, returnFormat, context, groupID);
 	};
 
-	static getFirstSuccessKeyFromResponse(response) {
-		let json = this.getJSONFromResponse(response);
-		if (!json.success) {
-			console.log(response.body);
-			throw new Error("No success keys found in response");
-		}
-		return json.success[0];
-	}
-
 	static async groupGet(groupID, suffix, headers = {}, auth = false) {
 		return this.get(`groups/${groupID}/${suffix}`, headers, auth);
 	}
 
 	static async getCollectionXML(keys, context = null) {
 		return this.getObject('collection', keys, context, 'atom');
+	}
+
+	static async postItem(json) {
+		return this.postItems([json]);
 	}
 
 	static async postItems(json) {
@@ -932,6 +1012,68 @@ class API3 extends API2 {
 				console.log(response.body);
 				throw new Error(`Unknown content type '${contentType}'`);
 		}
+	}
+
+	//////Response parsing
+	static getXMLFromResponse(response) {
+		var result;
+		try {
+			const jsdom = new JSDOM(response.data, { contentType: "application/xml", url: "http://localhost/" });
+			wgxpath.install(jsdom.window, true);
+			result = jsdom.window._document;
+		}
+		catch (e) {
+			console.log(response.data);
+			throw e;
+		}
+		return result;
+	}
+
+	static getJSONFromResponse(response) {
+		const json = JSON.parse(response.data);
+		if (json === null) {
+			console.log(response.data);
+			throw new Error("JSON response could not be parsed");
+		}
+		return json;
+	}
+
+	static getFirstSuccessKeyFromResponse(response) {
+		const json = this.getJSONFromResponse(response);
+		if (!json.success || json.success.length === 0) {
+			console.log(response.data);
+			throw new Error("No success keys found in response");
+		}
+		return json.success[0];
+	}
+
+	static parseDataFromAtomEntry(entryXML) {
+		const key = entryXML.getElementsByTagName('zapi:key')[0];
+		const version = entryXML.getElementsByTagName('zapi:version')[0];
+		const content = entryXML.getElementsByTagName('content')[0];
+		if (content === null) {
+			console.log(entryXML.outerHTML);
+			throw new Error("Atom response does not contain <content>");
+		}
+
+		return {
+			key: key ? key.textContent : null,
+			version: version ? version.textContent : null,
+			content: content ? content.textContent : null
+		};
+	}
+
+	static getContentFromResponse(response) {
+		const xml = this.getXMLFromResponse(response);
+		const data = this.parseDataFromAtomEntry(xml);
+		return data.content;
+	}
+
+	static getPluralObjectType(objectType) {
+		if (objectType === 'search') {
+			return objectType + "es";
+		}
+		return objectType + "s";
 	}
 }
 

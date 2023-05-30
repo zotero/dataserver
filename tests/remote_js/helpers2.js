@@ -3,13 +3,7 @@ const chai = require('chai');
 const assert = chai.assert;
 const crypto = require('crypto');
 
-class Helpers {
-	static isV3 = false;
-
-	static useV3 = () => {
-		this.isV3 = true;
-	};
-
+class Helpers2 {
 	static uniqueToken = () => {
 		const id = crypto.randomBytes(16).toString("hex");
 		const hash = crypto.createHash('md5').update(id).digest('hex');
@@ -223,4 +217,4 @@ class Helpers {
 	};
 }
 
-module.exports = Helpers;
+module.exports = Helpers2;

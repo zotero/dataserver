@@ -12,7 +12,6 @@ describe('AtomTests', function () {
 	
 	before(async function () {
 		await API3Setup();
-		Helpers.useV3();
 		let key = await API.createItem("book", {
 			title: "Title",
 			creators: [{
@@ -81,7 +80,7 @@ describe('AtomTests', function () {
 			`items?itemKey=${keyStr}&content=bib,json`,
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		Helpers.assertTotalResults(response, keys.length);
 	
 		const entries = Helpers.xpathEval(xml, '//atom:entry', true, true);

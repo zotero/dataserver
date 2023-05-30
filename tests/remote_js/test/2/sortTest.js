@@ -2,7 +2,7 @@ const chai = require('chai');
 const assert = chai.assert;
 var config = require('config');
 const API = require('../../api2.js');
-const Helpers = require('../../helpers.js');
+const Helpers = require('../../helpers2.js');
 const { API2Setup, API2WrapUp } = require("../shared.js");
 
 describe('SortTests', function () {

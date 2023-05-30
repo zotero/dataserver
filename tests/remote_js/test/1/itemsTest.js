@@ -1,7 +1,7 @@
 const { assert } = require('chai');
 const API = require('../../api2.js');
 var config = require('config');
-const Helpers = require('../../helpers.js');
+const Helpers = require('../../helpers2.js');
 const { API1Setup, API1WrapUp } = require("../shared.js");
 
 describe('ItemTests', function () {

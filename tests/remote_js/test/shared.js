@@ -34,7 +34,7 @@ module.exports = {
 	},
 
 	API3Setup: async () => {
-		const credentials = await API.login();
+		const credentials = await API3.login();
 		config.apiKey = credentials.user1.apiKey;
 		config.user2APIKey = credentials.user2.apiKey;
 		await API3.useAPIVersion(3);
@@ -42,10 +42,10 @@ module.exports = {
 		await API3.resetSchemaVersion();
 		await API3.setKeyUserPermission(config.apiKey, 'notes', true);
 		await API3.setKeyUserPermission(config.apiKey, 'write', true);
-		await API.userClear(config.userID);
+		await API3.userClear(config.userID);
 	},
 	API3WrapUp: async () => {
 		await API3.useAPIKey(config.apiKey);
-		await API.userClear(config.userID);
+		await API3.userClear(config.userID);
 	}
 };
