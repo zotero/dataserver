@@ -1,4 +1,4 @@
-const config = require("../config.js");
+var config = require('config');
 const API = require('../api2.js');
 const API3 = require('../api3.js');
 const { resetGroups } = require("../groupsSetup.js");

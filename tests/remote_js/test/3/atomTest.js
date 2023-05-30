@@ -1,6 +1,6 @@
 const chai = require('chai');
 const assert = chai.assert;
-const config = require("../../config.js");
+var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
 const { JSDOM } = require('jsdom');

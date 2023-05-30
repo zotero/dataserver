@@ -2,11 +2,10 @@
 const HTTP = require("./httpHandler");
 const { JSDOM } = require("jsdom");
 const wgxpath = require('wgxpath');
+var config = require('config');
 
 class API2 {
 	static apiVersion = null;
-
-	static config = require("./config");
 
 	static useAPIVersion(version) {
 		this.apiVersion = version;
@@ -14,11 +13,11 @@ class API2 {
 
 	static async login() {
 		const response = await HTTP.post(
-			`${this.config.apiURLPrefix}test/setup?u=${this.config.userID}&u2=${this.config.userID2}`,
+			`${config.apiURLPrefix}test/setup?u=${config.userID}&u2=${config.userID2}`,
 			" ",
 			{}, {
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			});
 		if (!response.data) {
 			throw new Error("Could not fetch credentials!");
@@ -41,8 +40,8 @@ class API2 {
 		}
 
 		let response = await this.userPost(
-			this.config.userID,
-			`items?key=${this.config.apiKey}`,
+			config.userID,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: [json]
 			}),
@@ -54,8 +53,8 @@ class API2 {
 
 	static async postItems(json) {
 		return this.userPost(
-			this.config.userID,
-			`items?key=${this.config.apiKey}`,
+			config.userID,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: json
 			}),
@@ -73,7 +72,7 @@ class API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: [json]
 			}),
@@ -121,8 +120,8 @@ class API2 {
 		}
 
 		response = await this.userPost(
-			this.config.userID,
-			`items?key=${this.config.apiKey}`,
+			config.userID,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: [json]
 			}),
@@ -181,7 +180,7 @@ class API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: [json]
 			}),
@@ -238,8 +237,8 @@ class API2 {
 		}
 
 		response = await this.userPost(
-			this.config.userID,
-			`items?key=${this.config.apiKey}`,
+			config.userID,
+			`items?key=${config.apiKey}`,
 			JSON.stringify({
 				items: [json]
 			}),
@@ -308,8 +307,8 @@ class API2 {
 		};
 
 		const response = await this.userPost(
-			this.config.userID,
-			`collections?key=${this.config.apiKey}`,
+			config.userID,
+			`collections?key=${config.apiKey}`,
 			JSON.stringify(json),
 			{ "Content-Type": "application/json" }
 		);
@@ -338,8 +337,8 @@ class API2 {
 		};
 
 		const response = await this.userPost(
-			this.config.userID,
-			`searches?key=${this.config.apiKey}`,
+			config.userID,
+			`searches?key=${config.apiKey}`,
 			JSON.stringify(json),
 			{ "Content-Type": "application/json" }
 		);
@@ -349,8 +348,8 @@ class API2 {
 
 	static async getLibraryVersion() {
 		const response = await this.userGet(
-			this.config.userID,
-			`items?key=${this.config.apiKey}&format=keys&limit=1`
+			config.userID,
+			`items?key=${config.apiKey}&format=keys&limit=1`
 		);
 		return response.headers["last-modified-version"][0];
 	}
@@ -358,7 +357,7 @@ class API2 {
 	static async getGroupLibraryVersion(groupID) {
 		const response = await this.groupGet(
 			groupID,
-			`items?key=${this.config.apiKey}&format=keys&limit=1`
+			`items?key=${config.apiKey}&format=keys&limit=1`
 		);
 		return response.headers["last-modified-version"][0];
 	}
@@ -374,7 +373,7 @@ class API2 {
 
 		const response = await this.groupGet(
 			groupID,
-			`items?key=${this.config.apiKey}&itemKey=${keys.join(',')}&order=itemKeyList&content=json`
+			`items?key=${config.apiKey}&itemKey=${keys.join(',')}&order=itemKeyList&content=json`
 		);
 		if (context && response.status != 200) {
 			throw new Error("Group set request failed.");
@@ -397,14 +396,14 @@ class API2 {
 
 	// Simple http requests with no dependencies
 	static async get(url, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
 
 		const response = await HTTP.get(url, headers, auth);
 
-		if (this.config.verbose >= 2) {
+		if (config.verbose >= 2) {
 			console.log("\n\n" + response.data + "\n");
 		}
 
@@ -413,8 +412,8 @@ class API2 {
 
 	static async superGet(url, headers = {}) {
 		return this.get(url, headers, {
-			username: this.config.username,
-			password: this.config.password
+			username: config.username,
+			password: config.password
 		});
 	}
 
@@ -427,7 +426,7 @@ class API2 {
 	}
 
 	static async post(url, data, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -444,7 +443,7 @@ class API2 {
 	}
 
 	static async put(url, data, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -461,7 +460,7 @@ class API2 {
 	}
 
 	static async patch(url, data, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -474,7 +473,7 @@ class API2 {
 	}
 
 	static async delete(url, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -486,7 +485,7 @@ class API2 {
 	}
 
 	static async head(url, headers = {}, auth = null) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -501,8 +500,8 @@ class API2 {
 			"",
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 		if (response.status !== 204) {
@@ -518,8 +517,8 @@ class API2 {
 			"",
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 
@@ -611,8 +610,8 @@ class API2 {
 		}
 
 		let response = await this.userGet(
-			this.config.userID,
-			`${objectTypePlural}?key=${this.config.apiKey}&${objectType}Key=${keys.join(',')}&order=${objectType}KeyList&content=json`
+			config.userID,
+			`${objectTypePlural}?key=${config.apiKey}&${objectType}Key=${keys.join(',')}&order=${objectType}KeyList&content=json`
 		);
 
 		// Checking the response status
@@ -686,8 +685,8 @@ class API2 {
 			`users/${userID}/keys/${key}`,
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 
@@ -716,12 +715,12 @@ class API2 {
 					if (current !== val) {
 						access.setAttribute('notes', val);
 						response = await this.put(
-							`users/${this.config.userID}/keys/${this.config.apiKey}`,
+							`users/${config.userID}/keys/${config.apiKey}`,
 							xml.documentElement.outerHTML,
 							{},
 							{
-								username: this.config.rootUsername,
-								password: this.config.rootPassword
+								username: config.rootUsername,
+								password: config.rootPassword
 							}
 						);
 						if (response.status !== 200) {
@@ -741,12 +740,12 @@ class API2 {
 					if (current !== val) {
 						access.setAttribute('write', val);
 						response = await this.put(
-							`users/${this.config.userID}/keys/${this.config.apiKey}`,
+							`users/${config.userID}/keys/${config.apiKey}`,
 							xml.documentElement.outerHTML,
 							{},
 							{
-								username: this.config.rootUsername,
-								password: this.config.rootPassword
+								username: config.rootUsername,
+								password: config.rootPassword
 							}
 						);
 						if (response.status !== 200) {

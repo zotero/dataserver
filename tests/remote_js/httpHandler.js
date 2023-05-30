@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const config = require('./config');
+var config = require('config');
 
 class HTTP {
 	static verbose = config.verbose;

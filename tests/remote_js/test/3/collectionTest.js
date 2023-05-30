@@ -1,6 +1,6 @@
 const chai = require('chai');
 const assert = chai.assert;
-const config = require("../../config.js");
+var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
 const { API3Setup, API3WrapUp } = require("../shared.js");
@@ -120,7 +120,7 @@ describe('CollectionTests', function () {
 		let childItemKey2 = await API.createAttachmentItem("linked_url", {}, itemKey2, this, 'key');
 
 		let response = await API.userGet(
-			API.config.userID,
+			config.userID,
 			`collections/${collectionKey}/items?format=keys`
 		);
 		Helpers.assert200(response);
@@ -132,7 +132,7 @@ describe('CollectionTests', function () {
 		assert.include(keys, childItemKey2);
 
 		response = await API.userGet(
-			API.config.userID,
+			config.userID,
 			`collections/${collectionKey}/items/top?format=keys`
 		);
 		Helpers.assert200(response);

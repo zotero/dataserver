@@ -1,5 +1,5 @@
 
-const config = require('./config');
+var config = require('config');
 const API3 = require('./api3.js');
 
 const resetGroups = async () => {

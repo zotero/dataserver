@@ -1,6 +1,6 @@
 const { assert } = require('chai');
 const API = require('../../api2.js');
-const config = require("../../config.js");
+var config = require('config');
 const Helpers = require('../../helpers.js');
 const { API1Setup, API1WrapUp } = require("../shared.js");
 

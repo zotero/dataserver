@@ -3,20 +3,21 @@ const { JSDOM } = require("jsdom");
 const API2 = require("./api2.js");
 const Helpers = require("./helpers");
 const fs = require("fs");
+var config = require('config');
 
 class API3 extends API2 {
 	static schemaVersion;
 
 	static apiVersion = 3;
 
-	static apiKey = this.config.apiKey;
+	static apiKey = config.apiKey;
 
 	static useAPIKey(key) {
 		this.apiKey = key;
 	}
 
 	static async get(url, headers = {}, auth = false) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -27,7 +28,7 @@ class API3 extends API2 {
 			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.get(url, headers, auth);
-		if (this.config.verbose >= 2) {
+		if (config.verbose >= 2) {
 			console.log("\n\n" + response.data + "\n");
 		}
 		return response;
@@ -38,7 +39,7 @@ class API3 extends API2 {
 	}
 
 	static async head(url, headers = {}, auth = false) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -49,7 +50,7 @@ class API3 extends API2 {
 			headers.Authorization = "Bearer " + this.apiKey;
 		}
 		let response = await HTTP.head(url, headers, auth);
-		if (this.config.verbose >= 2) {
+		if (config.verbose >= 2) {
 			console.log("\n\n" + response.data + "\n");
 		}
 		return response;
@@ -70,7 +71,7 @@ class API3 extends API2 {
 
 
 	static async delete(url, headers = {}, auth = false) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -85,7 +86,7 @@ class API3 extends API2 {
 	}
 
 	static async post(url, data, headers = {}, auth = false) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -102,23 +103,23 @@ class API3 extends API2 {
 
 	static async superGet(url, headers = {}) {
 		return this.get(url, headers, {
-			username: this.config.rootUsername,
-			password: this.config.rootPassword
+			username: config.rootUsername,
+			password: config.rootPassword
 		});
 	}
 
 
 	static async superPost(url, data, headers = {}) {
 		return this.post(url, data, headers, {
-			username: this.config.rootUsername,
-			password: this.config.rootPassword
+			username: config.rootUsername,
+			password: config.rootPassword
 		});
 	}
 
 	static async superDelete(url, headers = {}) {
 		return this.delete(url, headers, {
-			username: this.config.rootUsername,
-			password: this.config.rootPassword
+			username: config.rootUsername,
+			password: config.rootPassword
 		});
 	}
 
@@ -227,7 +228,7 @@ class API3 extends API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.config.apiKey}`,
+			`items?key=${config.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -239,8 +240,8 @@ class API3 extends API2 {
 			`keys/${key}`,
 			{},
 			{
-				username: `${this.config.rootUsername}`,
-				password: `${this.config.rootPassword}`
+				username: `${config.rootUsername}`,
+				password: `${config.rootPassword}`
 			}
 		);
 		if (response.status != 200) {
@@ -260,12 +261,12 @@ class API3 extends API2 {
 		}
 		delete json.access.groups;
 		response = await this.put(
-			`users/${this.config.userID}/keys/${this.config.apiKey}`,
+			`users/${config.userID}/keys/${config.apiKey}`,
 			JSON.stringify(json),
 			{},
 			{
-				username: `${this.config.rootUsername}`,
-				password: `${this.config.rootPassword}`
+				username: `${config.rootUsername}`,
+				password: `${config.rootPassword}`
 			}
 		);
 		if (response.status != 200) {
@@ -306,7 +307,7 @@ class API3 extends API2 {
 		}
 
 		response = await this.userPost(
-			this.config.userID,
+			config.userID,
 			`items?key=${this.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
@@ -323,7 +324,7 @@ class API3 extends API2 {
 	static async postObjects(objectType, json) {
 		let objectTypPlural = this.getPluralObjectType(objectType);
 		return this.userPost(
-			this.config.userID,
+			config.userID,
 			objectTypPlural,
 			JSON.stringify(json),
 			{ "Content-Type": "application/json" }
@@ -342,7 +343,7 @@ class API3 extends API2 {
 	}
 
 	static async patch(url, data, headers = {}, auth = false) {
-		let apiUrl = this.config.apiURLPrefix + url;
+		let apiUrl = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -380,7 +381,7 @@ class API3 extends API2 {
 	};
 
 	static async put(url, data, headers = {}, auth = false) {
-		url = this.config.apiURLPrefix + url;
+		url = config.apiURLPrefix + url;
 		if (this.apiVersion) {
 			headers["Zotero-API-Version"] = this.apiVersion;
 		}
@@ -480,8 +481,8 @@ class API3 extends API2 {
 
 	static async superPut(url, data, headers) {
 		return this.put(url, data, headers, {
-			username: this.config.rootUsername,
-			password: this.config.rootPassword
+			username: config.rootUsername,
+			password: config.rootPassword
 		});
 	}
 
@@ -530,8 +531,8 @@ class API3 extends API2 {
 			"keys/" + key,
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 		if (response.status != 200) {
@@ -553,8 +554,8 @@ class API3 extends API2 {
 			JSON.stringify(json),
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 		if (response.status != 200) {
@@ -608,7 +609,7 @@ class API3 extends API2 {
 
 		let requestBody = JSON.stringify([json]);
 
-		let response = await this.userPost(this.config.userID, "items", requestBody, headers);
+		let response = await this.userPost(config.userID, "items", requestBody, headers);
 
 		return this.handleCreateResponse('item', response, returnFormat, context);
 	}
@@ -618,8 +619,8 @@ class API3 extends API2 {
 			"keys/" + key,
 			{},
 			{
-				username: this.config.rootUsername,
-				password: this.config.rootPassword
+				username: config.rootUsername,
+				password: config.rootPassword
 			}
 		);
 		if (response.status != 200) {
@@ -664,8 +665,8 @@ class API3 extends API2 {
 				JSON.stringify(json),
 				{},
 				{
-					username: this.config.rootUsername,
-					password: this.config.rootPassword
+					username: config.rootUsername,
+					password: config.rootPassword
 				}
 			);
 		}
@@ -715,8 +716,8 @@ class API3 extends API2 {
 				xml.outterHTML,
 				{},
 				{
-					username: this.config.rootUsername,
-					password: this.config.rootPassword
+					username: config.rootUsername,
+					password: config.rootPassword
 				}
 			);
 		}
@@ -909,7 +910,7 @@ class API3 extends API2 {
 			response = await this.groupGet(groupID, url);
 		}
 		else {
-			response = await this.userGet(this.config.userID, url);
+			response = await this.userGet(config.userID, url);
 		}
 		if (context) {
 			Helpers.assert200(response);
