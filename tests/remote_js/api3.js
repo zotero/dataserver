@@ -218,7 +218,7 @@ class API3 extends API2 {
 
 	static async groupCreateItem(groupID, itemType, data = [], context = null, returnFormat = 'responseJSON') {
 		let response = await this.get(`items/new?itemType=${itemType}`);
-		let json = JSON.parse(await response.data);
+		let json = JSON.parse(response.data);
 
 		if (data) {
 			for (let field in data) {
@@ -228,7 +228,7 @@ class API3 extends API2 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.apiKey}`,
+			`items?key=${this.config.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -450,6 +450,11 @@ class API3 extends API2 {
 
 	static async userDelete(userID, suffix, headers = {}, auth = false) {
 		let url = `users/${userID}/${suffix}`;
+		return this.delete(url, headers, auth);
+	}
+
+	static async groupDelete(groupID, suffix, headers = {}, auth = false) {
+		let url = `groups/${groupID}/${suffix}`;
 		return this.delete(url, headers, auth);
 	}
 
@@ -722,14 +727,14 @@ class API3 extends API2 {
 		}
 	}
 
-	static async createAnnotationItem(annotationType, data = [], parentKey, context = false, returnFormat = 'responseJSON') {
+	static async createAnnotationItem(annotationType, data = {}, parentKey, context = false, returnFormat = 'responseJSON') {
 		let response = await this.get(`items/new?itemType=annotation&annotationType=${annotationType}`);
-		let json = await response.json();
+		let json = JSON.parse(response.data);
 		json.parentItem = parentKey;
 		if (annotationType === 'highlight') {
 			json.annotationText = 'This is highlighted text.';
 		}
-		if (data.annotationComment !== undefined) {
+		if (data.annotationComment) {
 			json.annotationComment = data.annotationComment;
 		}
 		json.annotationColor = '#ff8c19';

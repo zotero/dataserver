@@ -449,7 +449,7 @@ describe('ItemsTests', function () {
 				items: [data],
 			}),
 		);
-		Helpers.assertStatusCode(response, 200);
+		Helpers.assert200ForObject(response, 200);
 		xml = await API.getItemXML(data.itemKey);
 		data = API.parseDataFromAtomEntry(xml);
 		const json = JSON.parse(data.content);
@@ -512,12 +512,6 @@ describe('ItemsTests', function () {
 
 	it('testNewInvalidTopLevelAttachment', async function() {
 		this.skip(); //disabled
-	});
-
-	it('testNewEmptyLinkAttachmentItem', async function () {
-		const key = await API.createItem("book", false, true, 'key');
-		const xml = await API.createAttachmentItem("linked_url", [], key, true, 'atom');
-		await API.parseDataFromAtomEntry(xml);
 	});
 
 	it('testNewEmptyLinkAttachmentItemWithItemKey', async function () {

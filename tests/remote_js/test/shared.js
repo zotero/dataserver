@@ -79,5 +79,6 @@ module.exports = {
 			await API3.useAPIKey(config.apiKey);
 			await API.userClear(config.userID);
 		});
-	}
+	},
+	retryIfNeeded: retryIfNeeded
 };
