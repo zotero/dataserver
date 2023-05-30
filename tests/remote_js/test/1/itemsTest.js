@@ -2,18 +2,18 @@ const { assert } = require('chai');
 const API = require('../../api2.js');
 var config = require('config');
 const Helpers = require('../../helpers2.js');
-const { API1Setup, API1WrapUp } = require("../shared.js");
+const { API1Before, API1After } = require("../shared.js");
 
 describe('ItemTests', function () {
 	this.timeout(config.timeout); // setting timeout if operations are async and take some time
 
 	before(async function () {
-		await API1Setup();
+		await API1Before();
 		await API.setKeyOption(config.userID, config.apiKey, 'libraryNotes', 1);
 	});
 
 	after(async function () {
-		await API1WrapUp();
+		await API1After();
 	});
 
 	it('testCreateItemWithChildren', async function () {

@@ -3,17 +3,17 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api2.js');
 const Helpers = require('../../helpers2.js');
-const { API1Setup, API1WrapUp } = require("../shared.js");
+const { API1Before, API1After } = require("../shared.js");
 
 describe('CollectionTests', function () {
 	this.timeout(config.timeout);
 
 	before(async function () {
-		await API1Setup();
+		await API1Before();
 	});
 
 	after(async function () {
-		await API1WrapUp();
+		await API1After();
 	});
 
 	const testNewSingleCollection = async () => {

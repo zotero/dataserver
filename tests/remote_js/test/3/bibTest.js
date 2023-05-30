@@ -3,7 +3,7 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('BibTests', function () {
 	this.timeout(config.timeout);
@@ -19,7 +19,7 @@ describe('BibTests', function () {
 	];
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 
 		// Create test data
 		let key = await API.createItem("book", {
@@ -133,7 +133,7 @@ describe('BibTests', function () {
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 	it('testContentCitationMulti', async function () {

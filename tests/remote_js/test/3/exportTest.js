@@ -3,7 +3,7 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('ExportTests', function () {
 	this.timeout(config.timeout);
@@ -12,7 +12,7 @@ describe('ExportTests', function () {
 	let formats = ['bibtex', 'ris', 'csljson'];
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		await API.userClear(config.userID);
 
 		// Create test data
@@ -119,7 +119,7 @@ describe('ExportTests', function () {
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 	it('testExportInclude', async function () {

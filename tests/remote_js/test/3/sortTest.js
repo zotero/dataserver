@@ -3,7 +3,7 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('SortTests', function () {
 	this.timeout(config.timeout);
@@ -19,12 +19,12 @@ describe('SortTests', function () {
 	let notes = [null, 'aaa', null, null, 'taf'];
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		await setup();
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 	const setup = async () => {

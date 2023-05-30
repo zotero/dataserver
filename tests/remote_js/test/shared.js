@@ -10,18 +10,18 @@ module.exports = {
 	},
 	
 
-	API1Setup: async () => {
+	API1Before: async () => {
 		const credentials = await API.login();
 		config.apiKey = credentials.user1.apiKey;
 		config.user2APIKey = credentials.user2.apiKey;
 		await API.useAPIVersion(1);
 		await API.userClear(config.userID);
 	},
-	API1WrapUp: async () => {
+	API1After: async () => {
 		await API.userClear(config.userID);
 	},
 
-	API2Setup: async () => {
+	API2Before: async () => {
 		const credentials = await API.login();
 		config.apiKey = credentials.user1.apiKey;
 		config.user2APIKey = credentials.user2.apiKey;
@@ -29,11 +29,11 @@ module.exports = {
 		await API.setKeyOption(config.userID, config.apiKey, 'libraryNotes', 1);
 		await API.userClear(config.userID);
 	},
-	API2WrapUp: async () => {
+	API2After: async () => {
 		await API.userClear(config.userID);
 	},
 
-	API3Setup: async () => {
+	API3Before: async () => {
 		const credentials = await API3.login();
 		config.apiKey = credentials.user1.apiKey;
 		config.user2APIKey = credentials.user2.apiKey;
@@ -44,7 +44,7 @@ module.exports = {
 		await API3.setKeyUserPermission(config.apiKey, 'write', true);
 		await API3.userClear(config.userID);
 	},
-	API3WrapUp: async () => {
+	API3After: async () => {
 		await API3.useAPIKey(config.apiKey);
 		await API3.userClear(config.userID);
 	}

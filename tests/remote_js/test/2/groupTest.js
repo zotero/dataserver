@@ -3,19 +3,19 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api2.js');
 const Helpers = require('../../helpers2.js');
-const { API2Setup, API2WrapUp, resetGroups } = require("../shared.js");
+const { API2Before, API2After, resetGroups } = require("../shared.js");
 const { JSDOM } = require("jsdom");
 
 describe('GroupTests', function () {
 	this.timeout(config.timeout);
 
 	before(async function () {
-		await API2Setup();
+		await API2Before();
 		await resetGroups();
 	});
 
 	after(async function () {
-		await API2WrapUp();
+		await API2After();
 	});
 
 	it('testUpdateMetadata', async function () {

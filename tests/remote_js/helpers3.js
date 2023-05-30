@@ -82,6 +82,18 @@ class Helpers3 {
 		}
 	};
 
+	static assertCompression = (response) => {
+		assert.equal(response.headers['content-encoding'][0], 'gzip');
+	};
+
+	static assertNoCompression = (response) => {
+		assert.notOk(response.headers['content-encoding']);
+	};
+
+	static assertContentLength = (response, length) => {
+		assert.equal(response.headers['content-length'] || 0, length);
+	};
+
 	static assertStatusForObject = (response, status, recordId, httpCode, message) => {
 		let body = response;
 		if (response.data) {

@@ -3,19 +3,19 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('StorageAdminTests', function () {
 	this.timeout(config.timeout);
 	const DEFAULT_QUOTA = 300;
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		await setQuota(0, 0, DEFAULT_QUOTA);
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 	const setQuota = async (quota, expiration, expectedQuota) => {

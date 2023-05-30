@@ -4,14 +4,14 @@ var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
 const { resetGroups } = require('../../groupsSetup.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('AnnotationsTests', function () {
 	this.timeout(config.timeout);
 	let attachmentKey, attachmentJSON;
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		await resetGroups();
 		await API.groupClear(config.ownedPrivateGroupID);
 	
@@ -28,7 +28,7 @@ describe('AnnotationsTests', function () {
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 

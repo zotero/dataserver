@@ -4,14 +4,14 @@ var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
 const { JSDOM } = require('jsdom');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 
 describe('AtomTests', function () {
 	this.timeout(config.timeout);
 	let keyObj = {};
 	
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		let key = await API.createItem("book", {
 			title: "Title",
 			creators: [{
@@ -44,7 +44,7 @@ describe('AtomTests', function () {
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 
 

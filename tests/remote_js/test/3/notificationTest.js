@@ -3,18 +3,18 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp, resetGroups } = require("../shared.js");
+const { API3Before, API3After, resetGroups } = require("../shared.js");
 
 describe('NotificationTests', function () {
 	this.timeout(config.timeout);
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		await resetGroups();
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 	});
 	beforeEach(async function () {
 		API.useAPIKey(config.apiKey);

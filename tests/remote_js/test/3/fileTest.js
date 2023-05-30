@@ -3,7 +3,7 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp } = require("../shared.js");
+const { API3Before, API3After } = require("../shared.js");
 const { S3Client, DeleteObjectsCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 const HTTP = require('../../httpHandler.js');
@@ -18,7 +18,7 @@ describe('FileTestTests', function () {
 	const s3Client = new S3Client({ region: "us-east-1" });
 
 	before(async function () {
-		await API3Setup();
+		await API3Before();
 		try {
 			fs.mkdirSync("./work");
 		}
@@ -26,7 +26,7 @@ describe('FileTestTests', function () {
 	});
 
 	after(async function () {
-		await API3WrapUp();
+		await API3After();
 		fs.rm("./work", { recursive: true, force: true }, (e) => {
 			if (e) console.log(e);
 		});
