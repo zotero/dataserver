@@ -88,9 +88,6 @@ const resetGroups = async () => {
 		await API3.deleteGroup(groupID);
 	}
 
-	config.numOwnedGroups = 3;
-	config.numPublicGroups = 2;
-
 	for (let group of groups) {
 		if (!toDelete.includes(group.id)) {
 			await API3.groupClear(group.id);

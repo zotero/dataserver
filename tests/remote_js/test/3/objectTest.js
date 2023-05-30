@@ -6,7 +6,7 @@ const Helpers = require('../../helpers3.js');
 const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('ObjectTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 	let types = ['collection', 'search', 'item'];
 
 	before(async function () {

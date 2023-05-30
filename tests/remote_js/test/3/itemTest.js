@@ -3,10 +3,10 @@ const assert = chai.assert;
 const config = require("../../config.js");
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Setup, API3WrapUp, resetGroups, retryIfNeeded } = require("../shared.js");
+const { API3Setup, API3WrapUp, resetGroups } = require("../shared.js");
 
 describe('ItemsTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 
 	before(async function () {
 		await API3Setup();
@@ -18,12 +18,8 @@ describe('ItemsTests', function () {
 	});
 
 	this.beforeEach(async function () {
-		await retryIfNeeded(async () => {
-			await API.userClear(config.userID);
-		});
-		await retryIfNeeded(async () => {
-			await API.groupClear(config.ownedPrivateGroupID);
-		});
+		await API.userClear(config.userID);
+		await API.groupClear(config.ownedPrivateGroupID);
 		API.useAPIKey(config.apiKey);
 	});
 
@@ -1561,7 +1557,6 @@ describe('ItemsTests', function () {
 
 	it('testDateAddedNewItem8601TZ', async function () {
 		const objectType = 'item';
-		const objectTypePlural = API.getPluralObjectType(objectType);
 		const dateAdded = "2013-03-03T17:33:53-0400";
 		const dateAddedUTC = "2013-03-03T21:33:53Z";
 		let itemData = {
@@ -1828,7 +1823,6 @@ describe('ItemsTests', function () {
 			"imported_file", { contentType: 'application/pdf' }, itemKey, this, 'jsonData'
 		);
 		let attachmentKey = json.key;
-		let attachmentVersion = json.version;
     
 		let annotationKey = await API.createAnnotationItem(
 			'highlight',
@@ -2049,7 +2043,6 @@ describe('ItemsTests', function () {
 
 	it('testDateAddedNewItem8601', async function () {
 		const objectType = 'item';
-		const objectTypePlural = API.getPluralObjectType(objectType);
 
 		const dateAdded = "2013-03-03T21:33:53Z";
 
@@ -2057,8 +2050,10 @@ describe('ItemsTests', function () {
 			title: "Test",
 			dateAdded: dateAdded
 		};
-		let data = await API.createItem("videoRecording", itemData, this, 'jsonData');
-
+		let data;
+		if (objectType == 'item') {
+			data = await API.createItem("videoRecording", itemData, this, 'jsonData');
+		}
 		Helpers.assertEquals(dateAdded, data.dateAdded);
 	});
 
@@ -2269,7 +2264,7 @@ describe('ItemsTests', function () {
 	it('test_num_children_and_children_on_attachment_with_annotation', async function () {
 		let key = await API.createItem("book", false, this, 'key');
 		let attachmentKey = await API.createAttachmentItem("imported_url", { contentType: 'application/pdf', title: 'bbb' }, key, this, 'key');
-		let annotationKey = await API.createAnnotationItem("image", { annotationComment: 'ccc' }, attachmentKey, this, 'key');
+		await API.createAnnotationItem("image", { annotationComment: 'ccc' }, attachmentKey, this, 'key');
 		let response = await API.userGet(config.userID, `items/${attachmentKey}`);
 		let json = await API.getJSONFromResponse(response);
 		Helpers.assertEquals(1, json.meta.numChildren);
@@ -2404,16 +2399,12 @@ describe('ItemsTests', function () {
 		let version1 = await API.getLibraryVersion();
 		let parentKeys = [];
 		parentKeys[0] = await API.createItem('book', [], this, 'key');
-		let version2 = await API.getLibraryVersion();
 		let childKeys = [];
 		childKeys[0] = await API.createAttachmentItem('linked_url', [], parentKeys[0], this, 'key');
-		let version3 = await API.getLibraryVersion();
 		parentKeys[1] = await API.createItem('journalArticle', [], this, 'key');
 		let version4 = await API.getLibraryVersion();
 		childKeys[1] = await API.createNoteItem('', parentKeys[1], this, 'key');
-		let version5 = await API.getLibraryVersion();
 		parentKeys[2] = await API.createItem('book', [], this, 'key');
-		let version6 = await API.getLibraryVersion();
 
 		let response = await API.userGet(
 			config.userID,
@@ -2560,7 +2551,6 @@ describe('ItemsTests', function () {
 
 		json = await API.createAttachmentItem('linked_file', [], parentKey, this, 'jsonData');
 		let childKey = json.key;
-		let childVersion = json.version;
 
 		let response = await API.userGet(config.userID, `items?itemKey=${parentKey},${childKey}`);
 		Helpers.assertNumResults(response, 2);
@@ -2609,7 +2599,6 @@ describe('ItemsTests', function () {
 
 	it('testDateAddedNewItemSQL', async function () {
 		const objectType = 'item';
-		const objectTypePlural = API.getPluralObjectType(objectType);
 
 		const dateAdded = "2013-03-03 21:33:53";
 		const dateAdded8601 = "2013-03-03T21:33:53Z";
@@ -2618,7 +2607,10 @@ describe('ItemsTests', function () {
 			title: "Test",
 			dateAdded: dateAdded
 		};
-		let data = await API.createItem("videoRecording", itemData, this, 'jsonData');
+		let data;
+		if (objectType == 'item') {
+			data = await API.createItem("videoRecording", itemData, this, 'jsonData');
+		}
 
 		Helpers.assertEquals(dateAdded8601, data.dateAdded);
 	});

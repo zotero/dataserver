@@ -335,7 +335,7 @@ describe('NotificationTests', function () {
 		finally {
 			let response = await API.superDelete("keys/" + apiKey);
 			try {
-				Helpers.Helpers.assert204(response);
+				Helpers.assert204(response);
 			}
 			catch (e) {
 				console.log(e);

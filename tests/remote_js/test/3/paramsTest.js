@@ -6,7 +6,7 @@ const Helpers = require('../../helpers3.js');
 const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('ParamsTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 
 	let collectionKeys = [];
 	let itemKeys = [];

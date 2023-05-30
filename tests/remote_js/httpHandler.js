@@ -22,11 +22,31 @@ class HTTP {
 		}
 
 		//Hardcoded for running tests against containers
-		if (url.includes("172.16.0.11")) {
-			url = url.replace('172.16.0.11', 'localhost');
+		const localIPRegex = new RegExp("172.16.0.[0-9][0-9]");
+		if (url.match(localIPRegex)) {
+			url = url.replace(localIPRegex, 'localhost');
 		}
 
-		let response = await fetch(url, options);
+		let success = false;
+		let attempts = 3;
+		let tried = 0;
+		let response;
+		while (!success && tried < attempts) {
+			try {
+				response = await fetch(url, options);
+				success = true;
+			}
+			catch (error) {
+				if (error.name === 'FetchError') {
+					console.log('Request aborted. Wait for 2 seconds and retry...');
+					await new Promise(r => setTimeout(r, 2000));
+					tried += 1;
+				}
+			}
+		}
+		if (!success) {
+			throw new Error(`${method} to ${url} did not succeed after ${attempts} attempts.`);
+		}
 
 		// Fetch doesn't automatically parse the response body, so we have to do that manually
 		let responseData = await response.text();

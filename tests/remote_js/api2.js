@@ -634,7 +634,6 @@ class API2 {
 		let json = JSON.parse(response.data);
 
 		if (responseFormat !== 'responsejson' && (!json.success || Object.keys(json.success).length !== 1)) {
-			console.log(json);
 			return response;
 			//throw new Error(`${uctype} creation failed`);
 		}

@@ -3,7 +3,6 @@ const { JSDOM } = require("jsdom");
 const API2 = require("./api2.js");
 const Helpers = require("./helpers");
 const fs = require("fs");
-const wgxpath = require('wgxpath');
 
 class API3 extends API2 {
 	static schemaVersion;
@@ -66,7 +65,7 @@ class API3 extends API2 {
 
 	static async resetSchemaVersion() {
 		const schema = JSON.parse(fs.readFileSync("../../htdocs/zotero-schema/schema.json"));
-		this.schemaVersion = schema;
+		this.schemaVersion = schema.version;
 	}
 
 

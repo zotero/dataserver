@@ -6,7 +6,7 @@ const Helpers = require('../../helpers.js');
 const { API2Setup, API2WrapUp } = require("../shared.js");
 
 describe('BibTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 
 	let items = {};
 	let styles = [

@@ -11,7 +11,7 @@ const { JSDOM } = require("jsdom");
 
 
 describe('PublicationTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 	let toDelete = [];
 	const s3Client = new S3Client({ region: "us-east-1" });
 
@@ -26,7 +26,9 @@ describe('PublicationTests', function () {
 
 	after(async function () {
 		await API3WrapUp();
-		fs.rmdirSync("./work", { recursive: true, force: true });
+		fs.rm("./work", { recursive: true, force: true }, (e) => {
+			if (e) console.log(e);
+		});
 		if (toDelete.length > 0) {
 			const commandInput = {
 				Bucket: config.s3Bucket,

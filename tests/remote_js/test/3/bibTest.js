@@ -6,7 +6,7 @@ const Helpers = require('../../helpers3.js');
 const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('BibTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 
 	let items = {};
 	let multiResponses = {};

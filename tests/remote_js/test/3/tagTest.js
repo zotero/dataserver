@@ -6,7 +6,7 @@ const Helpers = require('../../helpers3.js');
 const { API3Setup, API3WrapUp } = require("../shared.js");
 
 describe('TagTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 
 	before(async function () {
 		await API3Setup();

@@ -12,7 +12,7 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 
 describe('FileTestTests', function () {
-	this.timeout(0);
+	this.timeout(config.timeout);
 	let toDelete = [];
 	const s3Client = new S3Client({ region: "us-east-1" });
 
@@ -26,7 +26,9 @@ describe('FileTestTests', function () {
 
 	after(async function () {
 		await API2WrapUp();
-		fs.rmdirSync("./work", { recursive: true, force: true });
+		fs.rm("./work", { recursive: true, force: true }, (e) => {
+			if (e) console.log(e);
+		});
 		if (toDelete.length > 0) {
 			const commandInput = {
 				Bucket: config.s3Bucket,
@@ -69,7 +71,7 @@ describe('FileTestTests', function () {
 		assert.equal(addFileData.md5, md5(viewModeResponse.data));
 		const userGetDownloadModeResponse = await API.userGet(config.userID, `items/${addFileData.key}/file?key=${config.apiKey}`);
 		Helpers.assert302(userGetDownloadModeResponse);
-		const downloadModeLocation = userGetDownloadModeResponse.headers.location;
+		const downloadModeLocation = userGetDownloadModeResponse.headers.location[0];
 		const s3Response = await HTTP.get(downloadModeLocation);
 		Helpers.assert200(s3Response);
 		assert.equal(addFileData.md5, md5(s3Response.data));
@@ -113,7 +115,7 @@ describe('FileTestTests', function () {
 		Helpers.assert400(response);
 	});
 
-	// Skipped as there may or may not be an error
+	// Errors
 	it('testAddFileFullParams', async function () {
 		let xml = await API.createAttachmentItem("imported_file", [], false, this);
 
