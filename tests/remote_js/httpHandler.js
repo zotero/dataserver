@@ -27,26 +27,9 @@ class HTTP {
 			url = url.replace(localIPRegex, 'localhost');
 		}
 
-		let success = false;
-		let attempts = 3;
-		let tried = 0;
-		let response;
-		while (!success && tried < attempts) {
-			try {
-				response = await fetch(url, options);
-				success = true;
-			}
-			catch (error) {
-				if (error.name === 'FetchError') {
-					console.log('Request aborted. Wait for 2 seconds and retry...');
-					await new Promise(r => setTimeout(r, 2000));
-					tried += 1;
-				}
-			}
-		}
-		if (!success) {
-			throw new Error(`${method} to ${url} did not succeed after ${attempts} attempts.`);
-		}
+		await new Promise(resolve => setTimeout(resolve, 0));
+		let response = await fetch(url, options);
+
 
 		// Fetch doesn't automatically parse the response body, so we have to do that manually
 		let responseData = await response.text();
