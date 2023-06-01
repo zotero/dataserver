@@ -15,6 +15,9 @@ describe('CacheTests', function () {
 		await API3After();
 	});
 
+	/**
+	 * An object type's primary data cache for a library has to be created before
+	 */
 	it('testCacheCreatorPrimaryData', async function () {
 		const data = {
 			title: 'Title',

@@ -40,6 +40,7 @@ describe('Tests', function () {
 			libraryReading: 'all'
 		});
 
+		// Get group version
 		let response = await API.userGet(config.userID, `groups?format=versions&key=${config.apiKey}`);
 		Helpers.assert200(response);
 		let version = JSON.parse(response.data)[groupID];
@@ -47,12 +48,14 @@ describe('Tests', function () {
 		response = await API.superPost(`groups/${groupID}/users`, '<user id="' + config.userID2 + '" role="member"/>', { 'Content-Type': 'text/xml' });
 		Helpers.assert200(response);
 
+		// Group metadata version should have changed
 		response = await API.userGet(config.userID, `groups?format=versions&key=${config.apiKey}`);
 		Helpers.assert200(response);
 		let json = JSON.parse(response.data);
 		let newVersion = json[groupID];
 		assert.notEqual(version, newVersion);
 	
+		// Check version header on individual group request
 		response = await API.groupGet(groupID, '');
 		Helpers.assert200(response);
 		Helpers.assertEquals(newVersion, response.headers['last-modified-version'][0]);
@@ -60,6 +63,9 @@ describe('Tests', function () {
 		await API.deleteGroup(groupID);
 	});
 
+	/**
+	 * Changing a group's metadata should change its version
+	 */
 	it('testUpdateMetadataAtom', async function () {
 		let response = await API.userGet(
 			config.userID,
@@ -158,6 +164,9 @@ describe('Tests', function () {
 		assert.equal(urlField, json.url);
 	});
 
+	/**
+	 * Changing a group's metadata should change its version
+	 */
 	it('testUpdateMetadataJSON', async function () {
 		const response = await API.userGet(
 			config.userID,
@@ -166,12 +175,14 @@ describe('Tests', function () {
 
 		Helpers.assert200(response);
 
+		// Get group API URI and version
 		const json = API.getJSONFromResponse(response)[0];
 		const groupID = json.id;
 		let url = json.links.self.href;
 		url = url.replace(config.apiURLPrefix, '');
 		const version = json.version;
 
+		// Make sure format=versions returns the same version
 		const response2 = await API.userGet(
 			config.userID,
 			"groups?format=versions&key=" + config.apiKey
@@ -181,6 +192,7 @@ describe('Tests', function () {
 
 		Helpers.assertEquals(version, JSON.parse(response2.data)[groupID]);
 
+		// Update group metadata
 		const xmlDoc = new JSDOM("<group></group>");
 		const groupXML = xmlDoc.window.document.getElementsByTagName("group")[0];
 		let name, description, urlField, newNode;
@@ -244,6 +256,7 @@ describe('Tests', function () {
 
 		assert.notEqual(version, newVersion);
 
+		// Check version header on individual group request
 		const response5 = await API.groupGet(
 			groupID,
 			""
@@ -267,6 +280,7 @@ describe('Tests', function () {
 			libraryReading: 'all'
 		});
 
+		// Group shouldn't show up if it's never had items
 		let response = await API.superGet(`groups?q=${name}`);
 		Helpers.assertNumResults(response, 0);
 

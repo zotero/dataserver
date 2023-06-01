@@ -273,6 +273,7 @@ describe('ParametersTests', function () {
 			date: 'November 25, 2012'
 		}, true, 'key'));
 
+		// Search for one by title
 		response = await API.userGet(
 			config.userID,
 			`items?key=${config.apiKey}&content=json&q=${encodeURIComponent(title1)}`
@@ -284,6 +285,7 @@ describe('ParametersTests', function () {
 		xpath = Helpers.xpathEval(xml, '//atom:entry/zapi:key', false, true);
 		assert.equal(keys[0], xpath[0]);
 
+		// Search by both by title, date asc
 		response = await API.userGet(
 			config.userID,
 			`items?key=${config.apiKey}&content=json&q=title&order=date&sort=asc`
@@ -296,6 +298,7 @@ describe('ParametersTests', function () {
 		assert.equal(keys[1], xpath[0]);
 		assert.equal(keys[0], xpath[1]);
 
+		// Search by both by title, date desc
 		response = await API.userGet(
 			config.userID,
 			`items?key=${config.apiKey}&content=json&q=title&order=date&sort=desc`

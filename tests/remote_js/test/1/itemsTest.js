@@ -5,7 +5,7 @@ const Helpers = require('../../helpers2.js');
 const { API1Before, API1After } = require("../shared.js");
 
 describe('ItemTests', function () {
-	this.timeout(config.timeout); // setting timeout if operations are async and take some time
+	this.timeout(config.timeout);
 
 	before(async function () {
 		await API1Before();

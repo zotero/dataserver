@@ -39,7 +39,7 @@ describe('ItemsTests', function () {
 
 		const response = await API.postItems(data);
 		Helpers.assertStatusCode(response, 200);
-		const jsonResponse = await API.getJSONFromResponse(response);
+		const jsonResponse = API.getJSONFromResponse(response);
 		const successArray = Object.keys(jsonResponse.success).map(key => jsonResponse.success[key]);
 		const xml = await API.getItemXML(successArray, true);
 		const contents = Helpers.xpathEval(xml, '/atom:feed/atom:entry/atom:content', false, true);
@@ -76,10 +76,8 @@ describe('ItemsTests', function () {
 			`items/${key}?key=${config.apiKey}`,
 			JSON.stringify(newBookItem),
 			{
-				headers: {
-					'Content-Type': 'application/json',
-					'If-Unmodified-Since-Version': version
-				}
+				'Content-Type': 'application/json',
+				'If-Unmodified-Since-Version': version
 			}
 		);
 		Helpers.assertStatusCode(response, 204);
@@ -211,7 +209,7 @@ describe('ItemsTests', function () {
 
 		const key = API.getFirstSuccessKeyFromResponse(response);
 		const xml = await API.getItemXML(key, true);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const version = data.version;
 		const json1 = JSON.parse(data.content);
 
@@ -235,7 +233,7 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(response2, 204);
 
 		const xml2 = await API.getItemXML(key);
-		const data2 = await API.parseDataFromAtomEntry(xml2);
+		const data2 = API.parseDataFromAtomEntry(xml2);
 		const json3 = JSON.parse(data2.content);
 
 		assert.equal(json3.itemType, "bookSection");
@@ -316,7 +314,7 @@ describe('ItemsTests', function () {
 
 	it('testNewComputerProgramItem', async function () {
 		const xml = await API.createItem('computerProgram', false, true);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const key = data.key;
 		const json = JSON.parse(data.content);
 		assert.equal(json.itemType, 'computerProgram');
@@ -333,10 +331,11 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 
 		const xml2 = await API.getItemXML(key);
-		const data2 = await API.parseDataFromAtomEntry(xml2);
+		const data2 = API.parseDataFromAtomEntry(xml2);
 		const json2 = JSON.parse(data2.content);
 		assert.equal(json2.version, version);
 
+		// 'versionNumber' from v3 should work too
 		delete json2.version;
 		const version2 = '1.1';
 		json2.versionNumber = version2;
@@ -349,7 +348,7 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(response2, 204);
 
 		const xml3 = await API.getItemXML(key);
-		const data3 = await API.parseDataFromAtomEntry(xml3);
+		const data3 = API.parseDataFromAtomEntry(xml3);
 		const json3 = JSON.parse(data3.content);
 		assert.equal(json3.version, version2);
 	});
@@ -510,8 +509,9 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(userPostResponse, 200);
 	});
 
-	it('testNewInvalidTopLevelAttachment', async function() {
-		this.skip(); //disabled
+	//Disabled -- see note at Zotero_Item::checkTopLevelAttachment()
+	it('testNewInvalidTopLevelAttachment', async function () {
+		this.skip();
 	});
 
 	it('testNewEmptyLinkAttachmentItemWithItemKey', async function () {
@@ -560,7 +560,7 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 
 		const xml = await API.getItemXML(key);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		// Item Shouldn't be changed
 		assert.equal(version, data.version);
 	});
@@ -568,7 +568,7 @@ describe('ItemsTests', function () {
 	const testEditEmptyLinkAttachmentItem = async () => {
 		const key = await API.createItem('book', false, true, 'key');
 		const xml = await API.createAttachmentItem('linked_url', [], key, true, 'atom');
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 
 		const updatedKey = data.key;
 		const version = data.version;
@@ -586,7 +586,7 @@ describe('ItemsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 
 		const newXml = await API.getItemXML(updatedKey);
-		const newData = await API.parseDataFromAtomEntry(newXml);
+		const newData = API.parseDataFromAtomEntry(newXml);
 		// Item shouldn't change
 		assert.equal(version, newData.version);
 		return newData;
@@ -1046,7 +1046,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items/${key}?key=${config.apiKey}&content=json`
 		);
-		const xmlResponse = await API.getXMLFromResponse(response);
+		const xmlResponse = API.getXMLFromResponse(response);
 		const dataResponse = API.parseDataFromAtomEntry(xmlResponse);
 		const json = JSON.parse(dataResponse.content);
 		assert.equal(date, json.date);
@@ -1058,7 +1058,7 @@ describe('ItemsTests', function () {
 		const title = "Tést";
 
 		const xml = await API.createItem("book", { title }, true);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const key = data.key;
 
 		// Test entry
@@ -1066,7 +1066,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items/${key}?key=${config.apiKey}&content=json`
 		);
-		let xmlResponse = await API.getXMLFromResponse(response);
+		let xmlResponse = API.getXMLFromResponse(response);
 		assert.equal(xmlResponse.getElementsByTagName("title")[0].innerHTML, "Tést");
 
 		// Test feed
@@ -1074,7 +1074,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items?key=${config.apiKey}&content=json`
 		);
-		xmlResponse = await API.getXMLFromResponse(response);
+		xmlResponse = API.getXMLFromResponse(response);
 
 		let titleFound = false;
 		for (var node of xmlResponse.getElementsByTagName("title")) {

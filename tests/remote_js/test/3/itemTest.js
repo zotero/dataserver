@@ -50,7 +50,7 @@ describe('ItemsTests', function () {
 		const response = await API.postItems(data);
 		Helpers.assertStatusCode(response, 200);
 		let libraryVersion = parseInt(response.headers['last-modified-version'][0]);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(3, json.successful);
 		Helpers.assertCount(3, json.success);
 
@@ -64,8 +64,6 @@ describe('ItemsTests', function () {
 		assert.equal(data[2].numPages, json.successful[2].data.numPages);
 
 		json = await API.getItem(Object.keys(json.success).map(k => json.success[k]), this, 'json');
-
-
 		assert.equal(json[0].data.title, "A");
 		assert.equal(json[1].data.title, "B");
 		assert.equal(json[2].data.title, "C");
@@ -95,10 +93,8 @@ describe('ItemsTests', function () {
 			`items/${key}`,
 			JSON.stringify(newBookItem),
 			{
-				headers: {
-					'Content-Type': 'application/json',
-					'If-Unmodified-Since-Version': version
-				}
+				'Content-Type': 'application/json',
+				'If-Unmodified-Since-Version': version
 			}
 		);
 		Helpers.assertStatusCode(response, 204);
@@ -161,7 +157,7 @@ describe('ItemsTests', function () {
 		// If existing dateModified, use current timestamp
 		//
 		json.title = 'Test 3';
-		json.dateModified = dateModified2;
+		json.dateModified = dateModified2.replace(/T|Z/g, " ").trim();
 		response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${objectKey}`,
@@ -186,7 +182,7 @@ describe('ItemsTests', function () {
 		json.dateModified = newDateModified;
 		response = await API.userPut(
 			config.userID,
-			`${objectTypePlural}/${objectKey}? `,
+			`${objectTypePlural}/${objectKey}`,
 			JSON.stringify(json)
 		);
 		Helpers.assertStatusCode(response, 204);
@@ -416,7 +412,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json2]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'itemType' property not provided");
+		Helpers.assert400ForObject(response, { message: "'itemType' property not provided" });
 
 		// contentType on non-attachment
 		const json3 = { ...json };
@@ -427,7 +423,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json3]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'contentType' is valid only for attachment items");
+		Helpers.assert400ForObject(response, { message: "'contentType' is valid only for attachment items" });
 	});
 
 	it('testEditTopLevelNote', async function () {
@@ -519,7 +515,7 @@ describe('ItemsTests', function () {
 			`items`,
 			JSON.stringify([json]),
 		);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert200ForObject(response);
 		json = (await API.getItem(json.key, true, 'json')).data;
 
 		assert.equal(json.title, 'B');
@@ -540,8 +536,9 @@ describe('ItemsTests', function () {
 		Helpers.assert200(userPostResponse);
 	});
 
+	// Disabled -- see note at Zotero_Item::checkTopLevelAttachment()
 	it('testNewInvalidTopLevelAttachment', async function () {
-		this.skip(); //disabled
+		this.skip();
 	});
 
 	it('testNewEmptyLinkAttachmentItemWithItemKey', async function () {
@@ -561,7 +558,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assert200(response);
+		Helpers.assert200ForObject(response);
 	});
 
 	it('testEditEmptyImportedURLAttachmentItem', async function () {
@@ -654,8 +651,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items/${data.key}`,
 			JSON.stringify(json),
-			{ "If-Unmodified-Since-Version": data.version,
-				"User-Agent": "Firefox" } // TODO: Remove
+			{ "If-Unmodified-Since-Version": data.version }
 		);
 		Helpers.assert204(response);
 	
@@ -876,15 +872,17 @@ describe('ItemsTests', function () {
 			childKeys[childKeys.length - 1],
 			this, 'key'));
 
+		// Create item with deleted child that matches child title search
 		parentKeys.push(await API.createItem(itemTypes[2], {
 			title: parentTitle3
 		}, this, 'key'));
 
-		childKeys.push(await API.createAttachmentItem("linked_url", {
+		await API.createAttachmentItem("linked_url", {
 			title: childTitle1,
 			deleted: true
-		}, parentKeys[parentKeys.length - 1], this, 'key'));
+		}, parentKeys[parentKeys.length - 1], this, 'key');
 
+		// Add deleted item with non-deleted child
 		const deletedKey = await API.createItem("book", {
 			title: "This is a deleted item",
 			deleted: true,
@@ -1192,7 +1190,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items/${key}`
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		assert.equal(json.data.date, date);
 		assert.equal(json.meta.parsedDate, parsedDate);
 
@@ -1214,7 +1212,7 @@ describe('ItemsTests', function () {
 			}
 		];
 		let response = await API.postItems(data);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		
 		assert.property(jsonResponse.successful[0].data, 'deleted');
 		Helpers.assertEquals(1, jsonResponse.successful[0].data.deleted);
@@ -1248,7 +1246,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items?itemKey=" + itemKey + "," + noteKey + "," + attachmentKey
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertNumResults(response, 0);
 	});
 
@@ -1265,7 +1263,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items/trash"
 		);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertCount(1, json);
 		Helpers.assertEquals(key2, json[0].key);
     
@@ -1274,7 +1272,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items"
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(1, json);
 		Helpers.assertEquals(key1, json[0].key);
     
@@ -1283,7 +1281,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items?itemKey=" + key2
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(0, json);
 	});
 
@@ -1318,7 +1316,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assert400ForObject(response, "Embedded-image attachment must have an image content type");
+		Helpers.assert400ForObject(response, { message: "Embedded-image attachment must have an image content type" });
 	});
 
 	it('testPatchNote', async function () {
@@ -1375,13 +1373,14 @@ describe('ItemsTests', function () {
 
 		await new Promise(resolve => setTimeout(resolve, 1000));
 
+		// If no explicit dateModified, use current timestamp
 		json.title = "Test 2";
 		delete json.dateModified;
 		let response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${objectKey}`,
 			JSON.stringify(json),
-			{
+			{ // TODO: Remove
 				"User-Agent": "Firefox"
 			}
 		);
@@ -1397,8 +1396,9 @@ describe('ItemsTests', function () {
 
 		await new Promise(resolve => setTimeout(resolve, 1000));
 
+		// If dateModified provided and hasn't changed, use that
 		json.title = "Test 3";
-		json.dateModified = dateModified2.replace(/[TZ]/g, ' ').trim();
+		json.dateModified = dateModified2.replace(/T|Z/g, ' ').trim();
 		response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${objectKey}`,
@@ -1415,7 +1415,7 @@ describe('ItemsTests', function () {
 		Helpers.assertEquals(dateModified2, json.dateModified);
     
 		let newDateModified = "2013-03-03T21:33:53Z";
-    
+		// If dateModified is provided and has changed, use that
 		json.title = "Test 4";
 		json.dateModified = newDateModified;
 		response = await API.userPut(
@@ -1437,6 +1437,7 @@ describe('ItemsTests', function () {
 	it('test_top_should_return_top_level_item_for_three_level_hierarchy', async function () {
 		await API.userClear(config.userID);
     
+		// Create parent item, PDF attachment, and annotation
 		let itemKey = await API.createItem("book", { title: 'aaa' }, this, 'key');
 		let attachmentKey = await API.createAttachmentItem("imported_url", {
 			contentType: 'application/pdf',
@@ -1444,6 +1445,7 @@ describe('ItemsTests', function () {
 		}, itemKey, this, 'key');
 		let _ = await API.createAnnotationItem('highlight', { annotationComment: 'ccc' }, attachmentKey, this, 'key');
     
+		// Search for descendant items in /top mode
 		let response = await API.userGet(config.userID, "items/top?q=bbb");
 		Helpers.assert200(response);
 		Helpers.assertNumResults(response, 1);
@@ -1463,6 +1465,9 @@ describe('ItemsTests', function () {
 		Helpers.assertEquals("aaa", json[0].data.title);
 	});
 
+	/**
+	 * Date Modified shouldn't be changed if 1) dateModified is provided or 2) certain fields are changed
+	 */
 	it('testDateModifiedNoChange', async function () {
 		let collectionKey = await API.createCollection('Test', false, this, 'key');
 		
@@ -1592,7 +1597,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assert400ForObject(response, "Embedded-image attachment must have a parent item");
+		Helpers.assert400ForObject(response, { message: "Embedded-image attachment must have a parent item" });
 	});
 
 	it('testNewEmptyAttachmentFields', async function () {
@@ -1623,6 +1628,13 @@ describe('ItemsTests', function () {
 		Helpers.assertCount(0, Helpers.xpathEval(xml, '/atom:entry/zapi:parsedDate', false, true).length);
 	});
 
+	/**
+	 * Changing existing 'md5' and 'mtime' values to null was originally prevented, but some client
+	 * versions were sending null, so now we just ignore it.
+	 *
+	 * At some point, we should check whether any clients are still doing this and restore the
+	 * restriction if not. These should only be cleared on a storage purge.
+	 */
 	it('test_should_ignore_null_for_existing_storage_properties', async function () {
 		let key = await API.createItem("book", [], this, 'key');
 		let json = await API.createAttachmentItem(
@@ -1664,7 +1676,7 @@ describe('ItemsTests', function () {
 		let note1Key = await API.createNoteItem("Test 1", null, this, 'key');
 		let note2Key = await API.createNoteItem("Test 2", null, this, 'key');
 		let response = await API.get("items/new?itemType=attachment&linkMode=embedded_image");
-		let json = JSON.parse(await response.data);
+		let json = JSON.parse(response.data);
 		json.parentItem = note1Key;
 		json.contentType = 'image/png';
 		response = await API.userPost(
@@ -1674,7 +1686,7 @@ describe('ItemsTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200ForObject(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		let key = json.successful[0].key;
 		json = await API.getItem(key, this, 'json');
 		
@@ -1709,6 +1721,9 @@ describe('ItemsTests', function () {
 		Helpers.assertEquals(collectionKey, json.collections[0]);
 	});
 
+	/**
+	 * Date Modified should be updated when a field is changed if not included in upload
+	 */
 	it('testDateModifiedChangeOnEdit', async function () {
 		let json = await API.createAttachmentItem("linked_file", [], false, this, 'jsonData');
 		let modified = json.dateModified;
@@ -1738,7 +1753,7 @@ describe('ItemsTests', function () {
 			}
 		];
 		let response = await API.postItems(data);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
   
 		assert.property(json.successful[0].data, 'deleted');
 		Helpers.assertEquals(1, json.successful[0].data.deleted);
@@ -1767,12 +1782,10 @@ describe('ItemsTests', function () {
 		let noteJSON = await API.createNoteItem("", parentItemKey, this, 'jsonData');
 		noteJSON.parentItem = false;
 		noteJSON.collections = [collectionKey];
-		let headers = { "Content-Type": "application/json" };
 		let response = await API.userPatch(
 			config.userID,
 			`items/${noteJSON.key}`,
-			JSON.stringify(noteJSON),
-			headers
+			JSON.stringify(noteJSON)
 		);
 		Helpers.assert204(response);
 		let json = await API.getItem(noteJSON.key, this, 'json');
@@ -1849,7 +1862,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			`items?itemKey=${itemKey},${attachmentKey},${annotationKey}`
 		);
-		json = await API.getJSONFromResponse(checkResponse);
+		json = API.getJSONFromResponse(checkResponse);
 		Helpers.assertNumResults(checkResponse, 0);
 	});
 
@@ -1942,6 +1955,7 @@ describe('ItemsTests', function () {
 		response = await API.userGet(config.userID, `settings/${settingKey}`);
 		Helpers.assert404(response);
 
+		// Setting shouldn't be in delete log
 		response = await API.userGet(config.userID, `deleted?since=${attachmentVersion}`);
 		json = API.getJSONFromResponse(response);
 		assert.notInclude(json.settings, settingKey);
@@ -1966,7 +1980,7 @@ describe('ItemsTests', function () {
 		);
 		Helpers.assert400ForObject(
 			response,
-			"Linked files can only be added to user libraries"
+			{ message: "Linked files can only be added to user libraries" }
 		);
 	});
 
@@ -2019,7 +2033,7 @@ describe('ItemsTests', function () {
 			"items/top?itemKey=" + annotationKey
 		);
 		Helpers.assertNumResults(response, 1);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(attachmentKey, json[0].key);
 	
 		// Move attachment under regular item
@@ -2037,7 +2051,7 @@ describe('ItemsTests', function () {
 			"items/top?itemKey=" + annotationKey
 		);
 		Helpers.assertNumResults(response, 1);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(itemKey, json[0].key);
 	});
 
@@ -2069,7 +2083,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assert400ForObject(response, "'note' property is not valid for embedded images");
+		Helpers.assert400ForObject(response, { message: "'note' property is not valid for embedded images" });
 	});
 
 	it('test_deleting_parent_item_should_delete_attachment_and_child_annotation', async function () {
@@ -2122,15 +2136,15 @@ describe('ItemsTests', function () {
 		API.useAPIKey(config.user2APIKey);
 		jsonData.version = 0;
 		const postData = JSON.stringify([jsonData]);
-		const headers = { "Content-Type": "application/json" };
 		const postResponse = await API.groupPost(
 			config.ownedPrivateGroupID,
 			"items",
 			postData,
-			headers
+			{ "Content-Type": "application/json" }
 		);
-		const jsonResponse = await API.getJSONFromResponse(postResponse);
+		const jsonResponse = API.getJSONFromResponse(postResponse);
 
+		// createdByUser shouldn't have changed
 		assert.equal(
 			jsonResponse.successful[0].meta.createdByUser.username,
 			config.username
@@ -2266,15 +2280,23 @@ describe('ItemsTests', function () {
 		let attachmentKey = await API.createAttachmentItem("imported_url", { contentType: 'application/pdf', title: 'bbb' }, key, this, 'key');
 		await API.createAnnotationItem("image", { annotationComment: 'ccc' }, attachmentKey, this, 'key');
 		let response = await API.userGet(config.userID, `items/${attachmentKey}`);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(1, json.meta.numChildren);
 		response = await API.userGet(config.userID, `items/${attachmentKey}/children`);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(1, json);
 		Helpers.assertEquals('ccc', json[0].data.annotationComment);
 	});
 
+	/**
+	 * If null is passed for a value, it should be treated the same as an empty string, not create
+	 * a NULL in the database.
+	 *
+	 * TODO: Since we don't have direct access to the database, our test for this is changing the
+	 * item type and then trying to retrieve it, which isn't ideal. Some way of checking the DB
+	 * state would be useful.
+	 */
 	it('test_should_treat_null_value_as_empty_string', async function () {
 		let json = {
 			itemType: 'book',
@@ -2283,16 +2305,14 @@ describe('ItemsTests', function () {
 		let response = await API.userPost(
 			config.userID,
 			"items",
-			JSON.stringify([json]),
-			{
-				"Content-Type": "application/json"
-			}
+			JSON.stringify([json])
 		);
 		Helpers.assert200ForObject(response);
 		json = API.getJSONFromResponse(response);
 		let key = json.successful[0].key;
 		json = await API.getItem(key, this, 'json');
 	
+		// Change the item type to a type without the field
 		json = {
 			version: json.version,
 			itemType: 'journalArticle'
@@ -2300,10 +2320,7 @@ describe('ItemsTests', function () {
 		await API.userPatch(
 			config.userID,
 			"items/" + key,
-			JSON.stringify(json),
-			{
-				"Content-Type": "application/json"
-			}
+			JSON.stringify(json)
 		);
 	
 		json = await API.getItem(key, this, 'json');
@@ -2334,7 +2351,13 @@ describe('ItemsTests', function () {
 		assert.equal('text/html', json.library.links.alternate.type);
 	});
 
+	/**
+	 * It should be possible to edit an existing PDF attachment without sending 'contentType'
+	 * (which would cause a new attachment to be rejected)
+	 * Disabled -- see note at Zotero_Item::checkTopLevelAttachment()
+	 */
 	it('testPatchTopLevelAttachment', async function () {
+		this.skip();
 		let json = await API.createAttachmentItem("imported_url", {
 			title: 'A',
 			contentType: 'application/pdf',
@@ -2467,7 +2490,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items?includeTrashed=1"
 		);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertCount(3, json);
 		let keys = [json[0].key, json[1].key, json[2].key];
 		assert.include(keys, key1);
@@ -2479,7 +2502,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items?itemKey=" + key2 + "," + key3 + "&includeTrashed=1"
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(2, json);
 		keys = [json[0].key, json[1].key];
 		assert.include(keys, key2);
@@ -2490,7 +2513,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items/top?includeTrashed=1"
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(2, json);
 		keys = [json[0].key, json[1].key];
 		assert.include(keys, key1);
@@ -2536,7 +2559,7 @@ describe('ItemsTests', function () {
 			}
 		);
 		Helpers.assert200(response2);
-		const json = await API.getJSONFromResponse(response2);
+		const json = API.getJSONFromResponse(response2);
 		Helpers.assert413ForObject(json);
 		Helpers.assert409ForObject(json, { message: "Parent item " + parentKey + " not found", index: 1 });
 		Helpers.assertEquals(parentKey, json.failed[1].data.parentItem);
@@ -2580,7 +2603,7 @@ describe('ItemsTests', function () {
 			}
 		];
 		let response = await API.postItems(data);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 
 		assert.notProperty(json.successful[0].data, 'deleted');
 	});
@@ -2628,7 +2651,7 @@ describe('ItemsTests', function () {
 			config.userID,
 			"items/" + key
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(date, json.data.date);
 
 		// meta.parsedDate (JSON)
@@ -2675,8 +2698,7 @@ describe('ItemsTests', function () {
 		let response = await API.userPatch(
 			config.userID,
 			`items/${jsonData.key}`,
-			JSON.stringify(json),
-			{ "Content-Type": "application/json" }
+			JSON.stringify(json)
 		);
 		Helpers.assert204(response);
 	});
@@ -2704,7 +2726,7 @@ describe('ItemsTests', function () {
 			"items/" + jsonData.key,
 			JSON.stringify(json)
 		);
-		assert.equal(response.status, 400, "Annotation must have a parent item");
+		Helpers.assert400(response, "Annotation must have a parent item");
 
 		// Regular item
 		json = {
@@ -2716,7 +2738,7 @@ describe('ItemsTests', function () {
 			"items/" + jsonData.key,
 			JSON.stringify(json)
 		);
-		assert.equal(response.status, 400, "Parent item of annotation must be a PDF attachment");
+		Helpers.assert400(response, "Parent item of annotation must be a PDF attachment");
 
 		// Linked-URL attachment
 		json = {
@@ -2728,7 +2750,7 @@ describe('ItemsTests', function () {
 			"items/" + jsonData.key,
 			JSON.stringify(json)
 		);
-		assert.equal(response.status, 400, "Parent item of annotation must be a PDF attachment");
+		Helpers.assert400(response, "Parent item of annotation must be a PDF attachment");
 	});
 
 	it('testConvertChildNoteToParentViaPatch', async function () {
@@ -2786,8 +2808,7 @@ describe('ItemsTests', function () {
 		response = await API.userPost(
 			config.userID,
 			"items",
-			JSON.stringify([json]),
-			{ "Content-Type": "application/json" }
+			JSON.stringify([json])
 		);
 		let msg = "Item " + json.key + " cannot be a child of itself";
 		// TEMP
@@ -2799,12 +2820,12 @@ describe('ItemsTests', function () {
 		let noteKey = await API.createNoteItem("Test", null, this, 'key');
 		let imageKey = await API.createAttachmentItem('embedded_image', { contentType: 'image/png' }, noteKey, this, 'key');
 		let response = await API.userGet(config.userID, `items/${noteKey}`);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(1, json.meta.numChildren);
   
 		response = await API.userGet(config.userID, `items/${noteKey}/children`);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertCount(1, json);
 		Helpers.assertEquals(imageKey, json[0].key);
 	});

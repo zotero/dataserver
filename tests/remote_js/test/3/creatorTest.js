@@ -169,6 +169,7 @@ describe('CreatorTests', function () {
 	});
 
 	it('test_should_add_creator_with_correct_case', async function () {
+		// Create two items with lowercase
 		let data = {
 			creators: [
 				{
@@ -180,6 +181,7 @@ describe('CreatorTests', function () {
 		await API.createItem("book", data);
 		await API.createItem("book", data);
 
+		// Create capitalized
 		let json = await API.createItem("book", {
 			creators: [
 				{

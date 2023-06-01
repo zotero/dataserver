@@ -18,6 +18,9 @@ describe('GroupTests', function () {
 		await API2After();
 	});
 
+	/**
+	 * Changing a group's metadata should change its ETag
+	 */
 	it('testUpdateMetadata', async function () {
 		const response = await API.userGet(
 			config.userID,

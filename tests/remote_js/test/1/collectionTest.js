@@ -27,13 +27,13 @@ describe('CollectionTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		Helpers.assertStatusCode(response, 200);
 		const totalResults = Helpers.xpathEval(xml, '//feed/zapi:totalResults');
 		const numCollections = Helpers.xpathEval(xml, '//feed//entry/zapi:numCollections');
 		assert.equal(parseInt(totalResults), 1);
 		assert.equal(parseInt(numCollections), 0);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const jsonResponse = JSON.parse(data.content);
 		assert.equal(jsonResponse.name, collectionName);
 		return jsonResponse;
@@ -65,7 +65,7 @@ describe('CollectionTests', function () {
 			`collections/${parent}?key=${config.apiKey}`
 		);
 		Helpers.assertStatusCode(response, 200);
-		xml = await API.getXMLFromResponse(response);
+		xml = API.getXMLFromResponse(response);
 		assert.equal(parseInt(Helpers.xpathEval(xml, '/atom:entry/zapi:numCollections')), 1);
 	});
 
@@ -80,9 +80,9 @@ describe('CollectionTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		assert.equal(parseInt(Helpers.xpathEval(xml, '//feed/zapi:totalResults')), 1);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const jsonResponse = JSON.parse(data.content);
 		assert.equal(jsonResponse.name, name);
 	});
@@ -90,7 +90,7 @@ describe('CollectionTests', function () {
 	it('testEditSingleCollection', async function () {
 		API.useAPIVersion(2);
 		const xml = await API.createCollection("Test", false);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 		const key = data.key;
 		API.useAPIVersion(1);
 
@@ -111,8 +111,8 @@ describe('CollectionTests', function () {
 			}
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xmlResponse = await API.getXMLFromResponse(response);
-		const dataResponse = await API.parseDataFromAtomEntry(xmlResponse);
+		const xmlResponse = API.getXMLFromResponse(response);
+		const dataResponse = API.parseDataFromAtomEntry(xmlResponse);
 		const jsonResponse = JSON.parse(dataResponse.content);
 		assert.equal(jsonResponse.name, newName);
 	});

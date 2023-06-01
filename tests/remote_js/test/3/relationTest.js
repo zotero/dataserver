@@ -70,7 +70,7 @@ describe('RelationsTests', function () {
 		}
 
 		// And item 2, since related items are bidirectional
-		const item2JSON2 =(await API.getItem(item2JSON.key, true, 'json')).data;
+		const item2JSON2 = (await API.getItem(item2JSON.key, true, 'json')).data;
 		assert.equal(1, Object.keys(item2JSON2.relations).length);
 		assert.equal(item1URI, item2JSON2.relations["dc:relation"]);
 
@@ -265,7 +265,7 @@ describe('RelationsTests', function () {
 			'dc:relation': `http://zotero.org/users/${config.userID}/items/${item1Data.key}`
 		};
 		const response = await API.postItems([item1Data, item2Data]);
-		Helpers.assert200(response);
+		Helpers.assert200ForObject(response, { index: 0 });
 		Helpers.assertUnchangedForObject(response, { index: 1 });
 	});
 	
@@ -369,6 +369,38 @@ describe('RelationsTests', function () {
 			"collections",
 			JSON.stringify([json])
 		);
-		Helpers.assert200(response);
+		Helpers.assert200ForObject(response);
+	});
+
+	it('test_should_add_a_URL_to_a_relation_with_PATCH', async function () {
+		const relations = {
+			"dc:replaces": [
+				"http://zotero.org/users/" + config.userID + "/items/AAAAAAAA"
+			]
+		};
+		
+		const itemJSON = await API.createItem("book", {
+			relations: relations
+		}, true, 'jsonData');
+		
+		relations["dc:replaces"].push("http://zotero.org/users/" + config.userID + "/items/BBBBBBBB");
+		
+		const patchJSON = {
+			version: itemJSON.version,
+			relations: relations
+		};
+		const response = await API.userPatch(
+			config.userID,
+			"items/" + itemJSON.key,
+			JSON.stringify(patchJSON)
+		);
+		Helpers.assert204(response);
+		
+		// Make sure the array was updated
+		const json = (await API.getItem(itemJSON.key, 'json')).data;
+		assert.equal(Object.keys(json.relations).length, Object.keys(relations).length);
+		assert.equal(json.relations['dc:replaces'].length, relations['dc:replaces'].length);
+		assert.include(json.relations['dc:replaces'], relations['dc:replaces'][0]);
+		assert.include(json.relations['dc:replaces'], relations['dc:replaces'][1]);
 	});
 });

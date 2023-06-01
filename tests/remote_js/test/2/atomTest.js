@@ -3,7 +3,6 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api2.js');
 const Helpers = require('../../helpers2.js');
-const { JSDOM } = require('jsdom');
 const { API2Before, API2After } = require("../shared.js");
 
 describe('CollectionTests', function () {
@@ -73,7 +72,7 @@ describe('CollectionTests', function () {
 			"items?key=" + config.apiKey
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		const links = Helpers.xpathEval(xml, '/atom:feed/atom:link', true, true);
 		assert.equal(config.apiURLPrefix + "users/" + userID + "/items", links[0].getAttribute('href'));
 	
@@ -83,13 +82,12 @@ describe('CollectionTests', function () {
 			"items?key=" + config.apiKey + "&order=dateModified&sort=asc"
 		);
 		Helpers.assertStatusCode(response2, 200);
-		const xml2 = await API.getXMLFromResponse(response2);
+		const xml2 = API.getXMLFromResponse(response2);
 		const links2 = Helpers.xpathEval(xml2, '/atom:feed/atom:link', true, true);
 		assert.equal(config.apiURLPrefix + "users/" + userID + "/items?order=dateModified&sort=asc", links2[0].getAttribute('href'));
 	});
 
 
-	//Requires citation server to run
 	it('testMultiContent', async function () {
 		const keys = Object.keys(keyObj);
 		const keyStr = keys.join(',');
@@ -99,7 +97,7 @@ describe('CollectionTests', function () {
 			`items?key=${config.apiKey}&itemKey=${keyStr}&content=bib,json`,
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		assert.equal(Helpers.xpathEval(xml, '/atom:feed/zapi:totalResults'), keys.length);
 	
 		const entries = Helpers.xpathEval(xml, '//atom:entry', true, true);
@@ -115,9 +113,7 @@ describe('CollectionTests', function () {
 				/"itemKey": "[A-Z0-9]{8}",(\s+)"itemVersion": [0-9]+/,
 				'"itemKey": "",$1"itemVersion": 0',
 			);
-			const contentDom = new JSDOM(content);
-			const expectedDom = new JSDOM(keyObj[key]);
-			assert.equal(contentDom.window.document.innerHTML, expectedDom.window.document.innerHTML);
+			Helpers.assertXMLEqual(content, keyObj[key]);
 		}
 	});
 });

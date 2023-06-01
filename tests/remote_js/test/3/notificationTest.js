@@ -6,7 +6,7 @@ const Helpers = require('../../helpers3.js');
 const { API3Before, API3After, resetGroups } = require("../shared.js");
 
 describe('NotificationTests', function () {
-	this.timeout(config.timeout);
+	this.timeout(0);
 
 	before(async function () {
 		await API3Before();
@@ -38,6 +38,9 @@ describe('NotificationTests', function () {
 		}, response);
 	});
 
+	/**
+	 * Grant an API key access to a group
+	 */
 	it('testKeyAddLibraryNotification', async function () {
 		API.useAPIKey("");
 		const name = "Test " + Helpers.uniqueID();
@@ -62,6 +65,7 @@ describe('NotificationTests', function () {
 
 		try {
 			json.access.groups = {};
+			// Add a group to the key, which should trigger topicAdded
 			json.access.groups[config.ownedPrivateGroupID] = {
 				library: true,
 				write: true
@@ -79,8 +83,6 @@ describe('NotificationTests', function () {
 				apiKeyID: String(apiKeyID),
 				topic: '/groups/' + config.ownedPrivateGroupID
 			}, response2);
-
-			await API.superDelete("keys/" + apiKey);
 		}
 		// Clean up
 		finally {
@@ -111,6 +113,7 @@ describe('NotificationTests', function () {
 			})
 		);
 		try {
+			// No notification when creating a new key
 			Helpers.assertNotificationCount(0, response);
 		}
 		finally {
@@ -124,6 +127,9 @@ describe('NotificationTests', function () {
 		}
 	});
 
+	/**
+	 * Create and delete group owned by user
+	 */
 	it('testAddDeleteOwnedGroupNotification', async function () {
 		API.useAPIKey("");
 		const json = await createKeyWithAllGroupAccess(config.userID);
@@ -131,7 +137,7 @@ describe('NotificationTests', function () {
 
 		try {
 			const allGroupsKeys = await getKeysWithAllGroupAccess(config.userID);
-
+			// Create new group owned by user
 			const response = await createGroup(config.userID);
 			const xml = API.getXMLFromResponse(response);
 			const groupID = parseInt(Helpers.xpathEval(xml, "/atom:entry/zapi:groupID"));
@@ -140,7 +146,7 @@ describe('NotificationTests', function () {
 				Helpers.assertNotificationCount(Object.keys(allGroupsKeys).length, response);
 				await Promise.all(allGroupsKeys.map(async function (key) {
 					const response2 = await API.superGet(`keys/${key}?showid=1`);
-					const json2 = await API.getJSONFromResponse(response2);
+					const json2 = API.getJSONFromResponse(response2);
 					Helpers.assertHasNotification({
 						event: "topicAdded",
 						apiKeyID: String(json2.id),
@@ -148,6 +154,7 @@ describe('NotificationTests', function () {
 					}, response);
 				}));
 			}
+			// Delete group
 			finally {
 				const response = await API.superDelete(`groups/${groupID}`);
 				Helpers.assert204(response);
@@ -158,6 +165,7 @@ describe('NotificationTests', function () {
 				}, response);
 			}
 		}
+		// Delete key
 		finally {
 			const response = await API.superDelete(`keys/${apiKey}`);
 			try {
@@ -187,6 +195,9 @@ describe('NotificationTests', function () {
 		}, response);
 	});
 
+	/**
+	 * Revoke access for a group from an API key that has access to all groups
+	 */
 	it('testKeyRemoveLibraryFromAllGroupsNotification', async function () {
 		API.useAPIKey("");
 		const removedGroup = config.ownedPrivateGroupID;
@@ -194,15 +205,20 @@ describe('NotificationTests', function () {
 		const apiKey = json.key;
 		const apiKeyID = json.id;
 		try {
+			// Get list of available groups
 			API.useAPIKey(apiKey);
 			const response = await API.userGet(config.userID, 'groups');
 			let groupIDs = API.getJSONFromResponse(response).map(group => group.id);
+
+			// Remove one group, and replace access array with new set
 			groupIDs = groupIDs.filter(groupID => groupID !== removedGroup);
 			delete json.access.groups.all;
 			for (let groupID of groupIDs) {
 				json.access.groups[groupID] = {};
 				json.access.groups[groupID].library = true;
 			}
+
+			// Post new JSON, which should trigger topicRemoved for the removed group
 			API.useAPIKey("");
 			const putResponse = await API.superPut(`keys/${apiKey}`, JSON.stringify(json));
 			Helpers.assert200(putResponse);
@@ -237,7 +253,7 @@ describe('NotificationTests', function () {
 			JSON.stringify(json)
 		);
 		assert.equal(response.status, 201);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		return json;
 	}
 
@@ -268,7 +284,7 @@ describe('NotificationTests', function () {
 	async function getKeysWithAllGroupAccess(userID) {
 		const response = await API.superGet("users/" + userID + "/keys");
 		assert.equal(response.status, 200);
-		const json = await API.getJSONFromResponse(response);
+		const json = API.getJSONFromResponse(response);
 		return json.filter(keyObj => keyObj.access.groups.all.library).map(keyObj => keyObj.key);
 	}
 
@@ -343,24 +359,21 @@ describe('NotificationTests', function () {
 		}
 	});
 
+
 	it('testKeyAddAllGroupsToNoneNotification', async function () {
 		API.useAPIKey("");
-		const json = await createKey(config.userID, {
-			userId: config.userId,
-			body: {
-				user: {
-					library: true,
-				},
-			},
-		});
+		const json = await createKey(config.userID,
+			{ user: { library: true } },
+		);
 		const apiKey = json.key;
 		const apiKeyId = json.id;
 
 		try {
+			// Get list of available groups
 			const response = await API.superGet(`users/${config.userID}/groups`);
 			const groupIds = API.getJSONFromResponse(response).map(group => group.id);
-			json.access = {};
 			json.access.groups = [];
+			// Add all groups to the key, which should trigger topicAdded for each groups
 			json.access.groups[0] = { library: true };
 			const putResponse = await API.superPut(`keys/${apiKey}`, JSON.stringify(json));
 			Helpers.assert200(putResponse);
@@ -399,6 +412,7 @@ describe('NotificationTests', function () {
 		const apiKeyID = json.id;
 
 		try {
+			// Remove group from the key, which should trigger topicRemoved
 			delete json.access.groups;
 			const response = await API.superPut(
 				`keys/${apiKey}`,

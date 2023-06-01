@@ -69,6 +69,7 @@ describe('AnnotationsTests', function () {
 				]
 			})
 		};
+		// Create highlight annotation
 		let response = await API.userPost(
 			config.userID,
 			"items",
@@ -80,6 +81,7 @@ describe('AnnotationsTests', function () {
 		let annotationKey = json.key;
 		let version = json.version;
 
+		// Try to change to note annotation
 		json = {
 			version: version,
 			annotationType: 'note'
@@ -138,7 +140,7 @@ describe('AnnotationsTests', function () {
 		};
 		let response = await API.userPost(config.userID, 'items', JSON.stringify([json]), { 'Content-Type': 'application/json' });
 		Helpers.assert200ForObject(response);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		let jsonData = jsonResponse.successful[0].data;
 		assert.notProperty(jsonData, 'annotationAuthorName');
 	});
@@ -187,7 +189,7 @@ describe('AnnotationsTests', function () {
 		};
 		const response = await API.userPost(config.userID, 'items', JSON.stringify([json]), { "Content-Type": "application/json" });
 		Helpers.assert200ForObject(response);
-		const result = await API.getJSONFromResponse(response);
+		const result = API.getJSONFromResponse(response);
 		const { key: annotationKey, version } = result.successful[0];
 		const patchJson = {
 			key: annotationKey,
@@ -280,7 +282,7 @@ describe('AnnotationsTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200ForObject(response);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		let jsonData = jsonResponse.successful[0].data;
 		Helpers.assertEquals('annotation', jsonData.itemType.toString());
 		Helpers.assertEquals('note', jsonData.annotationType);
@@ -462,7 +464,7 @@ describe('AnnotationsTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200ForObject(response);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		let jsonData = jsonResponse.successful[0].data;
 		Helpers.assertEquals('annotation', String(jsonData.itemType));
 		Helpers.assertEquals('highlight', jsonData.annotationType);
@@ -497,7 +499,7 @@ describe('AnnotationsTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200ForObject(response);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		jsonResponse = jsonResponse.successful[0];
 		let jsonData = jsonResponse.data;
 		Helpers.assertEquals('annotation', jsonData.itemType);

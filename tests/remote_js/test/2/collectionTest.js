@@ -16,7 +16,7 @@ describe('CollectionTests', function () {
 		await API2After();
 	});
 
-	it('testNewCollections', async function () {
+	const testNewCollection = async () => {
 		const name = "Test Collection";
 
 		const xml = await API.createCollection(name, false, true, 'atom');
@@ -26,6 +26,11 @@ describe('CollectionTests', function () {
 
 		const json = JSON.parse(data.content);
 		assert.equal(name, json.name);
+		return data;
+	};
+
+	it('testNewSubcollection', async function () {
+		const data = await testNewCollection();
 
 		const subName = "Test Subcollection";
 		const parent = data.key;
@@ -43,13 +48,13 @@ describe('CollectionTests', function () {
 			`collections/${parent}?key=${config.apiKey}`
 		);
 		Helpers.assertStatusCode(response, 200);
-		const xmlRes = await API.getXMLFromResponse(response);
+		const xmlRes = API.getXMLFromResponse(response);
 		assert.equal(parseInt(Helpers.xpathEval(xmlRes, '/atom:entry/zapi:numCollections')), 1);
 	});
 
 	it('testNewMultipleCollections', async function () {
 		const xml = await API.createCollection('Test Collection 1', false, true);
-		const data = await API.parseDataFromAtomEntry(xml);
+		const data = API.parseDataFromAtomEntry(xml);
 
 		const name1 = 'Test Collection 2';
 		const name2 = 'Test Subcollection';
@@ -75,7 +80,7 @@ describe('CollectionTests', function () {
 		);
 
 		Helpers.assertStatusCode(response, 200);
-		const jsonResponse = await API.getJSONFromResponse(response);
+		const jsonResponse = API.getJSONFromResponse(response);
 		assert.lengthOf(Object.keys(jsonResponse.success), 2);
 		const xmlResponse = await API.getCollectionXML(Object.keys(jsonResponse.success).map(key => jsonResponse.success[key]));
 		assert.equal(parseInt(Helpers.xpathEval(xmlResponse, '/atom:feed/zapi:totalResults')), 2);
@@ -91,10 +96,10 @@ describe('CollectionTests', function () {
 
 	it('testEditMultipleCollections', async function () {
 		let xml = await API.createCollection("Test 1", false, true, 'atom');
-		let data = await API.parseDataFromAtomEntry(xml);
+		let data = API.parseDataFromAtomEntry(xml);
 		let key1 = data.key;
 		xml = await API.createCollection("Test 2", false, true, 'atom');
-		data = await API.parseDataFromAtomEntry(xml);
+		data = API.parseDataFromAtomEntry(xml);
 		let key2 = data.key;
 
 		let newName1 = "Test 1 Modified";
@@ -120,7 +125,7 @@ describe('CollectionTests', function () {
 			}
 		);
 		Helpers.assertStatusCode(response, 200);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 
 		assert.lengthOf(Object.keys(json.success), 2);
 		xml = await API.getCollectionXML(Object.keys(json.success).map(key => json.success[key]));
@@ -261,13 +266,13 @@ describe('CollectionTests', function () {
 		const collectionKey = await API.createCollection('Test', false, true, 'key');
 		
 		let xml = await API.createItem("book", { collections: [collectionKey] }, this);
-		let data = await API.parseDataFromAtomEntry(xml);
+		let data = API.parseDataFromAtomEntry(xml);
 		let itemKey1 = data.key;
 		let json = JSON.parse(data.content);
 		assert.deepEqual([collectionKey], json.collections);
 		
 		xml = await API.createItem("journalArticle", { collections: [collectionKey] }, true);
-		data = await API.parseDataFromAtomEntry(xml);
+		data = API.parseDataFromAtomEntry(xml);
 		let itemKey2 = data.key;
 		json = JSON.parse(data.content);
 		assert.deepEqual([collectionKey], json.collections);

@@ -33,7 +33,7 @@ describe('GeneralTests', function () {
 			]
 		};
 		const xml = await API.createItem("book", data, this, 'atom');
-		const parsedData = await API.parseDataFromAtomEntry(xml);
+		const parsedData = API.parseDataFromAtomEntry(xml);
 		const json = JSON.parse(parsedData.content);
 		assert.equal("AA", json.title);
 		assert.equal("BB", json.creators[0].name);

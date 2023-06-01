@@ -1,5 +1,3 @@
-const chai = require('chai');
-const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
@@ -191,7 +189,7 @@ describe('BibTests', function () {
 			let response = await API.userGet(config.userID, `items?itemKey=${keyStr}&include=bib${(style == 'default' ? "" : '&style=' + encodeURIComponent(style))}`, { "Content-Type": "application/json" });
 			Helpers.assert200(response);
 			Helpers.assertTotalResults(response, keys.length);
-			let json = await API.getJSONFromResponse(response);
+			let json = API.getJSONFromResponse(response);
 
 			for (let item of json) {
 				let key = item.key;
@@ -205,7 +203,7 @@ describe('BibTests', function () {
 			for (let [key, expected] of Object.entries(items)) {
 				let response = await API.userGet(config.userID, `items/${key}?include=citation${(style == "default" ? "" : "&style=" + encodeURIComponent(style))}`, { "Content-Type": "application/json" });
 				Helpers.assert200(response);
-				let json = await API.getJSONFromResponse(response);
+				let json = API.getJSONFromResponse(response);
 				Helpers.assertEquals(expected.json.citation[style], json.citation, `Item: ${key}, style: ${style}`);
 			}
 		}
@@ -221,6 +219,7 @@ describe('BibTests', function () {
 				);
 				Helpers.assert200(response);
 				let content = API.getContentFromResponse(response);
+				// Add zapi namespace
 				content = content.toString().replace('<content ', '<content xmlns:zapi="http://zotero.org/ns/api" ');
 				Helpers.assertXMLEqual(expected.atom.citation[style], content);
 			}
@@ -245,7 +244,7 @@ describe('BibTests', function () {
 		for (let style of styles) {
 			let response = await API.userGet(config.userID, `items?itemKey=${keyStr}&content=bib${style == 'default' ? '' : '&style=' + encodeURIComponent(style)}`, { 'Content-Type': 'application/json' });
 			Helpers.assert200(response);
-			let xml = await API.getXMLFromResponse(response);
+			let xml = API.getXMLFromResponse(response);
 			Helpers.assertTotalResults(response, keys.length);
 
 			let entries = Helpers.xpathEval(xml, '//atom:entry', true, true);
@@ -271,7 +270,7 @@ describe('BibTests', function () {
 			);
 			Helpers.assert200(response);
 			Helpers.assertTotalResults(response, keys.length);
-			let json = await API.getJSONFromResponse(response);
+			let json = API.getJSONFromResponse(response);
 
 			for (let item of json) {
 				let key = item.key;

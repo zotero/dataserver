@@ -6,7 +6,6 @@ const Helpers = require('../../helpers3.js');
 const { API3Before, API3After } = require("../shared.js");
 
 describe('NoteTests', function () {
-	//this.timeout(config.timeout);
 	this.timeout(config.timeout);
 
 	let content, json;
@@ -63,7 +62,7 @@ describe('NoteTests', function () {
 	it('testSaveUnchangedSanitizedNote', async function () {
 		let json = await API.createNoteItem('<span >Foo</span>', false, this, 'json');
 		let response = await API.postItem(json.data, { "Content-Type": "application/json" });
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		let unchanged = json.unchanged;
 		assert.property(unchanged, 0);
 	});
@@ -97,7 +96,7 @@ describe('NoteTests', function () {
 
 		Helpers.assert200ForObject(response);
 
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		let data = jsonResponse.successful[0].data;
 		assert.equal(note, data.note);
 	});
@@ -137,7 +136,7 @@ describe('NoteTests', function () {
 		json.data.note = val;
 
 		let response = await API.postItem(json.data);
-		let jsonResp = await API.getJSONFromResponse(response);
+		let jsonResp = API.getJSONFromResponse(response);
 		Helpers.assertEquals(val, jsonResp.successful[0].data.note);
 	});
 

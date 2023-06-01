@@ -2,6 +2,7 @@ const { JSDOM } = require("jsdom");
 const chai = require('chai');
 const assert = chai.assert;
 const crypto = require('crypto');
+const fs = require('fs');
 
 class Helpers2 {
 	static uniqueToken = () => {
@@ -17,6 +18,25 @@ class Helpers2 {
 			result += chars[crypto.randomInt(chars.length)];
 		}
 		return result;
+	};
+
+	static md5 = (str) => {
+		return crypto.createHash('md5').update(str).digest('hex');
+	};
+
+	static md5File = (fileName) => {
+		const data = fs.readFileSync(fileName);
+		return crypto.createHash('md5').update(data).digest('hex');
+	};
+
+	static implodeParams = (params, exclude = []) => {
+		let parts = [];
+		for (const [key, value] of Object.entries(params)) {
+			if (!exclude.includes(key)) {
+				parts.push(key + "=" + encodeURIComponent(value));
+			}
+		}
+		return parts.join("&");
 	};
 
 	static namespaceResolver = (prefix) => {

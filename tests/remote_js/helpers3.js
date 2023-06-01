@@ -320,11 +320,12 @@ class Helpers3 {
 			}
 			else {
 				assert.ok(header);
-				this.assertCount(expected, JSON.parse(Buffer.from(header, 'base64')));
+				const headerJSON = JSON.parse(Buffer.from(header, 'base64'));
+				this.assertCount(expected, headerJSON);
 			}
 		}
 		catch (e) {
-			console.log("\nHeader: " + Buffer.from(header, 'base64') + "\n");
+			console.log("\nHeader: " + JSON.parse(Buffer.from(header, 'base64')) + "\n");
 			throw e;
 		}
 	}

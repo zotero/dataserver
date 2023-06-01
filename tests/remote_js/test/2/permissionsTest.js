@@ -28,8 +28,12 @@ describe('PermissionsTests', function () {
 		Helpers.assertTotalResults(response, config.numPublicGroups);
 	});
 
+	/**
+	 * A key without note access shouldn't be able to create a note.
+	 * Disabled
+	 */
 	it('testKeyNoteAccessWriteError', async function() {
-		this.skip(); //disabled
+		this.skip();
 	});
 
 	it('testUserGroupsOwned', async function () {
@@ -87,14 +91,14 @@ describe('PermissionsTests', function () {
 	
 		const makeNoteItem = async (text) => {
 			const xml = await API.createNoteItem(text, false, true);
-			const data = await API.parseDataFromAtomEntry(xml);
+			const data = API.parseDataFromAtomEntry(xml);
 			keys.push(data.key);
 			topLevelKeys.push(data.key);
 		};
 	
 		const makeBookItem = async (title) => {
 			let xml = await API.createItem('book', { title: title }, true);
-			let data = await API.parseDataFromAtomEntry(xml);
+			let data = API.parseDataFromAtomEntry(xml);
 			keys.push(data.key);
 			topLevelKeys.push(data.key);
 			bookKeys.push(data.key);
@@ -111,7 +115,7 @@ describe('PermissionsTests', function () {
 		const lastKey = await makeBookItem("F");
 	
 		let xml = await API.createNoteItem("<p>G</p>", lastKey, true);
-		let data = await API.parseDataFromAtomEntry(xml);
+		let data = API.parseDataFromAtomEntry(xml);
 		keys.push(data.key);
 	
 		// Create collection and add items to it

@@ -15,18 +15,13 @@ describe('KeysTests', function () {
 	after(async function () {
 		await API3After();
 	});
-	// beforeEach(async function () {
-	// 	await API.userClear(config.userID);
-	// });
 
-	// afterEach(async function () {
-	// 	await API.userClear(config.userID);
-	// });
-
+	// Private API
 	it('testKeyCreateAndModifyWithCredentials', async function () {
-		await API.useAPIKey("");
+		API.useAPIKey("");
 		let name = "Test " + Helpers.uniqueID();
 
+		// Can't create on /users/:userID/keys with credentials
 		let response = await API.userPost(
 			config.userID,
 			'keys',
@@ -43,6 +38,7 @@ describe('KeysTests', function () {
 		);
 		Helpers.assert403(response);
 
+		// Create with credentials
 		response = await API.post(
 			'keys',
 			JSON.stringify({
@@ -59,7 +55,7 @@ describe('KeysTests', function () {
 			{}
 		);
 		Helpers.assert201(response);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		let key = json.key;
 		assert.equal(json.userID, config.userID);
 		assert.equal(json.name, name);
@@ -72,6 +68,7 @@ describe('KeysTests', function () {
 
 		name = "Test " + Helpers.uniqueID();
 
+		// Can't modify on /users/:userID/keys/:key with credentials
 		response = await API.userPut(
 			config.userID,
 			"keys/" + key,
@@ -88,6 +85,7 @@ describe('KeysTests', function () {
 		);
 		Helpers.assert403(response);
 
+		// Modify with credentials
 		response = await API.put(
 			"keys/" + key,
 			JSON.stringify({
@@ -102,7 +100,7 @@ describe('KeysTests', function () {
 			})
 		);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		key = json.key;
 		assert.equal(json.name, name);
 
@@ -114,9 +112,10 @@ describe('KeysTests', function () {
 	});
 
 	it('testKeyCreateAndDelete', async function () {
-		await API.useAPIKey('');
+		API.useAPIKey('');
 		const name = 'Test ' + Helpers.uniqueID();
 
+		// Can't create anonymously
 		let response = await API.userPost(
 			config.userID,
 			'keys',
@@ -129,6 +128,7 @@ describe('KeysTests', function () {
 		);
 		Helpers.assert403(response);
 
+		// Create as root
 		response = await API.userPost(
 			config.userID,
 			'keys',
@@ -145,13 +145,14 @@ describe('KeysTests', function () {
 			}
 		);
 		Helpers.assert201(response);
-		const json = await API.getJSONFromResponse(response);
+		const json = API.getJSONFromResponse(response);
 		const key = json.key;
 		assert.equal(config.username, json.username);
 		assert.equal(config.displayName, json.displayName);
 		assert.equal(name, json.name);
 		assert.deepEqual({ user: { library: true, files: true } }, json.access);
 
+		// Delete anonymously (with embedded key)
 		response = await API.userDelete(config.userID, 'keys/current', {
 			'Zotero-API-Key': key
 		});
@@ -170,7 +171,7 @@ describe('KeysTests', function () {
 			{ "Zotero-API-Key": config.apiKey }
 		);
 		Helpers.assert200(response);
-		const json = await API.getJSONFromResponse(response);
+		const json = API.getJSONFromResponse(response);
 		assert.equal(config.apiKey, json.key);
 		assert.equal(config.userID, json.userID);
 		assert.equal(config.username, json.username);
@@ -189,6 +190,7 @@ describe('KeysTests', function () {
 		assert.notProperty(json, 'recentIPs');
 	});
 
+	// Deprecated
 	it('testGetKeyInfoWithUser', async function () {
 		API.useAPIKey("");
 		const response = await API.userGet(
@@ -209,6 +211,7 @@ describe('KeysTests', function () {
 		assert.isOk(json.access.groups.all.write);
 	});
 
+	// Private API
 	it('testKeyCreateWithEmailAddress', async function () {
 		API.useAPIKey("");
 		let name = "Test " + Helpers.uniqueID();
@@ -246,7 +249,7 @@ describe('KeysTests', function () {
 	});
 
 	it('testGetKeys', async function () {
-	// No anonymous access
+		// No anonymous access
 		API.useAPIKey('');
 		let response = await API.userGet(
 			config.userID,
@@ -287,7 +290,7 @@ describe('KeysTests', function () {
 		API.useAPIKey("");
 		const response = await API.get('keys/' + config.apiKey);
 		Helpers.assert200(response);
-		const json = await API.getJSONFromResponse(response);
+		const json = API.getJSONFromResponse(response);
 		assert.equal(config.apiKey, json.key);
 		assert.equal(config.userID, json.userID);
 		assert.property(json.access, 'user');

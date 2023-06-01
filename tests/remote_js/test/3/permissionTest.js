@@ -30,6 +30,7 @@ describe('PermissionsTests', function () {
 		const response = await API.get(`users/${config.userID}/groups`);
 		Helpers.assertStatusCode(response, 200);
 
+		// Make sure they're the right groups
 		const json = API.getJSONFromResponse(response);
 		const groupIDs = json.map(obj => String(obj.id));
 		assert.include(groupIDs, String(config.ownedPublicGroupID), `Owned public group ID ${config.ownedPublicGroupID} not found`);
@@ -42,6 +43,7 @@ describe('PermissionsTests', function () {
 		const response = await API.get(`users/${config.userID}/groups?content=json`);
 		Helpers.assertStatusCode(response, 200);
 
+		// Make sure they're the right groups
 		const xml = API.getXMLFromResponse(response);
 		const groupIDs = Helpers.xpathEval(xml, '//atom:entry/zapi:groupID', false, true);
 		assert.include(groupIDs, String(config.ownedPublicGroupID), `Owned public group ID ${config.ownedPublicGroupID} not found`);
@@ -49,6 +51,9 @@ describe('PermissionsTests', function () {
 		Helpers.assertTotalResults(response, config.numPublicGroups);
 	});
 
+	/**
+	 * A key without note access shouldn't be able to create a note
+	 */
 	it('testKeyNoteAccessWriteError', async function () {
 		this.skip(); //disabled
 	});
@@ -133,13 +138,13 @@ describe('PermissionsTests', function () {
 		);
 		
 		try {
-			await API.useAPIKey(config.apiKey);
+			API.useAPIKey(config.apiKey);
 			let response = await API.groupGet(groupID, "items");
 			Helpers.assert200(response);
 			Helpers.assertNumResults(response, 1);
 			
 			// An anonymous request should fail, because libraryReading is members
-			await API.useAPIKey(false);
+			API.useAPIKey(false);
 			response = await API.groupGet(groupID, "items");
 			Helpers.assert403(response);
 		}
@@ -327,7 +332,7 @@ describe('PermissionsTests', function () {
 		// totalResults with limit
 		response = await API.userGet(
 			config.userID,
-			"items?limit=1"
+			"items?format=atom&limit=1"
 		);
 		Helpers.assertNumResults(response, 1);
 		Helpers.assertTotalResults(response, bookKeys.length);
@@ -335,7 +340,7 @@ describe('PermissionsTests', function () {
 		// And without limit
 		response = await API.userGet(
 			config.userID,
-			"items"
+			"items?format=atom"
 		);
 		Helpers.assertNumResults(response, bookKeys.length);
 		Helpers.assertTotalResults(response, bookKeys.length);
@@ -343,7 +348,7 @@ describe('PermissionsTests', function () {
 		// Top
 		response = await API.userGet(
 			config.userID,
-			"items/top"
+			"items/top?format=atom"
 		);
 		Helpers.assertNumResults(response, bookKeys.length);
 		Helpers.assertTotalResults(response, bookKeys.length);
@@ -351,7 +356,7 @@ describe('PermissionsTests', function () {
 		// Collection
 		response = await API.userGet(
 			config.userID,
-			"collections/" + collectionKey + "/items"
+			"collections/" + collectionKey + "/items?format=atom"
 		);
 		Helpers.assertNumResults(response, bookKeys.length);
 		Helpers.assertTotalResults(response, bookKeys.length);

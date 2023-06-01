@@ -93,6 +93,7 @@ describe('SortTests', function () {
 		titlesSorted.sort();
 		let correct = {};
 		titlesSorted.forEach((title) => {
+			// The key at position k in itemKeys should be at the same position in keys
 			let index = titlesToIndex[title];
 			correct[index] = keys[index];
 		});
@@ -117,12 +118,14 @@ describe('SortTests', function () {
 		};
 		let namesEntries = Object.entries(namesCopy);
 		namesEntries.sort((a, b) => sortFunction(a[1], b[1]));
+		// The key at position k in itemKeys should be at the same position in keys
 		assert.equal(Object.keys(namesEntries).length, keys.length);
 		let correct = {};
 		namesEntries.forEach((entry, i) => {
 			correct[i] = itemKeys[parseInt(entry[0])];
 		});
 		correct = Object.keys(correct).map(key => correct[key]);
+		// Check attachment and note, which should fall back to ordered added (itemID)
 		assert.deepEqual(correct, keys);
 	});
 });

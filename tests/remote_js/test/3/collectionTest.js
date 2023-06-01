@@ -41,10 +41,12 @@ describe('CollectionTests', function () {
 			"collections/" + parent
 		);
 		Helpers.assert200(response);
-		let jsonResponse = await API.getJSONFromResponse(response);
+		let jsonResponse = API.getJSONFromResponse(response);
 		Helpers.assertEquals(jsonResponse.meta.numCollections, 1);
 	});
 
+	// MySQL FK cascade limit is 15, so 15 would prevent deleting all collections with just the
+	// libraryID
 	it('test_should_delete_collection_with_14_levels_below_it', async function () {
 		let json = await API.createCollection("0", false, this, 'json');
 		let topCollectionKey = json.key;
@@ -222,7 +224,7 @@ describe('CollectionTests', function () {
 		Helpers.assert200(response);
 		// If this behavior changes, remove the pre-increment
 		Helpers.assertEquals(++libraryVersion, response.headers['last-modified-version'][0]);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		assert.lengthOf(Object.keys(json.unchanged), 2);
 
 		Helpers.assertEquals(libraryVersion, await API.getLibraryVersion());
@@ -252,7 +254,7 @@ describe('CollectionTests', function () {
 		);
 		Helpers.assert200(response);
 		libraryVersion = response.headers['last-modified-version'][0];
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		assert.lengthOf(Object.keys(json.successful), 2);
 		// Deprecated
 		assert.lengthOf(Object.keys(json.success), 2);
@@ -274,7 +276,7 @@ describe('CollectionTests', function () {
 
 		response = await API.getCollectionResponse(keys);
 		Helpers.assertTotalResults(response, 2);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		// POST follows PATCH behavior, so unspecified values shouldn't change
 		Helpers.assertEquals(collection1NewName, json[0].data.name);
 		assert.notOk(json[0].data.parentCollection);
@@ -481,7 +483,7 @@ describe('CollectionTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200(response);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		assert.equal(json.successful[0].data.parentCollection, keyB);
 
 		let jsonB = await API.getCollection(keyB, this);

@@ -42,6 +42,34 @@ describe('TagTests', function () {
 		Helpers.assertStatusForObject(response, 'failed', 0, 400, "Tag must be an object");
 	});
 
+	it('test_should_add_tag_to_item', async function () {
+		let json = await API.getItemTemplate("book");
+		json.tags.push({ tag: "A" });
+
+		let response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		json = API.getJSONFromResponse(response).successful[0].data;
+		
+		json.tags.push({ tag: "C" });
+		response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		json = API.getJSONFromResponse(response).successful[0].data;
+		
+		json.tags.push({ tag: "B" });
+		response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		json = API.getJSONFromResponse(response).successful[0].data;
+		
+		json.tags.push({ tag: "D" });
+		response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		let tags = json.tags;
+		json = API.getJSONFromResponse(response).successful[0].data;
+		
+		assert.deepEqual(tags, json.tags);
+	});
+	
+
 	it('testTagSearch', async function () {
 		const tags1 = ["a", "aa", "b"];
 		const tags2 = ["b", "c", "cc"];
@@ -174,6 +202,10 @@ describe('TagTests', function () {
 		Helpers.assertNumResults(response, 1);
 	});
 
+	/**
+	 * When modifying a tag on an item, only the item itself should have its
+	 * version updated, not other items that had (and still have) the same tag
+	 */
 	it('testTagAddItemVersionChange', async function () {
 		let data1 = await API.createItem("book", {
 			tags: [{
@@ -590,9 +622,7 @@ describe('TagTests', function () {
 			{ tag: "etest" },
 		];
   
-		let response = await API.postItem(data, {
-			headers: { "Content-Type": "application/json" },
-		});
+		let response = await API.postItem(data);
 		Helpers.assert200(response);
 		Helpers.assert200ForObject(response);
   
@@ -627,6 +657,7 @@ describe('TagTests', function () {
 		Helpers.assert200(response);
 		Helpers.assert200ForObject(response);
 	
+		// Item version should be one greater than last update
 		data1 = (await API.getItem(data1.key, this, 'json')).data;
 		data2 = (await API.getItem(data2.key, this, 'json')).data;
 		assert.equal(version + 1, data2.version);
@@ -645,7 +676,7 @@ describe('TagTests', function () {
 				{ tag: "b" }
 			]
 		};
-		const json = await API.createItem('book', createItemData, this, 'responseJSON');
+		await API.createItem('book', createItemData, this, 'responseJSON');
   
 		const json2 = await API.getItem(itemKey, this, 'json');
 		const data = json2.data;
@@ -673,26 +704,26 @@ describe('TagTests', function () {
 		json.tags = [{ tag: "A" }];
 		let response = await API.postItem(json);
 		Helpers.assert200ForObject(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		json = json.successful[0].data;
   
 		json.tags.push({ tag: "C" });
 		response = await API.postItem(json);
 		Helpers.assert200ForObject(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		json = json.successful[0].data;
   
 		json.tags.push({ tag: "B" });
 		response = await API.postItem(json);
 		Helpers.assert200ForObject(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		json = json.successful[0].data;
   
 		json.tags.push({ tag: "D" });
 		response = await API.postItem(json);
 		Helpers.assert200ForObject(response);
 		let tags = json.tags;
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		json = json.successful[0].data;
   
 		assert.deepEqual(tags, json.tags);
@@ -724,12 +755,10 @@ describe('TagTests', function () {
 		json = await API.createItem('book', {
 			tags: [{ tag: "b" }]
 		}, this, 'jsonData');
-		let itemKey2 = json.key;
 	
 		json = await API.createItem("book", {
 			tags: [{ tag: "b" }]
 		}, this, 'jsonData');
-		let itemKey3 = json.key;
 	
 		const response = await API.userDelete(
 			config.userID,

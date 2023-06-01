@@ -113,7 +113,7 @@ describe('TranslationTests', function () {
 		Helpers.assert200(response);
 		Helpers.assert200ForObject(response, false, 0);
 		Helpers.assert200ForObject(response, false, 1);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 
 		// Check item
 		let itemKey = json.success[0];

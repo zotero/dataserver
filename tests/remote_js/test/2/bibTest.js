@@ -91,6 +91,7 @@ describe('BibTests', function () {
 			for (let entry of entries) {
 				const key = entry.getElementsByTagName("zapi:key")[0].innerHTML;
 				let content = entry.getElementsByTagName("content")[0].outerHTML;
+				// Add zapi namespace
 				content = content.replace('<content ', '<content xmlns:zapi="http://zotero.org/ns/api" ');
 				Helpers.assertXMLEqual(items[key].citation[style], content);
 			}
@@ -108,7 +109,8 @@ describe('BibTests', function () {
 				);
 				Helpers.assert200(response);
 				let content = API.getContentFromResponse(response);
-				content = content.toString().replace('<content ', '<content xmlns:zapi="http://zotero.org/ns/api" ');
+				// Add zapi namespace
+				content = content.replace('<content ', '<content xmlns:zapi="http://zotero.org/ns/api" ');
 				Helpers.assertXMLEqual(expected.citation[style], content);
 			}
 		}
@@ -124,7 +126,7 @@ describe('BibTests', function () {
 				`items?key=${config.apiKey}&itemKey=${keyStr}&content=bib${style == 'default' ? '' : '&style=' + encodeURIComponent(style)}`,
 				{ 'Content-Type': 'application/json' });
 			Helpers.assert200(response);
-			let xml = await API.getXMLFromResponse(response);
+			let xml = API.getXMLFromResponse(response);
 
 			assert.equal(Helpers.xpathEval(xml, '/atom:feed/zapi:totalResults'), keys.length);
 

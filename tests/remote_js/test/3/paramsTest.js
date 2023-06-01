@@ -217,7 +217,7 @@ describe('ParamsTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertNumResults(response, 1);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[1], json[0].key);
 
 		// Search by phrase
@@ -228,7 +228,7 @@ describe('ParamsTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertNumResults(response, 1);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[0], json[0].key);
 
 		// Search by non-matching phrase
@@ -337,7 +337,7 @@ describe('ParamsTests', function () {
 		);
 		Helpers.assert200(response);
 		Helpers.assertNumResults(response, 1);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[1], json[0].key);
 
 		// No results
@@ -387,6 +387,8 @@ describe('ParamsTests', function () {
 			title: title2,
 			date: "November 25, 2012"
 		}, this, 'key'));
+
+		// Search by title
 		let response = await API.userGet(
 			config.userID,
 			"items?q=" + encodeURIComponent(title1)
@@ -395,6 +397,8 @@ describe('ParamsTests', function () {
 		Helpers.assertNumResults(response, 1);
 		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[0], json[0].key);
+
+		// Search by both by title, date asc
 		response = await API.userGet(
 			config.userID,
 			"items?q=title&sort=date&direction=asc"
@@ -404,6 +408,8 @@ describe('ParamsTests', function () {
 		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[1], json[0].key);
 		Helpers.assertEquals(keys[0], json[1].key);
+
+		// Search by both by title, date asc, with old-style parameters
 		response = await API.userGet(
 			config.userID,
 			"items?q=title&order=date&sort=asc"
@@ -413,6 +419,8 @@ describe('ParamsTests', function () {
 		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[1], json[0].key);
 		Helpers.assertEquals(keys[0], json[1].key);
+
+		// Search by both by title, date desc
 		response = await API.userGet(
 			config.userID,
 			"items?q=title&sort=date&direction=desc"
@@ -422,6 +430,8 @@ describe('ParamsTests', function () {
 		json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[0], json[0].key);
 		Helpers.assertEquals(keys[1], json[1].key);
+
+		// Search by both by title, date desc, with old-style parameters
 		response = await API.userGet(
 			config.userID,
 			"items?q=title&order=date&sort=desc"
@@ -535,7 +545,7 @@ describe('ParamsTests', function () {
 		Helpers.assert200(response);
 		Helpers.assertNumResults(response, 1);
 		Helpers.assertTotalResults(response, 1);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(keys[0], json[0].key);
 
 		response = await API.userGet(

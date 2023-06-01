@@ -115,7 +115,7 @@ describe('FullTextTests', function () {
 		// Store content for one item
 		let key = await API.createItem("book", false, true, 'key');
 		let xml = await API.createAttachmentItem("imported_url", [], key, true, 'atom');
-		let data = await API.parseDataFromAtomEntry(xml);
+		let data = API.parseDataFromAtomEntry(xml);
 		let key1 = data.key;
 
 		let content = "Here is some full-text content";
@@ -135,7 +135,7 @@ describe('FullTextTests', function () {
 		// And another
 		key = await API.createItem("book", false, true, 'key');
 		xml = await API.createAttachmentItem("imported_url", [], key, true, 'atom');
-		data = await API.parseDataFromAtomEntry(xml);
+		data = API.parseDataFromAtomEntry(xml);
 		let key2 = data.key;
 
 		response = await API.userPut(

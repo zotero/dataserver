@@ -157,6 +157,10 @@ describe('TagTests', function () {
 		Helpers.assertNumResults(response, 1);
 	});
 
+	/**
+	 * When modifying a tag on an item, only the item itself should have its
+	 * version updated, not other items that had (and still have) the same tag
+	 */
 	it('testTagAddItemVersionChange', async function () {
 		let data1 = await API.createItem("book", {
 			tags: [{
@@ -167,7 +171,6 @@ describe('TagTests', function () {
 			}]
 		}, true, 'data');
 		let json1 = JSON.parse(data1.content);
-		//let version1 = data1.version;
 
 		let data2 = await API.createItem("book", {
 			tags: [{
@@ -180,6 +183,7 @@ describe('TagTests', function () {
 		let json2 = JSON.parse(data2.content);
 		let version2 = data2.version;
 		version2 = parseInt(version2);
+		
 		// Remove tag 'a' from item 1
 		json1.tags = [{
 			tag: "d"

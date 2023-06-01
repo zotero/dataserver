@@ -20,7 +20,7 @@ describe('VersionsTests', function () {
 		return string.charAt(0).toUpperCase() + string.slice(1);
 	};
 
-	const _modifyJSONObject = async (objectType, json) => {
+	const _modifyJSONObject = (objectType, json) => {
 		switch (objectType) {
 			case "collection":
 				json.name = "New Name " + Helpers.uniqueID();
@@ -97,6 +97,7 @@ describe('VersionsTests', function () {
 		json = JSON.parse(data.content);
 		assert.equal(objectVersion, json.version);
 		assert.equal(objectVersion, data.version);
+
 		response = await API.userGet(
 			config.userID,
 			`${objectTypePlural}?limit=1`
@@ -121,7 +122,6 @@ describe('VersionsTests', function () {
 			`${objectTypePlural}/${objectKey}`,
 			JSON.stringify(json),
 			{
-				'Content-Type': 'application/json',
 				'If-Unmodified-Since-Version': objectVersion - 1
 			}
 		);
@@ -133,7 +133,6 @@ describe('VersionsTests', function () {
 			`${objectTypePlural}/${objectKey}`,
 			JSON.stringify(json),
 			{
-				'Content-Type': 'application/json',
 				'If-Unmodified-Since-Version': objectVersion
 			}
 		);
@@ -152,6 +151,8 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 		const newObjectVersion2 = response.headers['last-modified-version'][0];
 		assert.isAbove(parseInt(newObjectVersion2), parseInt(newObjectVersion));
+
+		// Make sure new library version matches new object versio
 		response = await API.userGet(
 			config.userID,
 			`${objectTypePlural}?limit=1`
@@ -159,37 +160,9 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		const newLibraryVersion = response.headers['last-modified-version'][0];
 		assert.equal(parseInt(newObjectVersion2), parseInt(newLibraryVersion));
-		return;
-
-		await API.createItem('book', { title: 'Title' }, this, 'key');
-		response = await API.userGet(
-			config.userID,
-			`${objectTypePlural}/${objectKey}?limit=1`
-		);
-		Helpers.assertStatusCode(response, 200);
-		const newObjectVersion3 = response.headers['last-modified-version'][0];
-		assert.equal(parseInt(newLibraryVersion), parseInt(newObjectVersion3));
-		response = await API.userDelete(
-			config.userID,
-			`${objectTypePlural}/${objectKey}`
-		);
-		Helpers.assertStatusCode(response, 428);
-		response = await API.userDelete(
-			config.userID,
-			`${objectTypePlural}/${objectKey}`,
-			{ 'If-Unmodified-Since-Version': objectVersion }
-		);
-		Helpers.assertStatusCode(response, 412);
-		response = await API.userDelete(
-			config.userID,
-			`${objectTypePlural}/${objectKey}`,
-			{ 'If-Unmodified-Since-Version': newObjectVersion2 }
-		);
-		Helpers.assertStatusCode(response, 204);
 	};
 
 	const _testMultiObjectLastModifiedVersion = async (objectType) => {
-		await API.userClear(config.userID);
 		const objectTypePlural = API.getPluralObjectType(objectType);
 
 
@@ -210,8 +183,6 @@ describe('VersionsTests', function () {
 
 			case 'item':
 				json = await API.getItemTemplate("book");
-				json.creators[0].firstName = "Test";
-				json.creators[0].lastName = "Test";
 				break;
 
 			case 'search':
@@ -296,9 +267,8 @@ describe('VersionsTests', function () {
 				break;
 		}
 
-		delete json.version;
-
 		// No If-Unmodified-Since-Version or object version property
+		delete json.version;
 		response = await API.userPost(
 			config.userID,
 			`${objectTypePlural}`,
@@ -309,8 +279,8 @@ describe('VersionsTests', function () {
 		);
 		Helpers.assertStatusForObject(response, 'failed', 0, 428);
 
+		// Outdated object version property
 		json.version = version - 1;
-
 		response = await API.userPost(
 			config.userID,
 			`${objectTypePlural}`,
@@ -319,7 +289,7 @@ describe('VersionsTests', function () {
 				"Content-Type": "application/json",
 			}
 		);
-		// Outdated object version property
+		
 		const message = `${_capitalizeFirstLetter(objectType)} has been modified since specified version (expected ${json.version}, found ${version2})`;
 		Helpers.assertStatusForObject(response, 'failed', 0, 412, message);
 		// Modify object, using object version property
@@ -355,6 +325,8 @@ describe('VersionsTests', function () {
 		version = parseInt(response.headers['last-modified-version'][0]);
 		assert.isNumber(version);
 		assert.equal(version, version3);
+
+		// TODO: Version should be incremented on deleted item
 	};
 
 	const _testMultiObject304NotModified = async (objectType) => {
@@ -438,9 +410,7 @@ describe('VersionsTests', function () {
 	
 		let response = await API.userGet(
 			config.userID,
-			`${objectTypePlural}?format=versions&${sinceParam}=${firstVersion}`, {
-				"Content-Type": "application/json"
-			}
+			`${objectTypePlural}?format=versions&${sinceParam}=${firstVersion}`
 		);
 		Helpers.assertStatusCode(response, 200);
 		let json = JSON.parse(response.data);
@@ -508,8 +478,7 @@ describe('VersionsTests', function () {
 		response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${data.key}`,
-			JSON.stringify(data),
-			{ "Content-Type": "application/json" }
+			JSON.stringify(data)
 		);
 
 		Helpers.assertStatusCode(response, 204);
@@ -659,7 +628,6 @@ describe('VersionsTests', function () {
 		
 		const existing = await API.createDataObject(objectType, null, null, 'json');
 		const key = existing.key;
-		const libraryVersion = existing.version;
 		let json = await API.createUnsavedDataObject(objectType);
 		json.key = key;
 		
@@ -972,7 +940,6 @@ describe('VersionsTests', function () {
 
 	it('test_should_not_include_library_version_for_400', async function () {
 		let json = await API.createItem("book", [], this, 'json');
-		let libraryVersion = json.version;
 		let response = await API.userPut(
 			config.userID,
 			"items/" + json.key,

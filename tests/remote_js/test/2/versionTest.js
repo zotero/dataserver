@@ -67,6 +67,10 @@ describe('VersionsTests', function () {
 				);
 				break;
 		}
+
+		// Make sure all three instances of the object version
+		// (Last-Modified-Version, zapi:version, and the JSON
+		// {$objectType}Version property match the library version
 		let response = await API.userGet(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}&content=json`
@@ -86,7 +90,10 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		const libraryVersion = response.headers['last-modified-version'][0];
 		assert.equal(libraryVersion, objectVersion);
+		
 		_modifyJSONObject(objectType, json);
+
+		// No If-Unmodified-Since-Version or JSON version property
 		delete json[versionProp];
 		response = await API.userPut(
 			config.userID,
@@ -95,6 +102,8 @@ describe('VersionsTests', function () {
 			{ 'Content-Type': 'application/json' }
 		);
 		Helpers.assertStatusCode(response, 428);
+
+		// Out of date version
 		response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
@@ -105,6 +114,8 @@ describe('VersionsTests', function () {
 			}
 		);
 		Helpers.assertStatusCode(response, 412);
+
+		// Update with version header
 		response = await API.userPut(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
@@ -117,6 +128,8 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 		const newObjectVersion = response.headers['last-modified-version'][0];
 		assert.isAbove(parseInt(newObjectVersion), parseInt(objectVersion));
+
+		// Update object with JSON version property
 		_modifyJSONObject(objectType, json);
 		json[versionProp] = newObjectVersion;
 		response = await API.userPut(
@@ -128,6 +141,8 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 204);
 		const newObjectVersion2 = response.headers['last-modified-version'][0];
 		assert.isAbove(parseInt(newObjectVersion2), parseInt(newObjectVersion));
+
+		// Make sure new library version matches new object version
 		response = await API.userGet(
 			config.userID,
 			`${objectTypePlural}?key=${config.apiKey}&limit=1`
@@ -135,6 +150,9 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		const newLibraryVersion = response.headers['last-modified-version'][0];
 		assert.equal(parseInt(newObjectVersion2), parseInt(newLibraryVersion));
+
+		// Create an item to increase the library version, and make sure
+		// original object version stays the same
 		await API.createItem('book', { title: 'Title' }, this, 'key');
 		response = await API.userGet(
 			config.userID,
@@ -143,17 +161,26 @@ describe('VersionsTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		const newObjectVersion3 = response.headers['last-modified-version'][0];
 		assert.equal(parseInt(newLibraryVersion), parseInt(newObjectVersion3));
+
+		//
+		// Delete object
+		//
+		// No If-Unmodified-Since-Version
 		response = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`
 		);
 		Helpers.assertStatusCode(response, 428);
+
+		// Outdated If-Unmodified-Since-Version
 		response = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
 			{ 'If-Unmodified-Since-Version': objectVersion }
 		);
 		Helpers.assertStatusCode(response, 412);
+
+		// Delete object
 		response = await API.userDelete(
 			config.userID,
 			`${objectTypePlural}/${objectKey}?key=${config.apiKey}`,
@@ -339,6 +366,8 @@ describe('VersionsTests', function () {
 		version = parseInt(response.headers['last-modified-version'][0]);
 		assert.isNumber(version);
 		assert.equal(version, version3);
+
+		// TODO: Version should be incremented on deleted item
 	};
 
 	const _testMultiObject304NotModified = async (objectType) => {
@@ -415,7 +444,7 @@ describe('VersionsTests', function () {
 		const objects = [];
 		while (xmlArray.length > 0) {
 			const xml = xmlArray.shift();
-			const data = await API.parseDataFromAtomEntry(xml);
+			const data = API.parseDataFromAtomEntry(xml);
 			objects.push({
 				key: data.key,
 				version: data.version

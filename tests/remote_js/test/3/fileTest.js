@@ -48,34 +48,38 @@ describe('FileTestTests', function () {
 		API.useAPIKey(config.apiKey);
 	});
 
-
-	const testNewEmptyImportedFileAttachmentItem = async () => {
-		return API.createAttachmentItem("imported_file", [], false, this, 'key');
-	};
-
 	const testGetFile = async () => {
 		const addFileData = await testAddFileExisting();
-		const userGetViewModeResponse = await API.userGet(
+
+		// Get in view mode
+		let response = await API.userGet(
 			config.userID,
 			`items/${addFileData.key}/file/view`
 		);
-		Helpers.assert302(userGetViewModeResponse);
-		const location = userGetViewModeResponse.headers.location[0];
+		Helpers.assert302(response);
+		const location = response.headers.location[0];
 		Helpers.assertRegExp(/^https?:\/\/[^/]+\/[a-zA-Z0-9%]+\/[a-f0-9]{64}\/test_/, location);
 		const filenameEncoded = encodeURIComponent(addFileData.filename);
 		assert.equal(filenameEncoded, location.substring(location.length - filenameEncoded.length));
+
+		// Get from view mode
 		const viewModeResponse = await HTTP.get(location);
 		Helpers.assert200(viewModeResponse);
 		assert.equal(addFileData.md5, Helpers.md5(viewModeResponse.data));
-		const userGetDownloadModeResponse = await API.userGet(
+
+		// Get in download mode
+		response = await API.userGet(
 			config.userID,
 			`items/${addFileData.key}/file`
 		);
-		Helpers.assert302(userGetDownloadModeResponse);
-		const downloadModeLocation = userGetDownloadModeResponse.headers.location[0];
+		Helpers.assert302(response);
+
+		// Get from S3
+		const downloadModeLocation = response.headers.location[0];
 		const s3Response = await HTTP.get(downloadModeLocation);
 		Helpers.assert200(s3Response);
 		assert.equal(addFileData.md5, Helpers.md5(s3Response.data));
+
 		return {
 			key: addFileData.key,
 			response: s3Response
@@ -124,14 +128,15 @@ describe('FileTestTests', function () {
 		let originalVersion = json.version;
 		let file = "./work/file";
 		let fileContents = Helpers.getRandomUnicodeString();
-		await fs.promises.writeFile(file, fileContents);
+		fs.writeFileSync(file, fileContents);
 		let hash = Helpers.md5File(file);
 		let filename = "test_" + fileContents;
-		let mtime = parseInt((await fs.promises.stat(file)).mtimeMs);
-		let size = parseInt((await fs.promises.stat(file)).size);
+		let size = parseInt(fs.statSync(file).size);
+		let mtime = parseInt(fs.statSync(file).mtimeMs);
 		let contentType = "text/plain";
 		let charset = "utf-8";
 
+		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
@@ -155,6 +160,7 @@ describe('FileTestTests', function () {
 		assert.ok(json);
 		toDelete.push(hash);
 
+		// Generate form-data -- taken from S3::getUploadPostData()
 		let boundary = "---------------------------" + Helpers.md5(Helpers.uniqueID());
 		let prefix = "";
 		for (let key in json.params) {
@@ -162,6 +168,7 @@ describe('FileTestTests', function () {
 		}
 		prefix += "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"\r\n\r\n";
 		let suffix = "\r\n--" + boundary + "--";
+		// Upload to S3
 		response = await HTTP.post(
 			json.url,
 			prefix + fileContents + suffix,
@@ -171,6 +178,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert201(response);
 
+		// Register upload
 		response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
@@ -182,6 +190,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert204(response);
 
+		// Verify attachment item metadata
 		response = await API.userGet(
 			config.userID,
 			`items/${attachmentKey}`
@@ -193,6 +202,7 @@ describe('FileTestTests', function () {
 		assert.equal(contentType, json.contentType);
 		assert.equal(charset, json.charset);
 
+		// Make sure version has changed
 		assert.notEqual(originalVersion, json.version);
 	});
 
@@ -232,6 +242,7 @@ describe('FileTestTests', function () {
 		let contentType = 'text/plain';
 		let charset = 'utf-8';
 
+		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
@@ -253,6 +264,7 @@ describe('FileTestTests', function () {
 		json = JSON.parse(response.data);
 		assert.isOk(json);
 
+		// Upload to old-style location
 		toDelete.push(`${hash}/${filename}`);
 		toDelete.push(hash);
 		const putCommand = new PutObjectCommand({
@@ -261,6 +273,8 @@ describe('FileTestTests', function () {
 			Body: fileContents
 		});
 		await s3Client.send(putCommand);
+
+		// Register upload
 		response = await API.userPost(
 			config.userID,
 			`items/${key}/file`,
@@ -272,6 +286,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert204(response);
 
+		// The file should be accessible on the item at the old-style location
 		response = await API.userGet(
 			config.userID,
 			`items/${key}/file`
@@ -309,6 +324,7 @@ describe('FileTestTests', function () {
 		assert.isOk(postJSON);
 		Helpers.assertEquals(1, postJSON.exists);
 
+		// Get in download mode
 		response = await API.userGet(
 			config.userID,
 			`items/${key}/file`
@@ -319,6 +335,7 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(2, matches.length);
 		Helpers.assertEquals(hash, matches[1]);
 
+		// Get from S3
 		response = await HTTP.get(location);
 		Helpers.assert200(response);
 		Helpers.assertEquals(fileContents, response.data);
@@ -330,6 +347,7 @@ describe('FileTestTests', function () {
 		json = await API.createAttachmentItem("imported_file", [], parentKey, this, 'jsonData');
 
 		key = json.key;
+		// Also use a different content type
 		contentType = 'application/x-custom';
 		response = await API.userPost(
 			config.userID,
@@ -351,6 +369,7 @@ describe('FileTestTests', function () {
 		assert.isOk(postJSON);
 		Helpers.assertEquals(1, postJSON.exists);
 
+		// Get in download mode
 		response = await API.userGet(
 			config.userID,
 			`items/${key}/file`
@@ -361,6 +380,7 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(2, matches.length);
 		Helpers.assertEquals(hash, matches[1]);
 
+		// Get from S3
 		response = await HTTP.get(location);
 		Helpers.assert200(response);
 		Helpers.assertEquals(fileContents, response.data);
@@ -382,6 +402,7 @@ describe('FileTestTests', function () {
 		let contentType = "text/plain";
 		let charset = "utf-8";
 
+		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
@@ -404,6 +425,7 @@ describe('FileTestTests', function () {
 		assert.isOk(json);
 		toDelete.push(`${hash}`);
 
+		// Upload wrong contents to S3
 		const wrongContent = fileContents.split('').reverse().join("");
 		response = await HTTP.post(
 			json.url,
@@ -415,6 +437,7 @@ describe('FileTestTests', function () {
 		Helpers.assert400(response);
 		assert.include(response.data, "The Content-MD5 you specified did not match what we received.");
 
+		// Upload to S3
 		response = await HTTP.post(
 			json.url,
 			json.prefix + fileContents + json.suffix,
@@ -424,6 +447,9 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert201(response);
 
+		// Register upload
+
+		// No If-None-Match
 		response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
@@ -434,6 +460,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert428(response);
 
+		// Invalid upload key
 		response = await API.userPost(
 			config.userID,
 			`items/${attachmentKey}/file`,
@@ -456,6 +483,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert204(response);
 
+		// Verify attachment item metadata
 		response = await API.userGet(
 			config.userID,
 			`items/${attachmentKey}`
@@ -475,8 +503,8 @@ describe('FileTestTests', function () {
 		};
 	};
 
-	it('testAddFileAuthorizationErrors', async function () {
-		const parentKey = await testNewEmptyImportedFileAttachmentItem();
+	it('testAddFileFormDataAuthorizationErrors', async function () {
+		const parentKey = await API.createAttachmentItem("imported_file", [], false, this, 'key');
 		const fileContents = Helpers.getRandomUnicodeString();
 		const hash = Helpers.md5(fileContents);
 		const mtime = Date.now();
@@ -561,7 +589,7 @@ describe('FileTestTests', function () {
 			config.userID,
 			`items/${getFileData.key}`
 		);
-		let json = await API.getJSONFromResponse(response).data;
+		let json = API.getJSONFromResponse(response).data;
 
 		await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -581,8 +609,11 @@ describe('FileTestTests', function () {
 		};
 
 		for (let [algo, cmd] of Object.entries(algorithms)) {
+			// Create random contents
 			fs.writeFileSync(newFilename, Helpers.getRandomUnicodeString() + Helpers.uniqueID());
 			const newHash = Helpers.md5File(newFilename);
+
+			// Get upload authorization
 			const fileParams = {
 				md5: newHash,
 				filename: `test_${fileContents}`,
@@ -617,6 +648,7 @@ describe('FileTestTests', function () {
 
 			toDelete.push(newHash);
 
+			// Upload patch file
 			let response = await API.userPatch(
 				config.userID,
 				`items/${getFileData.key}/file?algorithm=${algo}&upload=${json.uploadKey}`,
@@ -627,8 +659,9 @@ describe('FileTestTests', function () {
 			);
 			Helpers.assert204(response);
 
-			fs.unlinkSync(patchFilename);
+			fs.rmSync(patchFilename);
 			fs.renameSync(newFilename, oldFilename);
+			// Verify attachment item metadata
 			response = await API.userGet(
 				config.userID,
 				`items/${getFileData.key}`
@@ -639,8 +672,11 @@ describe('FileTestTests', function () {
 			Helpers.assertEquals(fileParams.mtime, json.mtime);
 			Helpers.assertEquals(fileParams.contentType, json.contentType);
 			Helpers.assertEquals(fileParams.charset, json.charset);
+
+			// Make sure version has changed
 			assert.notEqual(originalVersion, json.version);
 
+			// Verify file on S3
 			const fileResponse = await API.userGet(
 				config.userID,
 				`items/${getFileData.key}/file`
@@ -719,9 +755,6 @@ describe('FileTestTests', function () {
 	};
 
 
-	////////////////
-
-
 	it('testAddFileClientV4Zip', async function () {
 		await API.userClear(config.userID);
 
@@ -730,6 +763,7 @@ describe('FileTestTests', function () {
 			password: config.password,
 		};
 
+		// Get last storage sync
 		const response1 = await API.userGet(
 			config.userID,
 			'laststoragesync?auth=1',
@@ -748,7 +782,6 @@ describe('FileTestTests', function () {
 
 		const json2 = await API.createAttachmentItem('imported_url', [], key, this, 'jsonData');
 		key = json2.key;
-		//const version = json2.version;
 		json2.contentType = fileContentType;
 		json2.charset = fileCharset;
 		json2.filename = fileFilename;
@@ -764,6 +797,7 @@ describe('FileTestTests', function () {
 		Helpers.assert204(response2);
 		const originalVersion = response2.headers['last-modified-version'][0];
 
+		// Get file info
 		const response3 = await API.userGet(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1&info=1`,
@@ -777,6 +811,7 @@ describe('FileTestTests', function () {
 
 		const filename = `${key}.zip`;
 
+		// Get upload authorization
 		const response4 = await API.userPost(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1`,
@@ -811,11 +846,13 @@ describe('FileTestTests', function () {
 		postData += `--${boundary}\r\nContent-Disposition: form-data; name="file"\r\n\r\n${fileContent}\r\n`;
 		postData += `--${boundary}--`;
 
+		// Upload to S3
 		const response5 = await HTTP.post(`${url}`, postData, {
 			'Content-Type': `multipart/form-data; boundary=${boundary}`,
 		});
 		Helpers.assert201(response5);
 
+		// Register upload
 		const response6 = await API.userPost(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1`,
@@ -827,8 +864,11 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert204(response6);
 
+		// Verify attachment item metadata
 		const response7 = await API.userGet(config.userID, `items/${json2.key}`);
 		const json3 = API.getJSONFromResponse(response7).data;
+		// Make sure attachment item version hasn't changed (or else the client
+		// will get a conflict when it tries to update the metadata)
 		Helpers.assertEquals(originalVersion, json3.version);
 		Helpers.assertEquals(hash, json3.md5);
 		Helpers.assertEquals(fileFilename, json3.filename);
@@ -847,6 +887,7 @@ describe('FileTestTests', function () {
 		const mtime = response8.data;
 		Helpers.assertRegExp(/^[0-9]{10}$/, mtime);
 
+		// File exists
 		const response9 = await API.userPost(
 			config.userID,
 			`items/${json2.key}/file?auth=1&iskey=1&version=1`,
@@ -866,6 +907,7 @@ describe('FileTestTests', function () {
 		Helpers.assertContentType(response9, 'application/xml');
 		Helpers.assertEquals('<exists/>', response9.data);
 
+		// Make sure attachment version still hasn't changed
 		const response10 = await API.userGet(config.userID, `items/${json2.key}`);
 		const json4 = API.getJSONFromResponse(response10).data;
 		Helpers.assertEquals(originalVersion, json4.version);
@@ -1090,7 +1132,6 @@ describe('FileTestTests', function () {
 			charset
 		}, false, this, 'jsonData');
 		const key = json.key;
-		//const originalVersion = json.version;
 
 		// Get authorization
 		const response = await API.userPost(
@@ -1108,7 +1149,7 @@ describe('FileTestTests', function () {
 			}
 		);
 		Helpers.assert200(response);
-		const jsonObj = await API.getJSONFromResponse(response);
+		const jsonObj = API.getJSONFromResponse(response);
 
 		// Try to upload to S3, which should fail
 		const s3Response = await HTTP.post(
@@ -1145,6 +1186,7 @@ describe('FileTestTests', function () {
 		}, false, this, 'jsonData');
 		let itemKey = json.key;
 
+		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
@@ -1165,6 +1207,7 @@ describe('FileTestTests', function () {
 
 		toDelete.push(hash);
 
+		// Upload to S3
 		response = await HTTP.post(
 			json.url,
 			json.prefix + fileContents + json.suffix,
@@ -1174,6 +1217,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert201(response);
 
+		// Register upload
 		response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
@@ -1423,6 +1467,7 @@ describe('FileTestTests', function () {
 	});
 
 	it('test_updating_compressed_attachment_hash_should_clear_associated_storage_file', async function () {
+		// Create initial file
 		let fileContents = Helpers.getRandomUnicodeString();
 		let contentType = "text/html";
 		let charset = "utf-8";
@@ -1439,11 +1484,13 @@ describe('FileTestTests', function () {
 		let file = "work/" + itemKey + ".zip";
 		let zipFilename = "work/" + itemKey + ".zip";
 
+		// Create initial ZIP file
 		const zipData = await generateZip(file, fileContents, zipFilename);
 		let zipHash = zipData.hash;
 		let zipSize = zipData.zipSize;
 		let zipFileContents = zipData.fileContent;
 
+		// Get upload authorization
 		let response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
@@ -1467,6 +1514,7 @@ describe('FileTestTests', function () {
 
 		toDelete.push(zipHash);
 
+		// Upload to S3
 		response = await HTTP.post(
 			json.url,
 			json.prefix + zipFileContents + json.suffix,
@@ -1478,6 +1526,7 @@ describe('FileTestTests', function () {
 		);
 		Helpers.assert201(response);
 
+		// Register upload
 		response = await API.userPost(
 			config.userID,
 			"items/" + itemKey + "/file",
@@ -1492,6 +1541,7 @@ describe('FileTestTests', function () {
 		Helpers.assert204(response);
 		let newVersion = response.headers['last-modified-version'];
 
+		// Set new attachment file info
 		hash = Helpers.md5(Helpers.uniqueID());
 		mtime = Date.now();
 		zipHash = Helpers.md5(Helpers.uniqueID());
@@ -1594,7 +1644,7 @@ describe('FileTestTests', function () {
 		Helpers.assertEquals(filename, metaDataJson.data.filename);
 		Helpers.assertEquals(contentType, metaDataJson.data.contentType);
 		Helpers.assertEquals(charset, metaDataJson.data.charset);
-		// update file
+		
 		const newFileContents
 			= Helpers.getRandomUnicodeString() + Helpers.getRandomUnicodeString();
 		fs.writeFileSync(file, newFileContents);
@@ -1681,6 +1731,7 @@ describe('FileTestTests', function () {
 		Helpers.assert404(response);
 	});
 
+	// TODO: Reject for keys not owned by user, even if public library
 	it('testLastStorageSyncNoAuthorization', async function () {
 		API.useAPIKey(false);
 		let response = await API.userGet(
@@ -1988,7 +2039,7 @@ describe('FileTestTests', function () {
 			config.userID,
 			"items/" + parentKey
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		assert.notProperty(json.links, 'attachment');
 
 		// Get upload authorization
@@ -2007,7 +2058,7 @@ describe('FileTestTests', function () {
 			}
 		);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 
 		// If file doesn't exist on S3, upload
 		if (!json.exists) {
@@ -2039,7 +2090,7 @@ describe('FileTestTests', function () {
 			config.userID,
 			"items/" + parentKey
 		);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		assert.property(json.links, 'attachment');
 		assert.property(json.links.attachment, 'href');
 		assert.equal('application/json', json.links.attachment.type);

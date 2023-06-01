@@ -1,5 +1,21 @@
 const fetch = require('node-fetch');
 var config = require('config');
+const http = require("node:http");
+const https = require("node:https");
+
+
+// http(s) agents with keepAlive=true used to prevent socket from hanging
+// due to bug in node-fetch: https://github.com/node-fetch/node-fetch/issues/1735
+const httpAgent = new http.Agent({ keepAlive: true });
+const httpsAgent = new https.Agent({ keepAlive: true });
+const agentSelector = function (_parsedURL) {
+	if (_parsedURL.protocol == 'http:') {
+		return httpAgent;
+	}
+	else {
+		return httpsAgent;
+	}
+};
 
 class HTTP {
 	static verbose = config.verbose;
@@ -27,8 +43,9 @@ class HTTP {
 			url = url.replace(localIPRegex, 'localhost');
 		}
 
-		await new Promise(resolve => setTimeout(resolve, 0));
-		let response = await fetch(url, options);
+		// workaround to prevent socket from hanging due to but in node-fetch: https://github.com/node-fetch/node-fetch/issues/1735
+		await new Promise(resolve => setTimeout(resolve, 1));
+		let response = await fetch(url, Object.assign(options, { agent: agentSelector }));
 
 
 		// Fetch doesn't automatically parse the response body, so we have to do that manually

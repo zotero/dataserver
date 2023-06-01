@@ -1,5 +1,3 @@
-const chai = require('chai');
-const assert = chai.assert;
 var config = require('config');
 const API = require('../../api2.js');
 const Helpers = require("../../helpers2.js");
@@ -31,9 +29,7 @@ describe('NoteTests', function () {
 			JSON.stringify({
 				items: [json]
 			}),
-			{
-				headers: { "Content-Type": "application/json" }
-			}
+			{ "Content-Type": "application/json" }
 		);
 		const expectedMessage = "Note '1234567890123456789012345678901234567890123456789012345678901234567890123456789...' too long";
 		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
@@ -86,6 +82,7 @@ describe('NoteTests', function () {
 		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
 	});
 
+	// All content within HTML tags
 	it('testNoteTooLongWithinHTMLTags', async function () {
 		json.note = "&nbsp;\n<p><!-- " + content + " --></p>";
 

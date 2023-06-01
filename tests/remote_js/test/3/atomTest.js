@@ -3,7 +3,6 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { JSDOM } = require('jsdom');
 const { API3Before, API3After } = require("../shared.js");
 
 describe('AtomTests', function () {
@@ -53,16 +52,17 @@ describe('AtomTests', function () {
 
 		let response = await API.userGet(userID, "items?format=atom");
 		Helpers.assert200(response);
-		let xml = await API.getXMLFromResponse(response);
+		let xml = API.getXMLFromResponse(response);
 		let links = Helpers.xpathEval(xml, "//atom:feed/atom:link", true, true);
 		Helpers.assertEquals(
 			config.apiURLPrefix + "users/" + userID + "/items?format=atom",
 			links[0].getAttribute("href")
 		);
 
+		// 'order'/'sort' should turn into 'sort'/'direction'
 		response = await API.userGet(userID, "items?format=atom&order=dateModified&sort=asc");
 		Helpers.assert200(response);
-		xml = await API.getXMLFromResponse(response);
+		xml = API.getXMLFromResponse(response);
 		links = Helpers.xpathEval(xml, "//atom:feed/atom:link", true, true);
 		Helpers.assertEquals(
 			config.apiURLPrefix + "users/" + userID + "/items?direction=asc&format=atom&sort=dateModified",
@@ -88,22 +88,23 @@ describe('AtomTests', function () {
 			const key = entry.getElementsByTagName("zapi:key")[0].innerHTML;
 			let content = entry.getElementsByTagName("content")[0].outerHTML;
 
+			// Add namespace prefix (from <entry>)
 			content = content.replace(
 				'<content ',
 				'<content xmlns:zapi="http://zotero.org/ns/api" ',
 			);
+			// Strip variable key and version
 			content = content.replace(
 				/"key": "[A-Z0-9]{8}",(\s+)"version": [0-9]+/,
 				'"key": "",$1"version": 0',
 			);
+			// Strip dateAdded/dateModified
 			content = content.replace(
 				/"dateAdded": [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z,(\s+)"dateModified": [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z,(\s+)"dateModified/,
 				'"dateAdded": "",$1"dateModified": ""'
 			);
 
-			const contentDom = new JSDOM(content);
-			const expectedDom = new JSDOM(keyObj[key]);
-			assert.equal(contentDom.window.document.innerHTML, expectedDom.window.document.innerHTML);
+			Helpers.assertXMLEqual(content, keyObj[key]);
 		}
 	});
 
@@ -120,7 +121,7 @@ describe('AtomTests', function () {
 			"items?format=atom"
 		);
 		Helpers.assert200(response);
-		const xml = await API.getXMLFromResponse(response);
+		const xml = API.getXMLFromResponse(response);
 		Helpers.assertTotalResults(response, Object.keys(keyObj).length);
 		// Make sure there's no totalResults tag
 		assert.lengthOf(Helpers.xpathEval(xml, '//atom:feed/zapi:totalResults', false, true), 0);

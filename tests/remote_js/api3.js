@@ -398,7 +398,7 @@ class API3 {
 
 		response = await this.userPost(
 			config.userID,
-			`items?key=${this.apiKey}`,
+			`items?key=${config.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -500,7 +500,7 @@ class API3 {
 
 		response = await this.groupPost(
 			groupID,
-			`items?key=${this.apiKey}`,
+			`items?key=${config.apiKey}`,
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
@@ -684,7 +684,7 @@ class API3 {
 
 		let headers = {
 			"Content-Type": "application/json",
-			"Zotero-API-Key": this.apiKey
+			"Zotero-API-Key": config.apiKey
 		};
 
 		let requestBody = JSON.stringify([json]);
@@ -741,7 +741,7 @@ class API3 {
 			}
 
 			response = await this.put(
-				"keys/" + this.apiKey,
+				"keys/" + config.apiKey,
 				JSON.stringify(json),
 				{},
 				{
@@ -792,7 +792,7 @@ class API3 {
 			}
 
 			response = await this.put(
-				"keys/" + this.apiKey,
+				"keys/" + config.apiKey,
 				xml.outterHTML,
 				{},
 				{
@@ -975,7 +975,7 @@ class API3 {
 		if (single) {
 			url += `/${keys}`;
 		}
-		url += `?key=${this.apiKey}`;
+		url += `?key=${config.apiKey}`;
 		if (!single) {
 			url += `&${objectType}Key=${keys.join(',')}&order=${objectType}KeyList`;
 		}

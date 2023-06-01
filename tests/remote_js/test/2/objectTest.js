@@ -16,6 +16,10 @@ describe('ObjectTests', function () {
 		await API2After();
 	});
 
+	beforeEach(async function() {
+		await API.userClear(config.userID);
+	});
+
 	const _testMultiObjectGet = async (objectType = 'collection') => {
 		const objectNamePlural = API.getPluralObjectType(objectType);
 		const keyProp = `${objectType}Key`;
@@ -92,7 +96,6 @@ describe('ObjectTests', function () {
 	};
 
 	const _testMultiObjectDelete = async (objectType) => {
-		await API.userClear(config.userID);
 		const objectTypePlural = await API.getPluralObjectType(objectType);
 		const keyProp = `${objectType}Key`;
 	
@@ -135,6 +138,7 @@ describe('ObjectTests', function () {
 		response = await API.userGet(config.userID, `${objectTypePlural}?key=${config.apiKey}&${keyProp}=${keepKeys.join(',')}`);
 		Helpers.assertNumResults(response, keepKeys.length);
 	
+		// Add trailing comma to itemKey param, to test key parsing
 		response = await API.userDelete(config.userID,
 			`${objectTypePlural}?key=${config.apiKey}&${keyProp}=${keepKeys.join(',')},`,
 			{ "If-Unmodified-Since-Version": libraryVersion });
@@ -144,11 +148,10 @@ describe('ObjectTests', function () {
 		Helpers.assertNumResults(response, 0);
 	};
 
-	const _testPartialWriteFailure = async () => {
+	const _testPartialWriteFailure = async (objectType) => {
 		await API.userClear(config.userID);
 		let json;
 		let conditions = [];
-		const objectType = 'collection';
 		let json1 = { name: "Test" };
 		let json2 = { name: "1234567890".repeat(6554) };
 		let json3 = { name: "Test" };
@@ -187,7 +190,7 @@ describe('ObjectTests', function () {
 			{ "Content-Type": "application/json" });
 
 		Helpers.assertStatusCode(response, 200);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 
 		Helpers.assertStatusForObject(response, 'success', 0, 200);
 		Helpers.assertStatusForObject(response, 'success', 1, 413);
@@ -211,16 +214,11 @@ describe('ObjectTests', function () {
 		await API.userClear(config.userID);
 	
 		let objectTypePlural = API.getPluralObjectType(objectType);
-		let objectData;
-		let objectDataContent;
-		let json1;
-		let json2;
-		let json3;
+		let json1, json2, json3, objectData, objectDataContent;
 		let conditions = [];
 
 		switch (objectType) {
 			case 'collection':
-				await new Promise(r => setTimeout(r, 1000));
 				objectData = await API.createCollection('Test', false, true, 'data');
 				objectDataContent = objectData.content;
 				json1 = JSON.parse(objectDataContent);
@@ -371,7 +369,7 @@ describe('ObjectTests', function () {
 		let response = await API.userGet(config.userID, "items?key=" + config.apiKey + "&format=keys&limit=1");
 		let libraryVersion1 = response.headers["last-modified-version"][0];
 	
-		const func = async (objectType, libraryVersion, url) => {
+		const testDelete = async (objectType, libraryVersion, url) => {
 			const objectTypePlural = await API.getPluralObjectType(objectType);
 			const response = await API.userDelete(config.userID,
 				`${objectTypePlural}?key=${config.apiKey}${url}`,
@@ -380,15 +378,16 @@ describe('ObjectTests', function () {
 			return response.headers["last-modified-version"][0];
 		};
 	
-		let tempLibraryVersion = await func('collection', libraryVersion1, "&collectionKey=" + objectKeys.collection[0]);
-		tempLibraryVersion = await func('item', tempLibraryVersion, "&itemKey=" + objectKeys.item[0]);
-		tempLibraryVersion = await func('search', tempLibraryVersion, "&searchKey=" + objectKeys.search[0]);
+		// Delete first object
+		let tempLibraryVersion = await testDelete('collection', libraryVersion1, "&collectionKey=" + objectKeys.collection[0]);
+		tempLibraryVersion = await testDelete('item', tempLibraryVersion, "&itemKey=" + objectKeys.item[0]);
+		tempLibraryVersion = await testDelete('search', tempLibraryVersion, "&searchKey=" + objectKeys.search[0]);
 		let libraryVersion2 = tempLibraryVersion;
 	
 		// Delete second and third objects
-		tempLibraryVersion = await func('collection', tempLibraryVersion, "&collectionKey=" + objectKeys.collection.slice(1).join(','));
-		tempLibraryVersion = await func('item', tempLibraryVersion, "&itemKey=" + objectKeys.item.slice(1).join(','));
-		let libraryVersion3 = await func('search', tempLibraryVersion, "&searchKey=" + objectKeys.search.slice(1).join(','));
+		tempLibraryVersion = await testDelete('collection', tempLibraryVersion, "&collectionKey=" + objectKeys.collection.slice(1).join(','));
+		tempLibraryVersion = await testDelete('item', tempLibraryVersion, "&itemKey=" + objectKeys.item.slice(1).join(','));
+		let libraryVersion3 = await testDelete('search', tempLibraryVersion, "&searchKey=" + objectKeys.search.slice(1).join(','));
 	
 		// Request all deleted objects
 		response = await API.userGet(config.userID, "deleted?key=" + config.apiKey + "&newer=" + libraryVersion1);

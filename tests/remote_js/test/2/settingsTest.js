@@ -98,7 +98,6 @@ describe('SettingsTests', function () {
 	});
 
 	it('testAddUserSettingMultiple', async function () {
-		await API.userClear(config.userID);
 		const settingKey = 'tagColors';
 		const val = [
 			{
@@ -107,6 +106,7 @@ describe('SettingsTests', function () {
 			},
 		];
 
+		// TODO: multiple, once more settings are supported
 		const libraryVersion = await API.getLibraryVersion();
 
 		const json = {

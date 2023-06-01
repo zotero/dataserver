@@ -17,7 +17,7 @@ describe('FullTextTests', function () {
 	});
 
 	this.beforeEach(async function () {
-		await API.useAPIKey(config.apiKey);
+		API.useAPIKey(config.apiKey);
 	});
 
 	it('testContentAnonymous', async function () {
@@ -424,71 +424,6 @@ describe('FullTextTests', function () {
 		json = JSON.parse(response.data);
 		Helpers.assertEquals("", json.content);
 		assert.notProperty(json, "indexedPages");
-	});
-
-	it('_testSinceContent', async function () {
-		await API.userClear(config.userID);
-		// Store content for one item
-		let key = await API.createItem("book", false, this, 'key');
-		let json = await API.createAttachmentItem("imported_url", [], key, this, 'jsonData');
-		let key1 = json.key;
-
-		let content = "Here is some full-text content";
-
-		let response = await API.userPut(
-			config.userID,
-			"items/" + key1 + "/fulltext",
-			JSON.stringify({
-				content: content
-			}),
-			{ "Content-Type": "application/json" }
-		);
-		Helpers.assert204(response);
-		let contentVersion1 = response.headers['last-modified-version'][0];
-		assert.isAbove(parseInt(contentVersion1), 0);
-
-		// And another
-		key = await API.createItem("book", false, this, 'key');
-		json = await API.createAttachmentItem("imported_url", [], key, this, 'jsonData');
-		let key2 = json.key;
-
-		response = await API.userPut(
-			config.userID,
-			"items/" + key2 + "/fulltext",
-			JSON.stringify({
-				content: content
-			}),
-			{ "Content-Type": "application/json" }
-		);
-		Helpers.assert204(response);
-		let contentVersion2 = response.headers['last-modified-version'][0];
-		assert.isAbove(parseInt(contentVersion2), 0);
-
-		// Get newer one
-		response = await API.userGet(
-			config.userID,
-			"fulltext?param=" + contentVersion1
-		);
-		Helpers.assert200(response);
-		Helpers.assertContentType(response, "application/json");
-		Helpers.assertEquals(contentVersion2, response.headers['last-modified-version'][0]);
-		json = API.getJSONFromResponse(response);
-		assert.lengthOf(Object.keys(json), 2);
-		assert.property(json, key2);
-		Helpers.assertEquals(contentVersion2, json[key2]);
-
-		// Get both with since=0
-		response = await API.userGet(
-			config.userID,
-			"fulltext?param=0"
-		);
-		Helpers.assert200(response);
-		Helpers.assertContentType(response, "application/json");
-		json = API.getJSONFromResponse(response);
-		assert.lengthOf(Object.keys(json), 2);
-		assert.property(json, key1);
-		Helpers.assertEquals(contentVersion1, json[key1]);
-		Helpers.assertEquals(contentVersion2, json[key2]);
 	});
 
 	it('testVersionsAnonymous', async function () {

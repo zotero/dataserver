@@ -32,7 +32,7 @@ describe('MappingsTests', function () {
 
 	it('test_should_return_fields_for_note_annotations', async function () {
 		let response = await API.get("items/new?itemType=annotation&annotationType=highlight");
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		assert.property(json, 'annotationText');
 		Helpers.assertEquals(json.annotationText, '');
 	});
@@ -75,7 +75,7 @@ describe('MappingsTests', function () {
 
 	it('test_should_return_fields_for_highlight_annotations', async function () {
 		const response = await API.get("items/new?itemType=annotation&annotationType=highlight");
-		const json = await API.getJSONFromResponse(response);
+		const json = API.getJSONFromResponse(response);
 		assert.property(json, 'annotationText');
 		assert.equal(json.annotationText, '');
 	});
@@ -83,7 +83,7 @@ describe('MappingsTests', function () {
 	it('test_should_return_fields_for_all_annotation_types', async function () {
 		for (let type of ['highlight', 'note', 'image']) {
 			const response = await API.get(`items/new?itemType=annotation&annotationType=${type}`);
-			const json = await API.getJSONFromResponse(response);
+			const json = API.getJSONFromResponse(response);
 
 			assert.property(json, 'annotationComment');
 			Helpers.assertEquals('', json.annotationComment);
@@ -143,7 +143,7 @@ describe('MappingsTests', function () {
 
 	it('test_should_return_fields_for_image_annotations', async function () {
 		let response = await API.get('items/new?itemType=annotation&annotationType=image');
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assertEquals(0, json.annotationPosition.width);
 		Helpers.assertEquals(0, json.annotationPosition.height);
 	});

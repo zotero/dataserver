@@ -92,6 +92,7 @@ describe('RelationsTests', function () {
 		assert.equal(parseInt(item2JSON2.itemVersion), response2.headers["last-modified-version"][0]);
 	});
 
+	// Same as above, but in a single request
 	it('testRelatedItemRelationsSingleRequest', async function () {
 		const uriPrefix = "http://zotero.org/users/" + config.userID + "/items/";
 		const item1Key = Helpers.uniqueID();
@@ -179,7 +180,7 @@ describe('RelationsTests', function () {
 
 		// Make sure it's gone
 		const xml = await API.getItemXML(data.key);
-		const itemData = await API.parseDataFromAtomEntry(xml);
+		const itemData = API.parseDataFromAtomEntry(xml);
 		json = JSON.parse(itemData.content);
 		assert.equal(Object.keys(relations).length, Object.keys(json.relations).length);
 		for (const [predicate, object] of Object.entries(relations)) {
@@ -197,11 +198,14 @@ describe('RelationsTests', function () {
 
 		// Make sure they're gone
 		const xmlAfterDelete = await API.getItemXML(data.key);
-		const itemDataAfterDelete = await API.parseDataFromAtomEntry(xmlAfterDelete);
+		const itemDataAfterDelete = API.parseDataFromAtomEntry(xmlAfterDelete);
 		const responseDataAfterDelete = JSON.parse(itemDataAfterDelete.content);
 		assert.lengthOf(Object.keys(responseDataAfterDelete.relations), 0);
 	});
 
+	//
+	// Collections
+	//
 	it('testNewCollectionRelations', async function () {
 		const relationsObj = {
 			"owl:sameAs": "http://zotero.org/groups/1/collections/AAAAAAAA"

@@ -50,6 +50,7 @@ describe('ObjectTests', function () {
 				break;
 		}
 
+		// HEAD request should include Total-Results
 		let response = await API.userHead(
 			config.userID,
 			`${objectNamePlural}?key=${config.apiKey}&${keyProp}=${keys.join(',')}`
@@ -150,6 +151,7 @@ describe('ObjectTests', function () {
 		response = await API.userGet(config.userID, `${objectTypePlural}?${keyProp}=${keepKeys.join(',')}`);
 		Helpers.assertNumResults(response, keepKeys.length);
 
+		// Add trailing comma to itemKey param, to test key parsing
 		response = await API.userDelete(config.userID,
 			`${objectTypePlural}?${keyProp}=${keepKeys.join(',')},`,
 			{ "If-Unmodified-Since-Version": libraryVersion });
@@ -159,9 +161,8 @@ describe('ObjectTests', function () {
 		Helpers.assertNumResults(response, 0);
 	};
 
-	const _testPartialWriteFailure = async () => {
+	const _testPartialWriteFailure = async (objectType) => {
 		let conditions = [];
-		const objectType = 'collection';
 		let json1 = { name: "Test" };
 		let json2 = { name: "1234567890".repeat(6554) };
 		let json3 = { name: "Test" };
@@ -219,6 +220,7 @@ describe('ObjectTests', function () {
 	};
 
 	const _testPartialWriteFailureWithUnchanged = async (objectType) => {
+		await API.userClear(config.userID);
 		let objectTypePlural = API.getPluralObjectType(objectType);
 
 		let json1;
@@ -365,7 +367,7 @@ describe('ObjectTests', function () {
 		let response = await API.userGet(config.userID, "items?key=" + config.apiKey + "&format=keys&limit=1");
 		let libraryVersion1 = response.headers["last-modified-version"][0];
 
-		const func = async (objectType, libraryVersion, url) => {
+		const testDelete = async (objectType, libraryVersion, url) => {
 			const objectTypePlural = await API.getPluralObjectType(objectType);
 			const response = await API.userDelete(config.userID,
 				`${objectTypePlural}?key=${config.apiKey}${url}`,
@@ -374,9 +376,9 @@ describe('ObjectTests', function () {
 			return response.headers["last-modified-version"][0];
 		};
 
-		let tempLibraryVersion = await func('collection', libraryVersion1, "&collectionKey=" + objectKeys.collection[0]);
-		tempLibraryVersion = await func('item', tempLibraryVersion, "&itemKey=" + objectKeys.item[0]);
-		tempLibraryVersion = await func('search', tempLibraryVersion, "&searchKey=" + objectKeys.search[0]);
+		let tempLibraryVersion = await testDelete('collection', libraryVersion1, "&collectionKey=" + objectKeys.collection[0]);
+		tempLibraryVersion = await testDelete('item', tempLibraryVersion, "&itemKey=" + objectKeys.item[0]);
+		tempLibraryVersion = await testDelete('search', tempLibraryVersion, "&searchKey=" + objectKeys.search[0]);
 		let libraryVersion2 = tempLibraryVersion;
 
 		// /deleted without 'since' should be an error
@@ -387,9 +389,9 @@ describe('ObjectTests', function () {
 		Helpers.assert400(response);
 
 		// Delete second and third objects
-		tempLibraryVersion = await func('collection', tempLibraryVersion, "&collectionKey=" + objectKeys.collection.slice(1).join(','));
-		tempLibraryVersion = await func('item', tempLibraryVersion, "&itemKey=" + objectKeys.item.slice(1).join(','));
-		let libraryVersion3 = await func('search', tempLibraryVersion, "&searchKey=" + objectKeys.search.slice(1).join(','));
+		tempLibraryVersion = await testDelete('collection', tempLibraryVersion, "&collectionKey=" + objectKeys.collection.slice(1).join(','));
+		tempLibraryVersion = await testDelete('item', tempLibraryVersion, "&itemKey=" + objectKeys.item.slice(1).join(','));
+		let libraryVersion3 = await testDelete('search', tempLibraryVersion, "&searchKey=" + objectKeys.search.slice(1).join(','));
 
 		// Request all deleted objects
 		response = await API.userGet(config.userID, "deleted?key=" + config.apiKey + "&since=" + libraryVersion1);
@@ -505,7 +507,7 @@ describe('ObjectTests', function () {
 				}
 			];
 			const response = await API.postObjects(type, data);
-			const jsonResponse = await API.getJSONFromResponse(response);
+			const jsonResponse = API.getJSONFromResponse(response);
 			assert.notProperty(jsonResponse.successful[0].data, 'deleted');
 		}
 	});
@@ -545,7 +547,7 @@ describe('ObjectTests', function () {
 
 		Helpers.assert200(response);
 
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assert200ForObject(response);
 		const objectKey = json.successful[0].key;
 
@@ -583,7 +585,7 @@ describe('ObjectTests', function () {
 		);
 
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 
 		switch (objectType) {
 			case 'item':
@@ -677,13 +679,13 @@ describe('ObjectTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200(response);
-		let json = await API.getJSONFromResponse(response);
+		let json = API.getJSONFromResponse(response);
 		Helpers.assert200ForObject(response, false, 0);
 		Helpers.assert200ForObject(response, false, 1);
 
 		response = await API.userGet(config.userID, objectTypePlural);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		switch (objectType) {
 			case "item":
 				json[0].data.title
@@ -708,14 +710,14 @@ describe('ObjectTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 		Helpers.assert200ForObject(response, false, 0);
 		Helpers.assert200ForObject(response, false, 1);
 
 		// Check
 		response = await API.userGet(config.userID, objectTypePlural);
 		Helpers.assert200(response);
-		json = await API.getJSONFromResponse(response);
+		json = API.getJSONFromResponse(response);
 
 		switch (objectTypePlural) {
 			case "item":
@@ -745,6 +747,7 @@ describe('ObjectTests', function () {
 			Helpers.assert200ForObject(response);
 			json = API.getJSONFromResponse(response);
 			assert.property(json.successful[0].data, 'deleted');
+			// TODO: Change to true in APIv4
 			if (type == 'item') {
 				assert.equal(json.successful[0].data.deleted, 1);
 			}
@@ -779,7 +782,7 @@ describe('ObjectTests', function () {
 				}
 			];
 			const response = await API.postItems(data);
-			const jsonResponse = await API.getJSONFromResponse(response);
+			const jsonResponse = API.getJSONFromResponse(response);
 
 			assert.property(jsonResponse.successful[0].data, 'deleted');
 			assert.equal(jsonResponse.successful[0].data.deleted, 1);

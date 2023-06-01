@@ -94,12 +94,14 @@ describe('SortTests', function () {
 		let correct = {};
 		titlesSorted.forEach((title) => {
 			let index = titlesToIndex[title];
+			// The key at position k in itemKeys should be at the same position in keys
 			correct[index] = keys[index];
 		});
 		correct = Object.keys(correct).map(key => correct[key]);
 		assert.deepEqual(correct, keys);
 	});
 
+	// Same thing, but with order parameter for backwards compatibility
 	it('testSortTopItemsTitleOrder', async function () {
 		let response = await API.userGet(
 			config.userID,
@@ -147,9 +149,36 @@ describe('SortTests', function () {
 			correct[i] = itemKeys[parseInt(entry[0])];
 		});
 		correct = Object.keys(correct).map(key => correct[key]);
+		// Check attachment and note, which should fall back to ordered added (itemID)
 		assert.deepEqual(correct, keys);
 	});
 	it('testSortTopItemsCreator', async function () {
+		let response = await API.userGet(
+			config.userID,
+			"items/top?format=keys&sort=creator"
+		);
+		Helpers.assertStatusCode(response, 200);
+		let keys = response.data.trim().split("\n");
+		let namesCopy = { ...names };
+		let sortFunction = function (a, b) {
+			if (a === '' && b !== '') return 1;
+			if (b === '' && a !== '') return -1;
+			if (a < b) return -1;
+			if (a > b) return 11;
+			return 0;
+		};
+		let namesEntries = Object.entries(namesCopy);
+		namesEntries.sort((a, b) => sortFunction(a[1], b[1]));
+		assert.equal(Object.keys(namesEntries).length, keys.length);
+		let correct = {};
+		namesEntries.forEach((entry, i) => {
+			correct[i] = itemKeys[parseInt(entry[0])];
+		});
+		correct = Object.keys(correct).map(key => correct[key]);
+		assert.deepEqual(correct, keys);
+	});
+
+	it('testSortTopItemsCreatorOrder', async function () {
 		let response = await API.userGet(
 			config.userID,
 			"items/top?format=keys&order=creator"
@@ -228,6 +257,7 @@ describe('SortTests', function () {
 			dateModified: '2014-03-02T01:00:00Z'
 		}, this, 'jsonData'));
 	
+		// Get sorted keys
 		dataArray.sort(function (a, b) {
 			return new Date(a.dateAdded) - new Date(b.dateAdded);
 		});
@@ -331,7 +361,7 @@ describe('SortTests', function () {
 		assert.deepEqual(keysByDateAddedDescending, keys);
 	});
 	
-
+	// Sort by item type
 	it('test_sort_top_level_items_by_item_type', async function () {
 		const response = await API.userGet(
 			config.userID,
@@ -391,6 +421,8 @@ describe('SortTests', function () {
 			dateAdded: '2014-02-02T00:00:00Z',
 			dateModified: '2014-03-02T01:00:00Z'
 		}, this, 'jsonData'));
+
+		// Get sorted keys
 		dataArray.sort((a, b) => {
 			return new Date(b.dateAdded) - new Date(a.dateAdded);
 		});
@@ -399,6 +431,8 @@ describe('SortTests', function () {
 			return new Date(b.dateModified) - new Date(a.dateModified);
 		});
 		const keysByDateModifiedDescending = dataArray.map(data => data.key);
+
+		// Tests
 		let response = await API.userGet(config.userID, "items?format=keys");
 		Helpers.assert200(response);
 		assert.deepEqual(keysByDateModifiedDescending, response.data.trim().split('\n'));

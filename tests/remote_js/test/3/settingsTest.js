@@ -448,15 +448,15 @@ describe('SettingsTests', function () {
 		// Check
 		response = await API.userGet(
 			config.userID,
-			`settings/${settingKey}`
+			`settings`
 		);
 		Helpers.assert200(response);
 		Helpers.assertContentType(response, "application/json");
 		assert.equal(parseInt(response.headers['last-modified-version'][0]), libraryVersion);
 		json = JSON.parse(response.data);
 		assert.isNotNull(json);
-		assert.deepEqual(json.value, newValue);
-		assert.equal(parseInt(json.version), libraryVersion);
+		assert.deepEqual(json[settingKey].value, newValue);
+		assert.equal(parseInt(json[settingKey].version), libraryVersion);
 	});
 
 	it('testUnsupportedSettingMultiple', async function () {
