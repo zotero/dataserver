@@ -212,12 +212,12 @@ describe('SearchTests', function () {
 			'Content-Type': 'application/json',
 		};
 		const response = await API.createSearch('', conditions, headers, 'responseJSON');
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, 'Search name cannot be empty');
+		Helpers.assert400ForObject(response, { message: 'Search name cannot be empty' });
 	});
 
 	it('testNewSearchNoConditions', async function () {
 		const json = await API.createSearch("Test", [], true, 'responseJSON');
-		Helpers.assertStatusForObject(json, 'failed', 0, 400, "'conditions' cannot be empty");
+		Helpers.assert400ForObject(json, { message: "'conditions' cannot be empty" });
 	});
 
 	it('testNewSearchConditionErrors', async function () {
@@ -232,7 +232,7 @@ describe('SearchTests', function () {
 			true,
 			'responseJSON'
 		);
-		Helpers.assertStatusForObject(json, 'failed', 0, 400, "'condition' property not provided for search condition");
+		Helpers.assert400ForObject(json, { message: "'condition' property not provided for search condition" });
 
 
 		json = await API.createSearch(
@@ -247,7 +247,7 @@ describe('SearchTests', function () {
 			true,
 			'responseJSON'
 		);
-		Helpers.assertStatusForObject(json, 'failed', 0, 400, 'Search condition cannot be empty');
+		Helpers.assert400ForObject(json, { message: 'Search condition cannot be empty' });
 
 
 		json = await API.createSearch(
@@ -261,7 +261,7 @@ describe('SearchTests', function () {
 			true,
 			'responseJSON'
 		);
-		Helpers.assertStatusForObject(json, 'failed', 0, 400, "'operator' property not provided for search condition");
+		Helpers.assert400ForObject(json, { message: "'operator' property not provided for search condition" });
 
 
 		json = await API.createSearch(
@@ -276,7 +276,7 @@ describe('SearchTests', function () {
 			true,
 			'responseJSON'
 		);
-		Helpers.assertStatusForObject(json, 'failed', 0, 400, 'Search operator cannot be empty');
+		Helpers.assert400ForObject(json, { message: 'Search operator cannot be empty' });
 	});
 	it('test_should_allow_a_search_with_emoji_values', async function () {
 		let response = await API.createSearch(

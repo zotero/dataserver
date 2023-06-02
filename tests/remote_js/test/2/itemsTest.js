@@ -4,6 +4,7 @@ var config = require('config');
 const API = require('../../api2.js');
 const Helpers = require('../../helpers2.js');
 const { API2Before, API2After } = require("../shared.js");
+const {post}=require('../../httpHandler.js');
 
 describe('ItemsTests', function () {
 	this.timeout(config.timeout * 2);
@@ -367,7 +368,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'itemType' property not provided");
+		Helpers.assert400ForObject(response, { message: "'itemType' property not provided" });
 
 		// contentType on non-attachment
 		const json3 = { ...json };
@@ -380,7 +381,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'contentType' is valid only for attachment items");
+		Helpers.assert400ForObject(response, { message: "'contentType' is valid only for attachment items" });
 	});
 
 	it('testEditTopLevelNote', async function () {
@@ -486,7 +487,7 @@ describe('ItemsTests', function () {
 				items: [json],
 			}),
 		);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert200ForObject(response);
 		const xml2 = await API.getItemXML(json.itemKey);
 		const data2 = API.parseDataFromAtomEntry(xml2);
 		const json2 = JSON.parse(data2.content);
@@ -660,7 +661,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(newResponse, 'failed', 0, 400, "'invalidName' is not a valid linkMode");
+		Helpers.assert400ForObject(newResponse, { message: "'invalidName' is not a valid linkMode" });
 
 		// Missing linkMode
 		delete json.linkMode;
@@ -672,7 +673,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(missingResponse, 'failed', 0, 400, "'linkMode' property not provided");
+		Helpers.assert400ForObject(missingResponse, { message: "'linkMode' property not provided" });
 	});
 	it('testNewAttachmentItemMD5OnLinkedURL', async function () {
 		const newItemData = await testNewEmptyBookItem();
@@ -691,7 +692,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(postResponse, 'failed', 0, 400, "'md5' is valid only for imported and embedded-image attachments");
+		Helpers.assert400ForObject(postResponse, { message: "'md5' is valid only for imported and embedded-image attachments" });
 	});
 	it('testNewAttachmentItemModTimeOnLinkedURL', async function () {
 		const newItemData = await testNewEmptyBookItem();
@@ -710,7 +711,7 @@ describe('ItemsTests', function () {
 			}),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(postResponse, 'failed', 0, 400, "'mtime' is valid only for imported and embedded-image attachments");
+		Helpers.assert400ForObject(postResponse, { message: "'mtime' is valid only for imported and embedded-image attachments" });
 	});
 	it('testMappedCreatorTypes', async function () {
 		const json = {
@@ -743,8 +744,8 @@ describe('ItemsTests', function () {
 			JSON.stringify(json)
 		);
 		// 'author' gets mapped automatically, others dont
-		Helpers.assertStatusForObject(response, 'failed', 1, 400);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert400ForObject(response, { index: 1 });
+		Helpers.assert200ForObject(response);
 	});
 
 	it('testNumChildren', async function () {

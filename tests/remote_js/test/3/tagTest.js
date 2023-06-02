@@ -39,7 +39,7 @@ describe('TagTests', function () {
 		let headers = { "Content-Type": "application/json" };
 		let response = await API.postItem(json, headers);
 
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "Tag must be an object");
+		Helpers.assert400ForObject(response, { message: "Tag must be an object" });
 	});
 
 	it('test_should_add_tag_to_item', async function () {

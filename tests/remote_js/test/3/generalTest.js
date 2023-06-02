@@ -50,7 +50,7 @@ describe('GeneralTests', function () {
 		);
 
 		Helpers.assertStatusCode(response, 200);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert200ForObject(response);
 
 		response = await API.userPost(
 			config.userID,

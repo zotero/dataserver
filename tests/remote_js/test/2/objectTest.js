@@ -192,9 +192,9 @@ describe('ObjectTests', function () {
 		Helpers.assertStatusCode(response, 200);
 		json = API.getJSONFromResponse(response);
 
-		Helpers.assertStatusForObject(response, 'success', 0, 200);
-		Helpers.assertStatusForObject(response, 'success', 1, 413);
-		Helpers.assertStatusForObject(response, 'success', 2, 200);
+		Helpers.assert200ForObject(response, { index: 0 });
+		Helpers.assert413ForObject(response, { index: 1 });
+		Helpers.assert200ForObject(response, { index: 2 });
 
 		const responseKeys = await API.userGet(
 			config.userID,
@@ -268,8 +268,8 @@ describe('ObjectTests', function () {
 		let json = API.getJSONFromResponse(response);
 		
 		Helpers.assertStatusForObject(response, 'unchanged', 0);
-		Helpers.assertStatusForObject(response, 'failed', 1);
-		Helpers.assertStatusForObject(response, 'success', 2);
+		Helpers.assert413ForObject(response, { index: 1 });
+		Helpers.assert200ForObject(response, { index: 2 });
 
 	
 		response = await API.userGet(config.userID,

@@ -694,7 +694,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(newResponse, 'failed', 0, 400, "'invalidName' is not a valid linkMode");
+		Helpers.assert400ForObject(newResponse, { message: "'invalidName' is not a valid linkMode" });
 
 		// Missing linkMode
 		delete json.linkMode;
@@ -704,7 +704,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(missingResponse, 'failed', 0, 400, "'linkMode' property not provided");
+		Helpers.assert400ForObject(missingResponse, { message: "'linkMode' property not provided" });
 	});
 	it('testNewAttachmentItemMD5OnLinkedURL', async function () {
 		let json = await testNewEmptyBookItem();
@@ -721,7 +721,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(postResponse, 'failed', 0, 400, "'md5' is valid only for imported and embedded-image attachments");
+		Helpers.assert400ForObject(postResponse, { message: "'md5' is valid only for imported and embedded-image attachments" });
 	});
 	it('testNewAttachmentItemModTimeOnLinkedURL', async function () {
 		let json = await testNewEmptyBookItem();
@@ -738,7 +738,7 @@ describe('ItemsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assertStatusForObject(postResponse, 'failed', 0, 400, "'mtime' is valid only for imported and embedded-image attachments");
+		Helpers.assert400ForObject(postResponse, { message: "'mtime' is valid only for imported and embedded-image attachments" });
 	});
 	it('testMappedCreatorTypes', async function () {
 		const json = [

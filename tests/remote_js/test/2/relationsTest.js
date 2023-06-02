@@ -134,7 +134,7 @@ describe('RelationsTests', function () {
 			}
 		}, true, 'response');
 
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "Unsupported predicate 'foo:unknown'");
+		Helpers.assert400ForObject(response, { message: "Unsupported predicate 'foo:unknown'" });
 
 		response = await API.createItem('book', {
 			relations: {
@@ -142,7 +142,7 @@ describe('RelationsTests', function () {
 			}
 		}, this, 'response');
 
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'relations' values currently must be Zotero item URIs");
+		Helpers.assert400ForObject(response, { message: "'relations' values currently must be Zotero item URIs" });
 
 		response = await API.createItem('book', {
 			relations: {
@@ -150,7 +150,7 @@ describe('RelationsTests', function () {
 			}
 		}, this, 'response');
 
-		Helpers.assertStatusForObject(response, 'failed', 0, 400, "'relations' values currently must be Zotero item URIs");
+		Helpers.assert400ForObject(response, { message: "'relations' values currently must be Zotero item URIs" });
 	});
 
 	it('testDeleteItemRelation', async function () {
@@ -231,7 +231,8 @@ describe('RelationsTests', function () {
 			"collections?key=" + config.apiKey,
 			JSON.stringify({ collections: [json] })
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, null, "Unsupported predicate 'foo:unknown'");
+		
+		Helpers.assert400ForObject(response, { message: "Unsupported predicate 'foo:unknown'" });
 
 		json.relations = {
 			"owl:sameAs": "Not a URI"
@@ -241,7 +242,7 @@ describe('RelationsTests', function () {
 			"collections?key=" + config.apiKey,
 			JSON.stringify({ collections: [json] })
 		);
-		Helpers.assertStatusForObject(response2, 'failed', 0, null, "'relations' values currently must be Zotero collection URIs");
+		Helpers.assert400ForObject(response2, { message: "'relations' values currently must be Zotero collection URIs" });
 
 		json.relations = ["http://zotero.org/groups/1/collections/AAAAAAAA"];
 		const response3 = await API.userPost(
@@ -249,7 +250,7 @@ describe('RelationsTests', function () {
 			"collections?key=" + config.apiKey,
 			JSON.stringify({ collections: [json] })
 		);
-		Helpers.assertStatusForObject(response3, 'failed', 0, null, "'relations' property must be an object");
+		Helpers.assert400ForObject(response3, { message: "'relations' property must be an object" });
 	});
 
 	it('testDeleteCollectionRelation', async function () {

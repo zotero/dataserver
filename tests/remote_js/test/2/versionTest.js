@@ -266,7 +266,7 @@ describe('VersionsTests', function () {
 			headers2
 		);
 		Helpers.assertStatusCode(response, 200);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert200ForObject(response);
 		const version2 = parseInt(response.headers['last-modified-version'][0]);
 		assert.isNumber(version2);
 		// Version should be incremented on new object
@@ -314,7 +314,7 @@ describe('VersionsTests', function () {
 				"Content-Type": "application/json"
 			}
 		);
-		Helpers.assertStatusForObject(response, 'failed', 0, 428);
+		Helpers.assert428ForObject(response);
 
 		json[objectVersionProp] = version - 1;
 
@@ -330,7 +330,7 @@ describe('VersionsTests', function () {
 		);
 		// Outdated object version property
 		const message = `${_capitalizeFirstLetter(objectType)} has been modified since specified version (expected ${json[objectVersionProp]}, found ${version2})`;
-		Helpers.assertStatusForObject(response, 'failed', 0, 412, message);
+		Helpers.assert412ForObject(response, { message: message });
 		// Modify object, using object version property
 		json[objectVersionProp] = version;
 		
@@ -345,7 +345,7 @@ describe('VersionsTests', function () {
 			}
 		);
 		Helpers.assertStatusCode(response, 200);
-		Helpers.assertStatusForObject(response, 'success', 0);
+		Helpers.assert200ForObject(response);
 		// Version should be incremented on modified object
 		const version3 = parseInt(response.headers['last-modified-version'][0]);
 		assert.isNumber(version3);

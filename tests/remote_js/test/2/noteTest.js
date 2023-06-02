@@ -32,7 +32,7 @@ describe('NoteTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		const expectedMessage = "Note '1234567890123456789012345678901234567890123456789012345678901234567890123456789...' too long";
-		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
+		Helpers.assert413ForObject(response, { message : expectedMessage });
 	});
 
 	it('testNoteTooLongBlankFirstLines', async function () {
@@ -47,7 +47,7 @@ describe('NoteTests', function () {
 			{ "Content-Type": "application/json" }
 		);
 		const expectedMessage = "Note '1234567890123456789012345678901234567890123456789012345678901234567890123456789...' too long";
-		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
+		Helpers.assert413ForObject(response, { message : expectedMessage });
 	});
 
 	it('testNoteTooLongBlankFirstLinesHTML', async function () {
@@ -63,7 +63,7 @@ describe('NoteTests', function () {
 		);
 
 		const expectedMessage = "Note '1234567890123456789012345678901234567890123456789012345678901234567890123...' too long";
-		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
+		Helpers.assert413ForObject(response, { message : expectedMessage });
 	});
 
 	it('testNoteTooLongTitlePlusNewlines', async function () {
@@ -79,7 +79,7 @@ describe('NoteTests', function () {
 		);
 
 		const expectedMessage = "Note 'Full Text: 1234567890123456789012345678901234567890123456789012345678901234567...' too long";
-		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
+		Helpers.assert413ForObject(response, { message : expectedMessage });
 	});
 
 	// All content within HTML tags
@@ -96,6 +96,6 @@ describe('NoteTests', function () {
 		);
 
 		const expectedMessage = "Note '&lt;p&gt;&lt;!-- 1234567890123456789012345678901234567890123456789012345678901234...' too long";
-		Helpers.assertStatusForObject(response, 'failed', 0, 413, expectedMessage);
+		Helpers.assert413ForObject(response, { message : expectedMessage });
 	});
 });
