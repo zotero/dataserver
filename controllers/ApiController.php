@@ -99,6 +99,7 @@ class ApiController extends Controller {
 			});
 		}
 		
+		register_shutdown_function(array($this, 'finishConcurrentRequest'));
 		register_shutdown_function(array($this, 'checkDBTransactionState'));
 		register_shutdown_function(array($this, 'logTotalRequestTime'));
 		register_shutdown_function(array($this, 'checkForFatalError'));
@@ -1164,10 +1165,6 @@ class ApiController extends Controller {
 	
 	
 	protected function end() {
-		if (Z_RequestLimiter::isConcurrentRequestActive()) {
-			Z_RequestLimiter::finishConcurrentRequest();
-		}
-		
 		if ($this->profile && $this->currentRequestTime() > $this->timeLogThreshold) {
 			Zotero_DB::profileEnd($this->objectLibraryID, true, $this->uri);
 		}
@@ -1388,6 +1385,11 @@ class ApiController extends Controller {
 		$this->handleException($e);
 	}
 	
+	public function finishConcurrentRequest() {
+		if (Z_RequestLimiter::isConcurrentRequestActive()) {
+			Z_RequestLimiter::finishConcurrentRequest();
+		}
+	}
 	
 	public function checkDBTransactionState($noLog = false) {
 		if (Zotero_DB::transactionInProgress()) {
