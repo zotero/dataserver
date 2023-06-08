@@ -34,8 +34,6 @@ class MappingsController extends ApiController {
 		$locale = !empty($_GET['locale'])
 			? \Zotero\Schema::resolveLocale($_GET['locale'])
 			: 'en-US';
-		unset($this->queryParams['format']);
-		header("Content-Type: application/json");
 
 		if ($this->subset == 'itemTypeFields') {
 			if (empty($_GET['itemType'])) {
