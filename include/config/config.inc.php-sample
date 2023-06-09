@@ -26,7 +26,8 @@ class Z_CONFIG {
 	public static $S3_BUCKET_FULLTEXT = '';
 	public static $S3_BUCKET_ERRORS = '';
 	public static $SNS_ALERT_TOPIC = '';
-
+	public static $SQS_URL = '';
+	
 	public static $REDIS_HOSTS = [
 		'default' => [
 			'host' => 'redis1.localdomain:6379'
