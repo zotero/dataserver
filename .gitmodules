@@ -1,3 +1,6 @@
 [submodule "htdocs/zotero-schema"]
 	path = htdocs/zotero-schema
 	url = https://github.com/zotero/zotero-schema.git
+[submodule "tests/remote_js/full-text-extractor"]
+	path = tests/remote_js/full-text-extractor
+	url = https://github.com/zotero/full-text-extractor.git
