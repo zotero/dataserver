@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@aws-sdk/client-s3": "^3.338.0",
+    "@aws-sdk/client-sqs": "^3.348.0",
     "config": "^3.3.9",
     "jsdom": "^22.0.0",
     "jszip": "^3.10.1",
@@ -13,6 +14,6 @@
     "mocha": "^10.2.0"
   },
   "scripts": {
-    "test": "mocha \"test/**/*.js\""
+    "test": "mocha \"test/**/*.*js\""
   }
 }
