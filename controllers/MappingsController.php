@@ -143,9 +143,6 @@ class MappingsController extends ApiController {
 			$this->e400("'itemType' not provided");
 		}
 
-		unset($this->queryParams['format']);
-		header("Content-Type: application/json");
-
 		$itemType = $_GET['itemType'];
 		if ($itemType == 'attachment') {
 			if (empty($_GET['linkMode'])) {
