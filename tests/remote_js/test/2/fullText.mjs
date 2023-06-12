@@ -1,19 +1,22 @@
-const chai = require('chai');
+import chai from 'chai';
 const assert = chai.assert;
-var config = require('config');
-const API = require('../../api2.js');
-const Helpers = require('../../helpers2.js');
-const { API2Before, API2After } = require("../shared.js");
+import config from 'config';
+import API from '../../api2.js';
+import Helpers from '../../helpers2.js';
+import shared from "../shared.js";
+import { s3 } from "../../full-text-indexer/index.mjs";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 describe('FullTextTests', function () {
 	this.timeout(config.timeout);
+	const s3Client = new S3Client({ region: "us-east-1" });
 
 	before(async function () {
-		await API2Before();
+		await shared.API2Before();
 	});
 
 	after(async function () {
-		await API2After();
+		await shared.API2After();
 	});
 
 	it('testSetItemContent', async function () {
@@ -179,8 +182,81 @@ describe('FullTextTests', function () {
 	});
 
 	//Requires ES
-	it('testSearchItemContent', async function() {
-		this.skip();
+	it('testSearchItemContent', async function () {
+		let key = await API.createItem("book", [], this, 'key');
+		let xml = await API.createAttachmentItem("imported_url", [], key, this, 'atom');
+		let data = API.parseDataFromAtomEntry(xml);
+
+		let response = await API.userGet(
+			config.userID,
+			"items/" + data.key + "/fulltext?key=" + config.apiKey
+		);
+		Helpers.assert404(response);
+
+		let content = "Here is some unique full-text content";
+		let pages = 50;
+
+		// Store content
+		response = await API.userPut(
+			config.userID,
+			"items/" + data.key + "/fulltext?key=" + config.apiKey,
+			JSON.stringify({
+				content: content,
+				indexedPages: pages,
+				totalPages: pages
+			}),
+			{ "Content-Type": "application/json" }
+		);
+
+		Helpers.assert204(response);
+
+		// Local fake-invoke of lambda function that indexes pdf
+		if (config.isLocalRun) {
+			const s3Result = await s3Client.send(new GetObjectCommand({ Bucket: config.s3Bucket, Key: `${config.userID}/${data.key}` }));
+
+			const event = {
+				eventName: "ObjectCreated",
+				s3: {
+					bucket: {
+						name: config.s3Bucket
+					},
+					object: {
+						key: `${config.userID}/${data.key}`,
+						eTag: s3Result.ETag.slice(1, -1)
+					}
+				},
+
+			};
+			await s3({ Records: [event] });
+		}
+
+		// Wait for indexing via Lambda
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		// Search for a word
+		response = await API.userGet(
+			config.userID,
+			"items?q=unique&qmode=everything&format=keys&key=" + config.apiKey
+		);
+		Helpers.assert200(response);
+		Helpers.assertEquals(data.key, response.data.trim());
+
+		// Search for a phrase
+		response = await API.userGet(
+			config.userID,
+			"items?q=unique%20full-text&qmode=everything&format=keys&key=" + config.apiKey
+		);
+		Helpers.assert200(response);
+		Helpers.assertEquals(data.key, response.data.trim());
+
+
+		// Search for nonexistent word
+		response = await API.userGet(
+			config.userID,
+			"items?q=nothing&qmode=everything&format=keys&key=" + config.apiKey
+		);
+		Helpers.assert200(response);
+		Helpers.assertEquals("", response.data.trim());
 	});
 
 	it('testDeleteItemContent', async function () {

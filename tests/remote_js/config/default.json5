@@ -30,6 +30,11 @@
 	"ownedPrivateGroupLibraryID2": 0,
 
 	"fullTextExtractorSQSUrl" : "",
-	"isLocalRun": false
+	"isLocalRun": false,
+	"es": {
+		"host": "",
+		"index": "item_fulltext_index",
+		"type": "item_fulltext"
+	}
 
 }

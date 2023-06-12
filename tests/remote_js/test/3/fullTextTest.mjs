@@ -1,19 +1,22 @@
-const chai = require('chai');
+import chai from 'chai';
 const assert = chai.assert;
-var config = require('config');
-const API = require('../../api3.js');
-const Helpers = require('../../helpers3.js');
-const { API3Before, API3After } = require("../shared.js");
+import config from 'config';
+import API from '../../api3.js';
+import Helpers from '../../helpers3.js';
+import shared from "../shared.js";
+import { s3 } from "../../full-text-indexer/index.mjs";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 describe('FullTextTests', function () {
-	this.timeout(config.timeout);
+	this.timeout(0);
+	const s3Client = new S3Client({ region: "us-east-1" });
 
 	before(async function () {
-		await API3Before();
+		await shared.API3Before();
 	});
 
 	after(async function () {
-		await API3After();
+		await shared.API3After();
 	});
 
 	this.beforeEach(async function () {
@@ -225,7 +228,6 @@ describe('FullTextTests', function () {
 
 	// Requires ES
 	it('testSearchItemContent', async function () {
-		this.skip();
 		let collectionKey = await API.createCollection('Test', false, this, 'key');
 		let parentKey = await API.createItem("book", { collections: [collectionKey] }, this, 'key');
 		let json = await API.createAttachmentItem("imported_url", [], parentKey, this, 'jsonData');
@@ -253,6 +255,26 @@ describe('FullTextTests', function () {
 		);
 
 		Helpers.assert204(response);
+
+		// Local fake-invoke of lambda function that indexes pdf
+		if (config.isLocalRun) {
+			const s3Result = await s3Client.send(new GetObjectCommand({ Bucket: config.s3Bucket, Key: `${config.userID}/${attachmentKey}` }));
+
+			const event = {
+				eventName: "ObjectCreated",
+				s3: {
+					bucket: {
+						name: config.s3Bucket
+					},
+					object: {
+						key: `${config.userID}/${attachmentKey}`,
+						eTag: s3Result.ETag.slice(1, -1)
+					}
+				},
+
+			};
+			await s3({ Records: [event] });
+		}
 
 		// Wait for indexing via Lambda
 		await new Promise(resolve => setTimeout(resolve, 6000));

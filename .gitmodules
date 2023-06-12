@@ -4,3 +4,6 @@
 [submodule "tests/remote_js/full-text-extractor"]
 	path = tests/remote_js/full-text-extractor
 	url = https://github.com/zotero/full-text-extractor.git
+[submodule "tests/remote_js/full-text-indexer"]
+	path = tests/remote_js/full-text-indexer
+	url = https://github.com/zotero/full-text-indexer.git
