@@ -1697,7 +1697,9 @@ class Zotero_Items {
 					continue 2;
 				
 				case 'parentItem':
-					$item->setSourceKey($val);
+					if ($val) {
+						$item->setSourceKey($val);
+					}
 					break;
 				
 				case 'creators':
