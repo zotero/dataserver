@@ -1849,12 +1849,15 @@ class Zotero_Items {
 				case 'annotationText':
 				case 'annotationComment':
 				case 'annotationColor':
-				case 'annotationPageLabel':
 				case 'annotationSortIndex':
 				case 'annotationPosition':
 					$item->$key = $val;
 					break;
-				
+
+				case 'annotationPageLabel':
+					$item->$key = substr($val, 0, Zotero_Items::$maxAnnotationPageLabelLength);
+					break;
+					
 				case 'dateModified':
 					if ($apiVersion >= 3 && $tmpZoteroClientDateModifiedHack) {
 						$item->setField($key, $val);
