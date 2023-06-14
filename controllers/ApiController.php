@@ -300,10 +300,10 @@ class ApiController extends Controller {
 					$this->e401();
 				}
 				
-				// Explicit auth request or not a GET request
+				// Explicit auth request or not a GET or HEAD request
 				//
 				// /users/<id>/keys is an exception, since the key is embedded in the URL
-				if ($this->method != "GET" && $this->action != 'keys' && empty($extra['noauth'])) {
+				if (($this->method != "GET" && $this->method != "HEAD") && $this->action != 'keys' && empty($extra['noauth'])) {
 					$this->e403('An API key is required for write requests.');
 				}
 				
