@@ -186,6 +186,10 @@ class TagsController extends ApiController {
 				// Filter for specific tags with "?tag=foo || bar"
 				$tagNames = !empty($this->queryParams['tag'])
 					? explode(' || ', $this->queryParams['tag']): array();
+				// Replace \|| with || to allow for tags with literal '||'.
+				$tagNames = array_map(function ($name) {
+					return str_replace("\||", "||", $name);
+				}, $tagNames);
 				Zotero_DB::beginTransaction();
 				foreach ($tagNames as $tagName) {
 					$tagIDs = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
