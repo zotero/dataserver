@@ -42,6 +42,8 @@ $router->map('/groups/i:objectGroupID/items/:objectKey/fulltext', array('control
 $router->map('/users/i:objectUserID/fulltext', array('controller' => 'FullText', 'action' => 'fulltext'));
 //$router->map('/users/i:objectUserID/publications/fulltext', ['controller' => 'FullText', 'action' => 'fulltext', 'extra' => ['publications' => true]]);
 $router->map('/groups/i:objectGroupID/fulltext', array('controller' => 'FullText', 'action' => 'fulltext'));
+$router->map('/groups/i:objectGroupID/fulltext/reindex', array('controller' => 'FullText', 'action' => 'reindex'));
+$router->map('/users/i:objectUserID/fulltext/reindex', array('controller' => 'FullText', 'action' => 'reindex'));
 
 // All trashed items
 $router->map('/users/i:objectUserID/items/trash', array('controller' => 'Items', 'extra' => array('subset' => 'trash')));

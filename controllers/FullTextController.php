@@ -157,4 +157,22 @@ class FullTextController extends ApiController {
 		
 		$this->end();
 	}
+
+	public function reindex() {
+		$this->allowMethods(['POST']);
+		
+		// Check for general library access
+		if (!$this->permissions->canAccess($this->objectLibraryID)) {
+			$this->e403();
+		}
+
+		$lambdaClient = Z_Core::$AWS->createLambda();
+		$result = $lambdaClient->invoke([
+			'FunctionName' => Z_CONFIG::$REINDEX_LAMBDA_FUNCTION_NAME, 
+			'InvocationType' => 'Event',
+			'Payload' => json_encode(['libraryID' => $this->objectLibraryID]),
+		]);
+		$this->end();
+	}
+
 }
