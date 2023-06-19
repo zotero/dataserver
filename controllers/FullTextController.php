@@ -161,11 +161,31 @@ class FullTextController extends ApiController {
 	public function reindex() {
 		$this->allowMethods(['POST']);
 		
+		$redis = Z_Redis::get('request-limiter');
+
+		// Only allow requests to this endpoint to come in once every $REINDEX_WAIT_HOURS hours
+		if ($redis->get("reindex_$this->objectLibraryID")) {
+			$this->e429("The request to reindex this library has already been submitted.");
+		}
+		else {
+			$redis->setex("reindex_$this->objectLibraryID", Z_CONFIG::$REINDEX_WAIT_HOURS * 3600, 1);
+		}
+
 		// Check for general library access
 		if (!$this->permissions->canAccess($this->objectLibraryID)) {
 			$this->e403();
 		}
 
+		// Check how many records we have in Elasticsearch and how many attachments we have.
+		$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
+		$expectedCount = Zotero_Libraries::countAttachments($this->objectLibraryID);
+		// If they're equal, everything is indexed.
+		if ($esCount == $expectedCount) {
+			$this->e400("The library has been indexed.");
+		}
+
+		// If they are not and it has been long enough since last request, something went wrong with
+		// SQS or lambda so we can rerun the reindexing proces.
 		$lambdaClient = Z_Core::$AWS->createLambda();
 		$result = $lambdaClient->invoke([
 			'FunctionName' => Z_CONFIG::$REINDEX_LAMBDA_FUNCTION_NAME, 
