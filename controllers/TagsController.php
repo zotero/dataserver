@@ -28,7 +28,7 @@ require('ApiController.php');
 
 class TagsController extends ApiController {
 	public function tags() {
-		$this->allowMethods(['HEAD', 'GET', 'DELETE']);
+		$this->allowMethods(['HEAD', 'GET', 'DELETE', 'POST']);
 		
 		if (!$this->permissions->canAccess($this->objectLibraryID)) {
 			$this->e403();
@@ -66,7 +66,7 @@ class TagsController extends ApiController {
 		}
 		// All tags
 		else {
-			$this->allowMethods(array('GET', 'DELETE'));
+			$this->allowMethods(array('GET', 'DELETE', 'POST'));
 			
 			if ($this->scopeObject) {
 				$this->allowMethods(array('GET'));
@@ -195,6 +195,28 @@ class TagsController extends ApiController {
 					}
 				}
 				Zotero_DB::commit();
+				$this->e204();
+			}
+			else if ($this->method == 'POST') {
+				if (empty($this->queryParams['tag']) || empty($this->queryParams['tagName']) ) {
+					$this->e400("tag and tagName are required query parameters.");
+				}
+
+				$oldTagName = $this->queryParams['tag'];
+				$newTagName =  $this->queryParams['tagName'];					
+				
+				$tagID = Zotero_Tags::getIDs($this->objectLibraryID, $oldTagName);
+				$tagCount = count($tagID);
+
+				// Make sure only one tag has been fetched
+				if ($tagCount != 1) {
+					$this->e400("Only one tag should be found to be renamed. Found: $tagCount");
+				}
+				
+				$tag = Zotero_Tags::get($this->objectLibraryID, $tagID[0], true);
+				$tag->name = $newTagName;
+				$tag -> save();
+
 				$this->e204();
 			}
 			else {
