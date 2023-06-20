@@ -144,6 +144,13 @@ class TagsController extends ApiController {
 						$results = Zotero_Tags::search($this->objectLibraryID, $tagParams);
 					}
 				}
+				// Unfiled
+				else if($this->scopeObjectKey == 'unfiled') {
+					$title = "Unfiled tags";
+					$items = Zotero_Items::getItemsWithoutCollection($this->objectLibraryID);
+					$this->queryParams['itemIDs'] = $items;
+					$results = Zotero_Tags::search($this->objectLibraryID, $this->queryParams);
+				}
 				// Tags within a collection or item
 				else if ($this->scopeObjectKey) {
 					switch ($this->scopeObject) {

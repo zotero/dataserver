@@ -424,6 +424,15 @@ class ItemsController extends ApiController {
 						$this->permissions
 					);
 				}
+				// Unfiled items
+				else if ($this->subset == 'unfiled') {
+					$this->allowMethods(array('GET'));
+					
+					$title = "Unfiled items";
+					$itemIDs = Zotero_Items::getItemsWithoutCollection(
+						$this->objectLibraryID
+					);
+				}
 				else if ($this->subset == 'children') {
 					$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $this->objectKey);
 					if (!$item) {

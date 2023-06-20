@@ -2574,6 +2574,16 @@ class Zotero_Items {
 			}
 		}
 	}
+
+	public static function getItemsWithoutCollection($libraryID) {
+		$sql = "SELECT items.itemID
+		FROM items
+		LEFT JOIN collectionItems ON items.itemID = collectionItems.itemID
+		WHERE collectionItems.collectionID IS NULL
+		AND items.libraryID = ?;";
+		$items = Zotero_DB::columnQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
+		return $items;
+	}
 	
 	
 	public static function getSortTitle($title) {
