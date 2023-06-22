@@ -274,13 +274,15 @@ class Zotero_Items {
 					// Join temp table to query
 					$sql .= "JOIN tmpItemTypeNames TITN ON (TITN.itemTypeID=$itemTypeIDSelector) ";
 					break;
-				
+
+				case 'editedBy':
 				case 'addedBy':
 					$isGroup = Zotero_Libraries::getType($libraryID) == 'group';
+					$userParameter = $params['sort'] == "editedBy" ? 'lastModifiedByUserID' : 'createdByUserID';
 					if ($isGroup) {
-						$sql2 = "SELECT DISTINCT createdByUserID FROM items
+						$sql2 = "SELECT DISTINCT $userParameter FROM items
 								JOIN groupItems USING (itemID) WHERE
-								createdByUserID IS NOT NULL AND ";
+								$userParameter IS NOT NULL AND ";
 						if ($itemIDs) {
 							$sql2 .= "itemID IN ("
 									. implode(', ', array_fill(0, sizeOf($itemIDs), '?'))
@@ -307,7 +309,7 @@ class Zotero_Items {
 							
 							// Join temp table to query
 							$sql .= "LEFT JOIN groupItems GI ON (GI.itemID=I.itemID)
-									LEFT JOIN tmpCreatedByUsers TCBU ON (TCBU.userID=GI.createdByUserID) ";
+									LEFT JOIN tmpCreatedByUsers TCBU ON (TCBU.userID=GI.$userParameter) ";
 						}
 					}
 					break;
@@ -550,6 +552,7 @@ class Zotero_Items {
 					$orderSQL = "$sortTable.value";
 					break;
 				
+				case 'editedBy':	
 				case 'addedBy':
 					if ($isGroup && $createdByUserIDs) {
 						$orderSQL = "TCBU.username";
