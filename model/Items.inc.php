@@ -304,7 +304,7 @@ class Zotero_Items {
 								);
 							}
 							
-							$sql2 = "INSERT IGNORE INTO tmpCreatedByUsers VALUES ";
+							$sql2 = "REPLACE INTO tmpCreatedByUsers VALUES ";
 							Zotero_DB::bulkInsert($sql2, $toAdd, 50, false, $shardID);
 							
 							// Join temp table to query
