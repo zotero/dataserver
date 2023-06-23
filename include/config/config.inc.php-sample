@@ -7,7 +7,8 @@ class Z_CONFIG {
 
 	public static $TESTING_SITE = true;
 	public static $DEV_SITE = true;
-	
+	public static $DB_SUFFIX = '';  // options: "_test" for test, "_dev" for dev, "" for prod
+
 	public static $DEBUG_LOG = false;
 	
 	public static $BASE_URI = '';

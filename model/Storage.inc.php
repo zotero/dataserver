@@ -836,9 +836,9 @@ class Zotero_Storage {
 	}
 	
 	public static function getInstitutionalUserQuota($userID) {
-		// TODO: config
-		$dev = Z_ENV_TESTING_SITE ? "_dev" : "";
-		$databaseName = "zotero_www{$dev}";
+
+		$suffix = Z_CONFIG::$DB_SUFFIX;
+		$databaseName = "zotero_www$suffix";
 		
 		// Get maximum institutional quota by e-mail domain
 		$sql = "SELECT IFNULL(MAX(storageQuota), 0) FROM $databaseName.users_email "

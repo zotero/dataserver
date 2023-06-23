@@ -230,8 +230,8 @@ class Zotero_Permissions {
 					break;
 					
 				case 2:
-					$privacy['library'] = false;
-					$privacy['notes'] = false;
+					$privacy['library'] = true;
+					$privacy['notes'] = true;
 					break;
 				
 				default:
