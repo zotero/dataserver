@@ -32,6 +32,26 @@ describe('TagTests', function () {
 		assert.deepEqual(json.successful[0].data.tags, [{ tag: 'A' }]);
 	});
 
+	it('test_rename_tag', async function () {
+		let json = await API.getItemTemplate("book");
+		json.tags.push({ tag: "A" });
+
+		let response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		json = API.getJSONFromResponse(response);
+		assert.deepEqual(json.successful[0].data.tags, [{ tag: 'A' }]);
+		let libraryVersion = await API.getLibraryVersion();
+		response = await API.userPost(config.userID, `tags?tag=A&tagName=B`, '{}', { 'If-Unmodified-Since-Version': libraryVersion });
+		Helpers.assert204(response);
+		
+		response = await API.userGet(config.userID, `/items/${json.successful[0].key}`);
+		const data = JSON.parse(response.data).data;
+		assert.equal(data.tags[0].tag, "B");
+
+		response = await API.userGet(`/tags/A`);
+		Helpers.assert404(response);
+	});
+
 	it('testInvalidTagObject', async function () {
 		let json = await API.getItemTemplate("book");
 		json.tags.push(["invalid"]);
