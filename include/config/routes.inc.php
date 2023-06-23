@@ -108,8 +108,8 @@ $router->map('/users/i:objectUserID/publications/items/:objectKey/children', ['c
 $router->map('/users/i:objectUserID/publications/items/:objectKey', ['controller' => 'Items', 'extra' => ['publications' => true]]);
 
 // Unfiled items
-$router->map('/users/i:objectUserID/items/unfiled', array('controller' => 'Items', 'extra' => array('subset' => 'unfiled')));
-$router->map('/users/i:objectUserID/items/unfiled/tags', array('controller' => 'Tags', 'extra' => array('subset' => 'unfiled')));
+$router->map('/users/i:objectUserID/items/unfiled',['controller' => 'Items', 'extra' => ['subset' => 'unfiled']]);
+$router->map('/users/i:objectUserID/items/unfiled/tags', ['controller' => 'Tags', 'extra' => ['subset' => 'unfiled']]);
 
 // Other top-level URLs, with an optional key and subset
 $router->map('/users/i:objectUserID/:controller/:objectKey/:subset');
