@@ -482,7 +482,7 @@ class ApiController extends Controller {
 		
 		// Sorting by Item Type or Added By currently require writing to shard tables, so don't
 		// send those to the read replicas
-		if ($this->queryParams['sort'] == 'itemType' || $this->queryParams['sort'] == 'addedBy' || $this->queryParams['sort'] == 'editedBy') {
+		if (in_array($this->queryParams['sort'], ['itemType', 'addedBy', 'editedBy'])) {
 			Zotero_DB::readOnly(false);
 		}
 		

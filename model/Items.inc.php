@@ -275,10 +275,10 @@ class Zotero_Items {
 					$sql .= "JOIN tmpItemTypeNames TITN ON (TITN.itemTypeID=$itemTypeIDSelector) ";
 					break;
 
-				case 'editedBy':
 				case 'addedBy':
+				case 'editedBy':
 					$isGroup = Zotero_Libraries::getType($libraryID) == 'group';
-					$userParameter = $params['sort'] == "editedBy" ? 'lastModifiedByUserID' : 'createdByUserID';
+					$userParameter = $params['sort'] == "addedBy" ? 'createdByUserID' : 'lastModifiedByUserID';
 					if ($isGroup) {
 						$sql2 = "SELECT DISTINCT $userParameter FROM items
 								JOIN groupItems USING (itemID) WHERE
@@ -551,9 +551,9 @@ class Zotero_Items {
 				case 'date':
 					$orderSQL = "$sortTable.value";
 					break;
-				
-				case 'editedBy':	
+					
 				case 'addedBy':
+				case 'editedBy':
 					if ($isGroup && $createdByUserIDs) {
 						$orderSQL = "TCBU.username";
 					}
