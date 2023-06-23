@@ -52,6 +52,30 @@ describe('TagTests', function () {
 		Helpers.assert404(response);
 	});
 
+	it('test_||_escaping', async function () {
+		let json = await API.getItemTemplate("book");
+		json.tags.push({ tag: "This || That" });
+
+		let response = await API.postItem(json);
+		Helpers.assert200ForObject(response);
+		json = API.getJSONFromResponse(response);
+		assert.deepEqual(json.successful[0].data.tags, [{ tag: 'This || That' }]);
+		
+		response = await API.userGet(config.userID, `/items/?tag=This&format=keys`);
+		assert.equal(response.data, "\n");
+		response = await API.userGet(config.userID, `/items/?tag=That&format=keys`);
+		assert.equal(response.data, "\n");
+		response = await API.userGet(config.userID, '/items/?tag=This%20\\||%20That&format=keys');
+		assert.equal(response.data, `${json.successful[0].key}\n`);
+
+		let libraryVersion = await API.getLibraryVersion();
+		response = await API.userDelete(config.userID, `tags?tag=This%20\\||%20That`, { "If-Unmodified-Since-Version": libraryVersion });
+		Helpers.assert204(response);
+		
+		response = await API.userGet(config.userID, `/items/?tag=This%20\\||%20That&format=keys`);
+		assert.equal(response.data, `\n`);
+	});
+
 	it('testInvalidTagObject', async function () {
 		let json = await API.getItemTemplate("book");
 		json.tags.push(["invalid"]);
