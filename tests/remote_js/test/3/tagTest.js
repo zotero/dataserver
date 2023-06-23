@@ -819,4 +819,26 @@ describe('TagTests', function () {
 			tags.slice(1)
 		);
 	});
+
+	it('tests_unfiled_tags', async function () {
+		await API.userClear(config.userID);
+
+		let collectionKey = await API.createCollection('Test', false, this, 'key');
+		await API.createItem("book", { title: 'aaa', tags: [{ tag: "unfiled" }] }, this, 'key');
+		await API.createItem("book", { title: 'bbb', tags: [{ tag: "unfiled" }] }, this, 'key');
+
+		await API.createItem("book", { title: 'ccc', collections: [collectionKey], tags: [{ tag: "filed" }] }, this, 'key');
+		let parentBookInCollection = await API.createItem("book",
+			{ title: 'ddd',
+				collections: [collectionKey],
+				tags: [{ tag: "also_filed" }] },
+			this, 'key');
+		await API.createNoteItem("some note", parentBookInCollection, this, 'key');
+
+		let response = await API.userGet(config.userID, `items/unfiled/tags`);
+		Helpers.assert200(response);
+		Helpers.assertNumResults(response, 1);
+		let json = API.getJSONFromResponse(response);
+		Helpers.assertEquals("unfiled", json[0].tag);
+	});
 });

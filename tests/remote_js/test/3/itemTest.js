@@ -1465,6 +1465,25 @@ describe('ItemsTests', function () {
 		Helpers.assertEquals("aaa", json[0].data.title);
 	});
 
+	it('test_unfiled', async function () {
+		await API.userClear(config.userID);
+
+		let collectionKey = await API.createCollection('Test', false, this, 'key');
+		await API.createItem("book", { title: 'aaa' }, this, 'key');
+		await API.createItem("book", { title: 'bbb' }, this, 'key');
+
+		await API.createItem("book", { title: 'ccc', collections: [collectionKey] }, this, 'key');
+		let parentBookInCollection = await API.createItem("book", { title: 'ddd', collections: [collectionKey] }, this, 'key');
+		await API.createNoteItem("some note", parentBookInCollection, this, 'key');
+
+		let response = await API.userGet(config.userID, `items/unfiled?sort=title`);
+		Helpers.assert200(response);
+		Helpers.assertNumResults(response, 2);
+		let json = API.getJSONFromResponse(response);
+		Helpers.assertEquals("aaa", json[0].data.title);
+		Helpers.assertEquals("bbb", json[1].data.title);
+	});
+
 	/**
 	 * Date Modified shouldn't be changed if 1) dateModified is provided or 2) certain fields are changed
 	 */
