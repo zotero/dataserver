@@ -3,7 +3,7 @@ const assert = chai.assert;
 var config = require('config');
 const API = require('../../api3.js');
 const Helpers = require('../../helpers3.js');
-const { API3Before, API3After } = require("../shared.js");
+const { API3Before, API3After, resetGroups } = require("../shared.js");
 
 describe('SortTests', function () {
 	this.timeout(config.timeout);
@@ -21,6 +21,7 @@ describe('SortTests', function () {
 	before(async function () {
 		await API3Before();
 		await setup();
+		await resetGroups();
 	});
 
 	after(async function () {
@@ -75,6 +76,54 @@ describe('SortTests', function () {
 			searchKeys.push(await API.createSearch("Test", 'default', null, 'key'));
 		}*/
 	};
+
+	it('test_sort_group_by_editedBy', async function () {
+		// user 1 makes item
+		let jsonOne = await API.groupCreateItem(
+			config.ownedPrivateGroupID,
+			'book',
+			{ title: `title_one` },
+			true,
+			'jsonData'
+		);
+	
+		API.useAPIKey(config.user2APIKey);
+
+		// user 2 makes item
+		let jsonTwo = await API.groupCreateItem(
+			config.ownedPrivateGroupID,
+			'book',
+			{ title: `title_two` },
+			true,
+			'jsonData'
+		);
+
+		// make sure, user's one item goes first
+		let response = await API.get(`groups/${config.ownedPrivateGroupID}/items?sort=editedBy&format=keys`);
+		let sortedKeys = response.data.split('\n');
+		assert.equal(sortedKeys[0], jsonOne.key);
+		assert.equal(sortedKeys[1], jsonTwo.key);
+
+		// user 2 updates user1's item, and the other way around
+		response = await API.patch(`groups/${config.ownedPrivateGroupID}/items/${jsonOne.key}`,
+			JSON.stringify({ title: 'updated_by_user 2' }),
+			{ 'If-Unmodified-Since-Version': jsonOne.version });
+
+		Helpers.assert204(response);
+
+		API.useAPIKey(config.apiKey);
+
+		response = await API.patch(`groups/${config.ownedPrivateGroupID}/items/${jsonTwo.key}`,
+			JSON.stringify({ title: 'updated_by_user 2' }),
+			{ 'If-Unmodified-Since-Version': jsonTwo.version });
+		Helpers.assert204(response);
+
+		// now order should be switched
+		response = await API.get(`groups/${config.ownedPrivateGroupID}/items?sort=editedBy&format=keys`);
+		sortedKeys = response.data.split('\n');
+		assert.equal(sortedKeys[0], jsonTwo.key);
+		assert.equal(sortedKeys[1], jsonOne.key);
+	});
 
 	it('testSortTopItemsTitle', async function () {
 		let response = await API.userGet(
