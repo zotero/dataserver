@@ -72,7 +72,7 @@ class TagsController extends ApiController {
 				$this->allowMethods(array('GET'));
 				
 				// Tags within items
-				if (($this->scopeObject == 'items' && !$this->scopeObjectKey) || $this->scopeObject == 'collection-items') {
+				if (($this->scopeObject == 'items' && (!$this->scopeObjectKey ||  $this->scopeObjectKey == 'unfiled')) || $this->scopeObject == 'collection-items') {
 					// Proxy certain query parameters to items search
 					$validItemParams = [
 						'itemQ' => 'q',
@@ -127,6 +127,17 @@ class TagsController extends ApiController {
 							$this->permissions
 						);
 					}
+					// Unfiled
+					else if($this->scopeObjectKey == 'unfiled') {
+						$title = "Unfiled tags";
+						$itemResults = Zotero_Items::search(
+							$this->objectLibraryID,
+							true,
+							$itemParams,
+							$this->permissions,
+							true
+						);
+					}
 					else {
 						$itemResults = Zotero_Items::search(
 							$this->objectLibraryID,
@@ -143,13 +154,6 @@ class TagsController extends ApiController {
 						$tagParams['itemIDs'] = $itemResults['results'];
 						$results = Zotero_Tags::search($this->objectLibraryID, $tagParams);
 					}
-				}
-				// Unfiled
-				else if($this->scopeObjectKey == 'unfiled') {
-					$title = "Unfiled tags";
-					$items = Zotero_Items::getItemsWithoutCollection($this->objectLibraryID);
-					$this->queryParams['itemIDs'] = $items;
-					$results = Zotero_Tags::search($this->objectLibraryID, $this->queryParams);
 				}
 				// Tags within a collection or item
 				else if ($this->scopeObjectKey) {
