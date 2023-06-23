@@ -28,9 +28,8 @@ class Zotero_AuthenticationPlugin_Password implements Zotero_AuthenticationPlugi
 	public static function authenticate($data) {
 		$salt = Z_CONFIG::$AUTH_SALT;
 		
-		// TODO: config
-		$dev = Z_ENV_TESTING_SITE ? "_dev" : "";
-		$databaseName = "zotero_www{$dev}";
+		$suffix = Z_CONFIG::$DB_SUFFIX;
+		$databaseName = "zotero_www$suffix";
 		
 		$username = $data['username'];
 		$password = $data['password'];

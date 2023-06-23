@@ -83,7 +83,7 @@ class Zotero_Notes {
 	
 	
 	public static function sanitize($text) {
-		if (strlen(trim($text)) == 0) {
+		if (Z_ENV_TESTING_SITE || strlen(trim($text)) == 0) {
 			return $text;
 		}
 		
