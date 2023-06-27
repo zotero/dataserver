@@ -228,8 +228,11 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			}
 			break;
 		
-		// Integer settings
+		// Allow anything for lastPageIndex
 		case 'lastPageIndex':
+			break;
+
+		// Integer settings
 		case 'lastRead':
 			if (!is_integer($value)) {
 				throw new Exception("'value' must be an integer", Z_ERROR_INVALID_INPUT);

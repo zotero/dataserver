@@ -171,6 +171,8 @@ class MappingsController extends ApiController {
 				case 'note':
 				case 'image':
 				case 'ink':
+				case 'underline':
+				case 'text':
 					break;
 				
 				default:

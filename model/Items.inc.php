@@ -2366,7 +2366,7 @@ class Zotero_Items {
 						throw new Exception("Cannot change attachment linkMode", Z_ERROR_INVALID_INPUT);
 					}
 					break;
-				
+
 				case 'contentType':
 				case 'charset':
 				case 'filename':
@@ -2448,10 +2448,11 @@ class Zotero_Items {
 					if ($itemType != 'annotation') {
 						throw new Exception("'$key' is valid only for annotation items", Z_ERROR_INVALID_INPUT);
 					}
+					$itemOrUpdate = $isNew ? $json : $item;
 					if ($key == 'annotationText'
-							&& ($isNew ? $json->annotationType != 'highlight' : $item->annotationType != 'highlight')) {
+							&& (!in_array($itemOrUpdate->annotationType, ['highlight', 'underline']))) {
 						throw new Exception(
-							"'$key' can only be set for highlight annotations",
+							"'$key' can only be set for highlight or underline annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
