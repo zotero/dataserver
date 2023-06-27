@@ -61,6 +61,7 @@ class Zotero_Item extends Zotero_DataObject {
 		'storageModTime' => null,
 		'storageHash' => null,
 	);
+	private $attachmentLastPageIndex;
 	
 	private $annotationData = [
 		'type' => null,

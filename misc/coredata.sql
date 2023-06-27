@@ -205,6 +205,7 @@ INSERT INTO `fields` (`fieldID`, `fieldName`, `fieldFormatID`, `custom`) VALUES
 (121, 'filingDate', NULL, 0),
 (122, 'genre', NULL, 0),
 (123, 'archive', NULL, 0),
+(124, 'lastPageIndex', NULL, 0)
 (10001, 'name', NULL, 1),
 (10002, 'address', NULL, 1),
 (10003, 'telephone', NULL, 1),
@@ -555,6 +556,7 @@ INSERT INTO `itemTypeFields` (`itemTypeID`, `fieldID`, `hide`, `orderIndex`) VAL
 (14, 1, 0, 3),
 (14, 27, 0, 2),
 (14, 110, 0, 1),
+(14, 124, 0, 4)
 (15, 1, 0, 12),
 (15, 2, 0, 18),
 (15, 7, 0, 6),
