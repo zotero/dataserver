@@ -8,18 +8,18 @@ const { API3Before, API3After } = require("../shared.js");
 
 describe('AnnotationsTests', function () {
 	this.timeout(config.timeout);
-	let attachmentKey, attachmentJSON;
+	let attachmentKey, attachmentJSON, bookKey;
 
 	before(async function () {
 		await API3Before();
 		await resetGroups();
 		await API.groupClear(config.ownedPrivateGroupID);
 	
-		let key = await API.createItem("book", {}, null, 'key');
+		bookKey = await API.createItem("book", {}, null, 'key');
 		attachmentJSON = await API.createAttachmentItem(
 			"imported_url",
 			{ contentType: 'application/pdf' },
-			key,
+			bookKey,
 			null,
 			'jsonData'
 		);
@@ -31,6 +31,67 @@ describe('AnnotationsTests', function () {
 		await API3After();
 	});
 
+	it('new_annotation_types_test', async function () {
+		let annotationTypes = ["text", "underline", "highlight", "note"];
+
+		let attachmentContentTypes = [
+			{ type: 'application/pdf', sortIndex: "00000|000000|00000" },
+			{ type: 'text/html', sortIndex: "00000000" }
+		];
+		let annotationTemplate = {
+			itemType: "annotation",
+			parentItem: "",
+			annotationType: "",
+			annotationComment: "",
+			annotationColor: "",
+			annotationPageLabel: "",
+			annotationSortIndex: "",
+			annotationPosition: "",
+			tags: []
+		};
+		for (let attachmentType of attachmentContentTypes) {
+			let data = await API.createAttachmentItem(
+				"imported_url",
+				{ contentType: attachmentType.type },
+				bookKey,
+				null,
+				'jsonData'
+			);
+			let parentKey = data.key;
+			assert.ok(parentKey);
+			for (let type of annotationTypes) {
+				let payload = Object.assign({}, annotationTemplate);
+				payload.parentItem = parentKey;
+				payload.annotationType = type;
+				if (type == "highlight") {
+					payload.annotationText = "Some annotation text";
+				}
+				payload.annotationSortIndex = attachmentType.sortIndex + "|0000";
+				// 400 on wrong annotation sort index
+				let response = await API.userPost(
+					config.userID,
+					"items",
+					JSON.stringify([payload]),
+					{ "Content-Type": "application/json" }
+				);
+				Helpers.assert400ForObject(JSON.parse(response.data));
+				payload.annotationSortIndex = attachmentType.sortIndex;
+				response = await API.userPost(
+					config.userID,
+					"items",
+					JSON.stringify([payload]),
+					{ "Content-Type": "application/json" }
+				);
+				// text type only works with PDFS
+				if (attachmentType.type != 'application/pdf' && type == 'text') {
+					Helpers.assert400ForObject(JSON.parse(response.data));
+				}
+				else {
+					Helpers.assert200ForObject(JSON.parse(response.data));
+				}
+			}
+		}
+	});
 
 	it('test_should_reject_non_empty_annotationText_for_image_annotation', async function () {
 		let json = {
