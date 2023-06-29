@@ -124,7 +124,7 @@ class ItemsController extends ApiController {
 				}
 			}
 			else {
-				$this->allowMethods(array('HEAD', 'GET', 'PUT', 'PATCH', 'DELETE'));
+				$this->allowMethods(array('HEAD', 'GET', 'PUT', 'PATCH', 'DELETE', 'COPY'));
 			}
 			
 			if (!Zotero_ID::isValidKey($this->objectKey)) {
@@ -221,6 +221,60 @@ class ItemsController extends ApiController {
 			
 			if (!$item) {
 				$this->e404("Item does not exist");
+			}
+			if ($this->method == 'COPY'){
+				// Method called by the client.
+				// Collects all children of an item, groups them by level
+				// and sends them to SQS
+
+				if (!isset($_SERVER['HTTP_DESTINATION'])) {
+					$this->e400("Destination header is required");
+				}
+				$destinationLibrary = intval($_SERVER['HTTP_DESTINATION']);
+				if (!$this->permissions->canWrite($destinationLibrary)) { 
+					$this->e403("No write access to destination library");
+				}
+				$libraryURI = Zotero_URI::getLibraryURI($destinationLibrary);
+
+				$level = 0;
+				$results = [$level => [ $item->toResponseJSON($this->queryParams, $this->permissions)['data'] ], 1 => [], 2 => []];
+				$itemsWithChildren = [$level => [ $item ], 1 => [], 2 => []];
+				while (sizeof($itemsWithChildren[$level]) > 0) {
+					$itemCandidate = array_shift($itemsWithChildren[$level]);
+					if ($itemCandidate->isAttachment()) {
+						$itemIDs = $itemCandidate->getAnnotations();
+					}
+					else if ($item->isNote()) {
+						$itemIDs = $itemCandidate->getAttachments();
+					}
+					else {
+						$notes = $itemCandidate->getNotes();
+						$attachments = $itemCandidate->getAttachments();
+						$itemIDs = array_merge($notes, $attachments);
+					}
+					$this->queryParams['itemIDs'] = $itemIDs;
+					if (sizeof($itemIDs) == 0) {
+						continue;
+					}
+					$searchResult = Zotero_Items::search(
+						$this->objectLibraryID,
+						false,
+						$this->queryParams,
+						$this->permissions
+					);
+					$itemsWithChildren[$level+1] = array_merge($itemsWithChildren[$level+1],$searchResult['results'] );
+					foreach($searchResult['results'] as $searchItem) {
+						$json = $searchItem->toResponseJSON($this->queryParams, $this->permissions)['data'];
+						array_push($results[$level+1],$json);
+					}
+					if (sizeof($itemsWithChildren[$level]) == 0) {
+						$level += 1;
+					}
+				}
+				$message = json_encode( [ 'libraryUri' => $libraryURI, 'userID' => $this->objectUserID, 'items' => $results ] );
+				Z_SQS::send(Z_CONFIG::$COPY_SQS_URL, $message);
+				#echo $message;
+				$this->e200();
 			}
 			
 			$this->libraryVersion = $item->version;
