@@ -929,21 +929,15 @@ class Zotero_Storage {
 			foreach ($shardIDs as $shardID) {
 				$sql = "SELECT libraryID, storageUsage AS `bytes` FROM shardLibraries
 					WHERE libraryID IN
-					(" . implode(', ', array_fill(0, sizeOf($ownedLibraries), '?')) . ")
-					GROUP BY libraryID WITH ROLLUP";
+					(" . implode(', ', array_fill(0, sizeOf($ownedLibraries), '?')) . ")";
 				$libraries = Zotero_DB::query($sql, $ownedLibraries, $shardID);
 				if ($libraries) {
 					foreach ($libraries as $library) {
-						if ($library['libraryID']) {
-							$usage['groups'][] = array(
-								'id' => Zotero_Groups::getGroupIDFromLibraryID($library['libraryID']),
-								'usage' => $library['bytes']
-							);
-						}
-						// ROLLUP row
-						else {
-							$groupBytes += $library['bytes'];
-						}
+						$usage['groups'][] = [
+							'id' => Zotero_Groups::getGroupIDFromLibraryID($library['libraryID']),
+							'usage' => $library['bytes']
+						];
+						$groupBytes += $library['bytes'];
 					}
 				}
 			}
