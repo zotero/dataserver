@@ -888,6 +888,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$itemTypeID = $this->getField('itemTypeID');
+		$this->loadCreators(true);
 		$creators = $this->getCreators();
 		
 		$creatorTypeIDsToTry = array(
@@ -4716,7 +4717,8 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	protected function loadCreators($reload = false) {
 		if ($this->loaded['creators'] && !$reload) return;
-		
+		$cache_used = false;
+
 		if (!$this->id) {
 			trigger_error('Item ID not set for item before attempting to load creators', E_USER_ERROR);
 		}
@@ -4739,14 +4741,17 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = false;
 		}
 		if ($creators === false) {
-			$sql = "SELECT creatorID, creatorTypeID, orderIndex FROM itemCreators
-					WHERE itemID=? ORDER BY orderIndex";
+			$sql = "SELECT * FROM itemCreators
+					INNER JOIN creators USING (creatorID) WHERE itemID=? ORDER BY orderIndex";
 			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 			$creators = Zotero_DB::queryFromStatement($stmt, $this->id);
 			
 			if ($this->cacheEnabled) {
 				Z_Core::$MC->set($cacheKey, $creators ? $creators : array());
 			}
+		}
+		else {
+			$cache_used = true;
 		}
 		
 		$this->creators = [];
@@ -4756,13 +4761,23 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$creators) {
 			return;
 		}
-		
-		foreach ($creators as $creator) {
-			$creatorObj = Zotero_Creators::get($this->libraryID, $creator['creatorID'], true);
-			if (!$creatorObj) {
+
+		if ($cache_used) {
+			$creatorsNotFound = Zotero_Creators::idsDoNotExist($this->libraryID, $creators);
+
+			foreach($creatorsNotFound as $missingCreator) {
 				Z_Core::$MC->delete($cacheKey);
 				throw new Exception("Creator {$creator['creatorID']} not found");
 			}
+		}
+
+		$shardID = Zotero_Shards::getByLibraryID($this->_libraryID);
+
+		// On update, we should have all this info already, so maybe we just get all data from 
+		// Zotero_Creators::$creatorsByID instead of this extra query + loop
+		foreach ($creators as $creator) {
+			$creatorObj = new Zotero_Creator($creator['creatorID'], $shardID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
+
 			$this->creators[$creator['orderIndex']] = array(
 				'creatorTypeID' => $creator['creatorTypeID'],
 				'ref' => $creatorObj

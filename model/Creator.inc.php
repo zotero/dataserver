@@ -27,40 +27,27 @@
 class Zotero_Creator {
 	private $id;
 	private $libraryID;
-	private $key;
 	private $firstName = '';
 	private $lastName = '';
 	private $shortName = '';
 	private $fieldMode = 0;
-	private $birthYear;
-	private $dateAdded;
-	private $dateModified;
-	
-	private $loaded = false;
 	private $changed = array();
-	
-	public function __construct() {
-		$numArgs = func_num_args();
-		if ($numArgs) {
-			throw new Exception("Constructor doesn't take any parameters");
-		}
-		
-		$this->init();
-	}	
+
 	
 	
-	private function init() {
-		$this->loaded = false;
-		
+	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode) {
+		$this->id = $id;
+		$this->libraryID = $libraryID;
+		$this->firstName = $firstName;
+		$this->lastName = $lastName;
+		$this->fieldMode = $fieldMode;
 		$this->changed = array();
 		$props = array(
+			'libraryID',
 			'firstName',
 			'lastName',
 			'shortName',
-			'fieldMode',
-			'birthYear',
-			'dateAdded',
-			'dateModified'
+			'fieldMode'
 		);
 		foreach ($props as $prop) {
 			$this->changed[$prop] = false;
@@ -69,10 +56,7 @@ class Zotero_Creator {
 	
 	
 	public function __get($field) {
-		if (($this->id || $this->key) && !$this->loaded) {
-			$this->load(true);
-		}
-		
+
 		if (!property_exists('Zotero_Creator', $field)) {
 			throw new Exception("Zotero_Creator property '$field' doesn't exist");
 		}
@@ -85,10 +69,6 @@ class Zotero_Creator {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
-			case 'key':
-				if ($this->loaded) {
-					throw new Exception("Cannot set $field after creator is already loaded");
-				}
 				$this->checkValue($field, $value);
 				$this->$field = $value;
 				return;
@@ -99,15 +79,6 @@ class Zotero_Creator {
 				break;
 		}
 		
-		if ($this->id || $this->key) {
-			if (!$this->loaded) {
-				$this->load(true);
-			}
-		}
-		else {
-			$this->loaded = true;
-		}
-		
 		$this->checkValue($field, $value);
 		
 		if ($this->$field !== $value) {
@@ -116,20 +87,6 @@ class Zotero_Creator {
 		}
 	}
 	
-	
-	/**
-	 * Check if creator exists in the database
-	 *
-	 * @return	bool			TRUE if the item exists, FALSE if not
-	 */
-	public function exists() {
-		if (!$this->id) {
-			trigger_error('$this->id not set');
-		}
-		
-		$sql = "SELECT COUNT(*) FROM creators WHERE creatorID=?";
-		return !!Zotero_DB::valueQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
-	}
 	
 	
 	public function hasChanged() {
@@ -142,7 +99,7 @@ class Zotero_Creator {
 			trigger_error("Library ID must be set before saving", E_USER_ERROR);
 		}
 		
-		Zotero_Creators::editCheck($this, $userID);
+		//Zotero_Creators::editCheck($this, $userID);
 		
 		// If empty, move on
 		if ($this->firstName === '' && $this->lastName === '') {
@@ -153,7 +110,7 @@ class Zotero_Creator {
 			throw new Exception('First name must be empty in single-field mode');
 		}
 		
-		if (!$this->hasChanged()) {
+		if (!$this->hasChanged() && isset($this->id)) {
 			Z_Core::debug("Creator $this->id has not changed");
 			return false;
 		}
@@ -166,24 +123,13 @@ class Zotero_Creator {
 			
 			Z_Core::debug("Saving creator $this->id");
 			
-			$key = $this->key ? $this->key : Zotero_ID::getKey();
-			
 			$timestamp = Zotero_DB::getTransactionTimestamp();
 			
-			$dateAdded = $this->dateAdded ? $this->dateAdded : $timestamp;
-			$dateModified = !empty($this->changed['dateModified']) ? $this->dateModified : $timestamp;
-			
-			$fields = "firstName=?, lastName=?, fieldMode=?,
-						libraryID=?, `key`=?, dateAdded=?, dateModified=?, serverDateModified=?";
+			$fields = "firstName=?, lastName=?, fieldMode=?";
 			$params = array(
 				$this->firstName,
 				$this->lastName,
-				$this->fieldMode,
-				$this->libraryID,
-				$key,
-				$dateAdded,
-				$dateModified,
-				$timestamp
+				$this->fieldMode
 			);
 			$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
 			
@@ -193,9 +139,6 @@ class Zotero_Creator {
 					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
 					Zotero_DB::queryFromStatement($stmt, array_merge(array($creatorID), $params));
 					
-					// Remove from delete log if it's there
-					$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=? AND objectType='creator' AND `key`=?";
-					Zotero_DB::query($sql, array($this->libraryID, $key), $shardID);
 				}
 				else {
 					$sql = "UPDATE creators SET $fields WHERE creatorID=?";
@@ -234,18 +177,6 @@ class Zotero_Creator {
 			
 			Zotero_DB::commit();
 			
-			Zotero_Creators::cachePrimaryData(
-				array(
-					'id' => $creatorID,
-					'libraryID' => $this->libraryID,
-					'key' => $key,
-					'dateAdded' => $dateAdded,
-					'dateModified' => $dateModified,
-					'firstName' => $this->firstName,
-					'lastName' => $this->lastName,
-					'fieldMode' => $this->fieldMode
-				)
-			);
 		}
 		catch (Exception $e) {
 			Zotero_DB::rollback();
@@ -256,19 +187,13 @@ class Zotero_Creator {
 		if (!$this->id) {
 			$this->id = $creatorID;
 		}
-		if (!$this->key) {
-			$this->key = $key;
-		}
-		
-		$this->init();
+
 		
 		if ($isNew) {
 			Zotero_Creators::cache($this);
 		}
 		
 		// TODO: invalidate memcache?
-		
-		return $this->id;
 	}
 	
 	
@@ -294,50 +219,11 @@ class Zotero_Creator {
 	}
 	
 	
-	public function equals($creator) {
-		if (!$this->loaded) {
-			$this->load();
-		}
-		
+	public function equals($creator) {		
 		return
 			($creator->firstName === $this->firstName) &&
 			($creator->lastName === $this->lastName) &&
 			($creator->fieldMode == $this->fieldMode);
-	}
-	
-	
-	private function load() {
-		if (!$this->libraryID) {
-			throw new Exception("Library ID not set");
-		}
-		
-		if (!$this->id && !$this->key) {
-			throw new Exception("ID or key not set");
-		}
-		
-		if ($this->id) {
-			//Z_Core::debug("Loading data for creator $this->libraryID/$this->id");
-			$row = Zotero_Creators::getPrimaryDataByID($this->libraryID, $this->id);
-		}
-		else {
-			//Z_Core::debug("Loading data for creator $this->libraryID/$this->key");
-			$row = Zotero_Creators::getPrimaryDataByKey($this->libraryID, $this->key);
-		}
-		
-		$this->loaded = true;
-		$this->changed = array();
-		
-		if (!$row) {
-			return;
-		}
-		
-		if ($row['libraryID'] != $this->libraryID) {
-			throw new Exception("libraryID {$row['libraryID']} != $this->libraryID");
-		}
-		
-		foreach ($row as $key=>$val) {
-			$this->$key = $val;
-		}
 	}
 	
 	

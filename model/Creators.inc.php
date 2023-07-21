@@ -24,7 +24,7 @@
     ***** END LICENSE BLOCK *****
 */
 
-class Zotero_Creators extends Zotero_ClassicDataObjects {
+class Zotero_Creators {
 	public static $creatorSummarySortLength = 50;
 	
 	protected static $ZDO_object = 'creator';
@@ -32,9 +32,6 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 	protected static $primaryFields = array(
 		'id' => 'creatorID',
 		'libraryID' => '',
-		'key' => '',
-		'dateAdded' => '',
-		'dateModified' => '',
 		'firstName' => '',
 		'lastName' => '',
 		'fieldMode' => ''
@@ -50,8 +47,20 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 	private static $primaryDataByCreatorID = array();
 	private static $primaryDataByLibraryAndKey = array();
 	
-	
-	public static function get($libraryID, $creatorID, $skipCheck=false) {
+	public static function idsDoNotExist($libraryID, $creators) {
+		$creatorIDs = array_map(function ($object) {
+			return $object['creatorID'];
+		}, $creators);
+		$placeholders = implode(',', array_fill(0, count($creatorIDs), '?'));
+		$sql = "SELECT creatorID FROM creators WHERE creatorID IN ($placeholders)";
+		$result = Zotero_DB::query($sql, $creatorIDs, Zotero_Shards::getByLibraryID($libraryID));
+		$existingIDs = array_map(function ($object) {
+			return $object['creatorID'];
+		}, $result);
+		return array_diff($creatorIDs, $existingIDs);
+	}
+
+	public static function get($libraryID, $creatorID) {
 		if (!$libraryID) {
 			throw new Exception("Library ID not set");
 		}
@@ -64,17 +73,13 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 			return self::$creatorsByID[$creatorID];
 		}
 		
-		if (!$skipCheck) {
-			$sql = 'SELECT COUNT(*) FROM creators WHERE creatorID=?';
-			$result = Zotero_DB::valueQuery($sql, $creatorID, Zotero_Shards::getByLibraryID($libraryID));
-			if (!$result) {
-				return false;
-			}
+		$sql = 'SELECT * FROM creators WHERE creatorID=?';
+		$creator = Zotero_DB::rowQuery($sql, $creatorID, Zotero_Shards::getByLibraryID($libraryID));
+		if (!$creator) {
+			return false;
 		}
 		
-		$creator = new Zotero_Creator;
-		$creator->libraryID = $libraryID;
-		$creator->id = $creatorID;
+		$creator = new Zotero_Creator($creator['creatorID'], $libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
 		
 		self::$creatorsByID[$creatorID] = $creator;
 		return self::$creatorsByID[$creatorID];
@@ -82,11 +87,11 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 	
 	
 	public static function getCreatorsWithData($libraryID, $creator, $sortByItemCountDesc=false) {
-		$sql = "SELECT creatorID, firstName, lastName FROM creators ";
+		$sql = "SELECT creatorID, firstName, lastName, fieldMode FROM creators ";
 		if ($sortByItemCountDesc) {
 			$sql .= "LEFT JOIN itemCreators USING (creatorID) ";
 		}
-		$sql .= "WHERE libraryID=? AND firstName = ? "
+		$sql .= "WHERE firstName = ? "
 			. "AND lastName = ? AND fieldMode=?";
 		if ($sortByItemCountDesc) {
 			$sql .= " GROUP BY creatorID ORDER BY IFNULL(COUNT(*), 0) DESC";
@@ -94,7 +99,6 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 		$rows = Zotero_DB::query(
 			$sql,
 			array(
-				$libraryID,
 				$creator->firstName,
 				$creator->lastName,
 				$creator->fieldMode
@@ -107,8 +111,17 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 		$rows = array_filter($rows, function ($row) use ($creator) {
 			return $row['lastName'] == $creator->lastName && $row['firstName'] == $creator->firstName;
 		});
+
+		$result = [];
+		foreach($rows as $row) {
+			$c = new Zotero_Creator($row['creatorID'], $libraryID, $row['firstName'], $row['lastName'], $row['fieldMode'] ); 
+			if (empty(self::$creatorsByID[$row['creatorID']])) {
+				self::$creatorsByID[$row['creatorID']] = $c;
+			}
+			array_push($result, $c);
+		}
 		
-		return array_column($rows, 'creatorID');
+		return $result;
 	}
 	
 	
@@ -197,8 +210,6 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 			$dataObj->lastName = $xml->getElementsByTagName('lastName')->item(0)->nodeValue;
 		}
 		
-		$birthYear = $xml->getElementsByTagName('birthYear')->item(0);
-		$dataObj->birthYear = $birthYear ? $birthYear->nodeValue : null;
 		
 		return $dataObj;
 	}

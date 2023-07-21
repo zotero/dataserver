@@ -1749,26 +1749,17 @@ class Zotero_Items {
 						}
 						
 						// Make a fake creator to use for the data lookup
-						$newCreator = new Zotero_Creator;
-						$newCreator->libraryID = $item->libraryID;
-						foreach ($newCreatorData as $key=>$val) {
-							if ($key == 'creatorType') {
-								continue;
-							}
-							$newCreator->$key = $val;
-						}
-						
+						$newCreator = new Zotero_Creator(null, $item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode);
+
 						// Look for an equivalent creator in this library
 						$candidates = Zotero_Creators::getCreatorsWithData($item->libraryID, $newCreator, true);
 						if ($candidates) {
-							$c = Zotero_Creators::get($item->libraryID, $candidates[0]);
-							$item->setCreator($orderIndex, $c, $newCreatorTypeID);
+							$item->setCreator($orderIndex, $candidates[0], $newCreatorTypeID);
 							continue;
 						}
 						
 						// None found, so make a new one
-						$creatorID = $newCreator->save();
-						$newCreator = Zotero_Creators::get($item->libraryID, $creatorID);
+						$newCreator->save();
 						$item->setCreator($orderIndex, $newCreator, $newCreatorTypeID);
 					}
 					
