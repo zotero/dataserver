@@ -4771,12 +4771,10 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 
-		$shardID = Zotero_Shards::getByLibraryID($this->_libraryID);
-
 		// On update, we should have all this info already, so maybe we just get all data from 
 		// Zotero_Creators::$creatorsByID instead of this extra query + loop
 		foreach ($creators as $creator) {
-			$creatorObj = new Zotero_Creator($creator['creatorID'], $shardID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
+			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
 
 			$this->creators[$creator['orderIndex']] = array(
 				'creatorTypeID' => $creator['creatorTypeID'],
