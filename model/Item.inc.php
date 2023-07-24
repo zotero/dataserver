@@ -851,15 +851,17 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$this->isFileAttachment()) return false;
 		return $this->attachmentContentType == 'application/pdf';
 	}
-	public function isHTMLAttachment() {
-		if (!$this->isFileAttachment()) return false;
-		return $this->attachmentContentType == 'text/html';
-	}
-
-
+	
+	
 	public function isEPUBAttachment() {
 		if (!$this->isFileAttachment()) return false;
 		return $this->attachmentContentType == 'application/epub+zip';
+	}
+	
+	
+	public function isHTMLAttachment() {
+		if (!$this->isFileAttachment()) return false;
+		return $this->attachmentContentType == 'text/html';
 	}
 	
 	
@@ -1471,25 +1473,25 @@ class Zotero_Item extends Zotero_DataObject {
 							Z_ERROR_INVALID_INPUT
 						);
 					}
-					// note, highlight, and underline supported for pdf, epub, and snapshot
+					// Note, highlight, and underline supported for PDFs, EPUBs, and snapshots
 					if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
-						if (!in_array($parentItem->attachmentContentType, ['application/pdf', 'text/html', 'application/epub+zip'])) {
+						if (!in_array($parentItem->attachmentContentType, ['application/pdf', 'application/epub+zip', 'text/html'])) {
 							throw new Exception(
-								"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF, HTML or EPUB",
+								"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
 								Z_ERROR_INVALID_INPUT
 							);
 						}
 					}
-					// for other annotation types, only PDFs
+					// For other annotation types, only PDFs
 					else if ($parentItem->attachmentContentType != 'application/pdf') {
 						throw new Exception(
-							"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF",
+							"Parent attachment $parentItem->libraryKey of $this->annotationType annotation must be a PDF",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
 					if (!empty($this->annotationText) && !in_array($this->annotationType, ['highlight', 'underline'])) {
 						throw new Exception(
-							"'annotationText' can only be set for highlight or underline annotations",
+							"'annotationText' can only be set for highlight and underline annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
@@ -1875,7 +1877,7 @@ class Zotero_Item extends Zotero_DataObject {
 							);
 						}
 						if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
-							if (!$parentItem->isPDFAttachment() && !$parentItem->isHTMLAttachment() && !$parentItem->isEPUBAttachment()) {
+							if (!$parentItem->isPDFAttachment() && !$parentItem->isEPUBAttachment() && !$parentItem->isHTMLAttachment()) {
 								throw new Exception(
 									"Parent item of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
 									Z_ERROR_INVALID_INPUT
@@ -2034,7 +2036,7 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!empty($this->changed['annotationData'])) {
 					if (!empty($this->annotationText) && !in_array($this->annotationType, ['highlight', 'underline'])) {
 						throw new Exception(
-							"'annotationText' can only be set for highlight or underline annotations",
+							"'annotationText' can only be set for highlight and underline annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
@@ -3551,22 +3553,21 @@ class Zotero_Item extends Zotero_DataObject {
 			
 			case 'sortIndex':
 				$parentItem = Zotero_Items::get($this->_libraryID, $this->getSource());
-				if ($parentItem->isHTMLAttachment()) {
-					if (!preg_match('/^\d{8}$/', $val)) {
-						throw new Exception("Invalid sortIndex '$val' for HTML annotation", Z_ERROR_INVALID_INPUT);
-					}
-				} 
-				else if ($parentItem->isEPUBAttachment()) {
-					if (!preg_match('/^\d{5}\|\d{8}$/', $val)) {
-						throw new Exception("Invalid sortIndex '$val' for EPUB annotation", Z_ERROR_INVALID_INPUT);
-					}
-				} 
-				else {
+				if ($parentItem->isPDFAttachment()) {
 					if (!preg_match('/^\d{5}\|\d{6}\|\d{5}$/', $val)) {
 						throw new Exception("Invalid sortIndex '$val'", Z_ERROR_INVALID_INPUT);
 					}
 				}
-
+				else if ($parentItem->isEPUBAttachment()) {
+					if (!preg_match('/^\d{5}\|\d{8}$/', $val)) {
+						throw new Exception("Invalid sortIndex '$val' for EPUB annotation", Z_ERROR_INVALID_INPUT);
+					}
+				}
+				else if ($parentItem->isHTMLAttachment()) {
+					if (!preg_match('/^\d{8}$/', $val)) {
+						throw new Exception("Invalid sortIndex '$val' for HTML annotation", Z_ERROR_INVALID_INPUT);
+					}
+				}
 				break;
 			
 			case 'authorName':
@@ -4599,7 +4600,7 @@ class Zotero_Item extends Zotero_DataObject {
 				if ($prop == 'authorName' && $this->annotationAuthorName === '') {
 					continue;
 				}
-				if ($prop == 'text' && !in_array($this->annotationType, ['highlight','underline'])) {
+				if ($prop == 'text' && !in_array($this->annotationType, ['highlight', 'underline'])) {
 					continue;
 				}
 				$fullProp = 'annotation' . ucwords($prop);

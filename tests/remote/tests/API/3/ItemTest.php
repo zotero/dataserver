@@ -2937,7 +2937,7 @@ class ItemTests extends APITests {
 			"items/{$jsonData['key']}",
 			json_encode($json)
 		);
-		$this->assert400($response, "Parent item of annotation must be a PDF attachment");
+		$this->assert400($response, "Parent item of highlight annotation must be a PDF attachment");
 		
 		// Linked-URL attachment
 		$json = [
@@ -2949,7 +2949,7 @@ class ItemTests extends APITests {
 			"items/{$jsonData['key']}",
 			json_encode($json)
 		);
-		$this->assert400($response, "Parent item of annotation must be a PDF attachment");
+		$this->assert400($response, "Parent item of highlight annotation must be a PDF attachment");
 	}
 	
 	

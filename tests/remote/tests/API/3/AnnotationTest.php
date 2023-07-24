@@ -179,7 +179,7 @@ class AnnotationTest extends APITests {
 			json_encode([$json]),
 			["Content-Type: application/json"]
 		);
-		$this->assert400ForObject($response, "'annotationText' can only be set for highlight annotations");
+		$this->assert400ForObject($response, "'annotationText' can only be set for highlight and underline annotations");
 	}
 	
 	
@@ -203,7 +203,7 @@ class AnnotationTest extends APITests {
 			json_encode([$json]),
 			["Content-Type: application/json"]
 		);
-		$this->assert400ForObject($response, "'annotationText' can only be set for highlight annotations");
+		$this->assert400ForObject($response, "'annotationText' can only be set for highlight and underline annotations");
 	}
 	
 	

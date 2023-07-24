@@ -2452,7 +2452,7 @@ class Zotero_Items {
 					if ($key == 'annotationText'
 							&& (!in_array($itemOrUpdate->annotationType, ['highlight', 'underline']))) {
 						throw new Exception(
-							"'$key' can only be set for highlight or underline annotations",
+							"'$key' can only be set for highlight and underline annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
