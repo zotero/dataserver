@@ -373,7 +373,7 @@ class Zotero_Libraries {
 		Zotero_DB::beginTransaction();
 		
 		$tables = array(
-			'collections', 'creators', 'items', 'relations', 'savedSearches', 'tags',
+			'collections', 'items', 'creators', 'relations', 'savedSearches', 'tags',
 			'syncDeleteLogIDs', 'syncDeleteLogKeys', 'settings'
 		);
 		
@@ -386,6 +386,14 @@ class Zotero_Libraries {
 		Zotero_FullText::deleteByLibraryMySQL($libraryID);
 		
 		foreach ($tables as $table) {
+			// Creators deleted after items
+			// We fetch and delete all creators that have no items linked to them
+			// In production, this should be a cron job
+			if ($table == 'creators') {
+				$sql = "DELETE creators from creators LEFT JOIN itemCreators USING (creatorID)";
+				$deleteCreators = Zotero_DB::query($sql, [], $shardID);
+				continue;
+			}
 			// For items, delete annotations first, then notes and attachments, then items after
 			if ($table == 'items') {
 				$itemTypeIDs = Zotero_DB::columnQuery(

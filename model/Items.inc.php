@@ -1706,6 +1706,7 @@ class Zotero_Items {
 					}
 					
 					$orderIndex = -1;
+					$creatorsToAdd = [];
 					foreach ($val as $newCreatorData) {
 						// JSON uses 'name' and 'firstName'/'lastName',
 						// so switch to just 'firstName'/'lastName'
@@ -1749,19 +1750,26 @@ class Zotero_Items {
 						}
 						
 						// Make a fake creator to use for the data lookup
-						$newCreator = new Zotero_Creator(null, $item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode);
+						$newCreator = new Zotero_Creator(null, $item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID);
 
-						// Look for an equivalent creator in this library
+						// Look for an equivalent creator in this shard
 						$candidates = Zotero_Creators::getCreatorsWithData($item->libraryID, $newCreator, true);
 						if ($candidates) {
 							$item->setCreator($orderIndex, $candidates[0], $newCreatorTypeID);
 							continue;
 						}
 						
-						// None found, so make a new one
-						$newCreator->save();
-						$item->setCreator($orderIndex, $newCreator, $newCreatorTypeID);
+						// None found, so prepare to make a new one 
+						$creatorsToAdd[$orderIndex] = $newCreator;
 					}
+					// Save all new creators in bulk
+					if (count($creatorsToAdd) > 0) {
+						$addedCreators = Zotero_Creators::bulkInsert($item->libraryID, $creatorsToAdd);
+						foreach ($addedCreators as $order => $creator) { 
+							$item->setCreator($order, $creator, $creator->creatorTypeID);
+						}
+					}
+
 					
 					// Remove all existing creators above the current index
 					if ($exists && $indexes = array_keys($item->getCreators())) {

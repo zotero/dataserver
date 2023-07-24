@@ -31,23 +31,26 @@ class Zotero_Creator {
 	private $lastName = '';
 	private $shortName = '';
 	private $fieldMode = 0;
+	private $creatorTypeID;
 	private $changed = array();
 
 	
 	
-	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode) {
+	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode, $creatorTypeID = null) {
 		$this->id = $id;
 		$this->libraryID = $libraryID;
 		$this->firstName = $firstName;
 		$this->lastName = $lastName;
 		$this->fieldMode = $fieldMode;
+		$this->creatorTypeID = $creatorTypeID;
 		$this->changed = array();
 		$props = array(
 			'libraryID',
 			'firstName',
 			'lastName',
 			'shortName',
-			'fieldMode'
+			'fieldMode',
+			'creatorTypeID'
 		);
 		foreach ($props as $prop) {
 			$this->changed[$prop] = false;
@@ -99,7 +102,7 @@ class Zotero_Creator {
 			trigger_error("Library ID must be set before saving", E_USER_ERROR);
 		}
 		
-		//Zotero_Creators::editCheck($this, $userID);
+		Zotero_Creators::editCheck($this, $userID);
 		
 		// If empty, move on
 		if ($this->firstName === '' && $this->lastName === '') {
@@ -236,6 +239,7 @@ class Zotero_Creator {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
+			case 'creatorTypeID':
 				if (!Zotero_Utilities::isPosInt($value)) {
 					$this->invalidValueError($field, $value);
 				}
@@ -243,19 +247,6 @@ class Zotero_Creator {
 			
 			case 'fieldMode':
 				if ($value !== 0 && $value !== 1) {
-					$this->invalidValueError($field, $value);
-				}
-				break;
-				
-			case 'key':
-				if (!preg_match('/^[23456789ABCDEFGHIJKMNPQRSTUVWXTZ]{8}$/', $value)) {
-					$this->invalidValueError($field, $value);
-				}
-				break;
-			
-			case 'dateAdded':
-			case 'dateModified':
-				if ($value !== '' && !preg_match("/^[0-9]{4}\-[0-9]{2}\-[0-9]{2} ([0-1][0-9]|[2][0-3]):([0-5][0-9]):([0-5][0-9])$/", $value)) {
 					$this->invalidValueError($field, $value);
 				}
 				break;

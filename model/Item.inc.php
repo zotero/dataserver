@@ -888,7 +888,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$itemTypeID = $this->getField('itemTypeID');
-		$this->loadCreators(true);
+		
 		$creators = $this->getCreators();
 		
 		$creatorTypeIDsToTry = array(
@@ -4771,8 +4771,6 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 
-		// On update, we should have all this info already, so maybe we just get all data from 
-		// Zotero_Creators::$creatorsByID instead of this extra query + loop
 		foreach ($creators as $creator) {
 			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
 

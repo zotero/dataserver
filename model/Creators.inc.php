@@ -60,6 +60,30 @@ class Zotero_Creators {
 		return array_diff($creatorIDs, $existingIDs);
 	}
 
+	public static function bulkInsert($libraryID, $orderedCreators) {
+		$placeholdersArray = array();
+		$paramList = array();
+		foreach ($orderedCreators as $order => $creator) {
+			if (isset($creator->id)) {
+				throw new Exception("Insert not possible for creator with a set creatorID");
+			}
+			$creator->id = Zotero_ID::get('creators');
+			$placeholdersArray[] = "(?, ?, ?, ?)";
+			$paramList = array_merge($paramList, [
+				$creator->id,
+				$creator->firstName,
+				$creator->lastName,
+				$creator->fieldMode,
+			 ]);
+		}
+		$placeholdersStr = implode(", ", $placeholdersArray);
+		$sql = "INSERT INTO creators (creatorID, firstName, lastName, fieldMode) VALUES $placeholdersStr";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		Zotero_DB::queryFromStatement($stmt, $paramList);
+		return $orderedCreators;
+	}
+
 	public static function get($libraryID, $creatorID) {
 		if (!$libraryID) {
 			throw new Exception("Library ID not set");
@@ -155,6 +179,17 @@ class Zotero_Creators {
 		}
 		
 		self::$creatorsByID[$creator->id] = $creator;
+	}
+
+	public static function editCheck($obj, $userID=false) {
+		if (!$userID) {
+			return true;
+		}
+		
+		if (!Zotero_Libraries::userCanEdit($obj->libraryID, $userID, $obj)) {
+			throw new Exception("Cannot edit " . self::$objectType
+				. " in library $obj->libraryID", Z_ERROR_LIBRARY_ACCESS_DENIED);
+		}
 	}
 	
 	
