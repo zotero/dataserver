@@ -27,30 +27,36 @@
 class Zotero_Creator {
 	private $id;
 	private $libraryID;
+	private $itemID;
 	private $firstName = '';
 	private $lastName = '';
 	private $shortName = '';
 	private $fieldMode = 0;
 	private $creatorTypeID;
+	private $orderIndex;
 	private $changed = array();
 
 	
 	
-	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode, $creatorTypeID = null) {
+	public function __construct($id, $libraryID, $itemID, $firstName, $lastName, $fieldMode, $creatorTypeID, $orderIndex) {
 		$this->id = $id;
 		$this->libraryID = $libraryID;
+		$this->itemID = $itemID;
 		$this->firstName = $firstName;
 		$this->lastName = $lastName;
 		$this->fieldMode = $fieldMode;
 		$this->creatorTypeID = $creatorTypeID;
+		$this->orderIndex = $orderIndex;
 		$this->changed = array();
 		$props = array(
 			'libraryID',
+			'itemID',
 			'firstName',
 			'lastName',
 			'shortName',
 			'fieldMode',
-			'creatorTypeID'
+			'creatorTypeID',
+			'orderIndex'
 		);
 		foreach ($props as $prop) {
 			$this->changed[$prop] = false;
@@ -72,6 +78,7 @@ class Zotero_Creator {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
+			case 'itemID':
 				$this->checkValue($field, $value);
 				$this->$field = $value;
 				return;
@@ -128,23 +135,26 @@ class Zotero_Creator {
 			
 			$timestamp = Zotero_DB::getTransactionTimestamp();
 			
-			$fields = "firstName=?, lastName=?, fieldMode=?";
+			$fields = "itemID=?, firstName=?, lastName=?, fieldMode=?, creatorTypeID=?, orderIndex=?";
 			$params = array(
+				$this->itemID,
 				$this->firstName,
 				$this->lastName,
-				$this->fieldMode
+				$this->fieldMode,
+				$this->creatorTypeID,
+				$this->orderIndex
 			);
 			$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
 			
 			try {
 				if ($isNew) {
-					$sql = "INSERT INTO creators SET creatorID=?, $fields";
+					$sql = "INSERT INTO itemCreators SET creatorID=?, $fields";
 					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
 					Zotero_DB::queryFromStatement($stmt, array_merge(array($creatorID), $params));
 					
 				}
 				else {
-					$sql = "UPDATE creators SET $fields WHERE creatorID=?";
+					$sql = "UPDATE itemCreators SET $fields WHERE creatorID=?";
 					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
 					Zotero_DB::queryFromStatement($stmt, array_merge($params, array($creatorID)));
 				}

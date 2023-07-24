@@ -52,7 +52,7 @@ class Zotero_Creators {
 			return $object['creatorID'];
 		}, $creators);
 		$placeholders = implode(',', array_fill(0, count($creatorIDs), '?'));
-		$sql = "SELECT creatorID FROM creators WHERE creatorID IN ($placeholders)";
+		$sql = "SELECT creatorID FROM itemCreators WHERE creatorID IN ($placeholders)";
 		$result = Zotero_DB::query($sql, $creatorIDs, Zotero_Shards::getByLibraryID($libraryID));
 		$existingIDs = array_map(function ($object) {
 			return $object['creatorID'];
@@ -68,16 +68,19 @@ class Zotero_Creators {
 				throw new Exception("Insert not possible for creator with a set creatorID");
 			}
 			$creator->id = Zotero_ID::get('creators');
-			$placeholdersArray[] = "(?, ?, ?, ?)";
+			$placeholdersArray[] = "(?, ?, ?, ?, ?, ?, ?)";
 			$paramList = array_merge($paramList, [
 				$creator->id,
+				$creator->itemID,
 				$creator->firstName,
 				$creator->lastName,
 				$creator->fieldMode,
+				$creator->creatorTypeID,
+				$creator->orderIndex,
 			 ]);
 		}
 		$placeholdersStr = implode(", ", $placeholdersArray);
-		$sql = "INSERT INTO creators (creatorID, firstName, lastName, fieldMode) VALUES $placeholdersStr";
+		$sql = "INSERT INTO itemCreators (creatorID, itemID, firstName, lastName, fieldMode, creatorTypeID, orderIndex) VALUES $placeholdersStr";
 
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
 		Zotero_DB::queryFromStatement($stmt, $paramList);
@@ -97,7 +100,7 @@ class Zotero_Creators {
 			return self::$creatorsByID[$creatorID];
 		}
 		
-		$sql = 'SELECT * FROM creators WHERE creatorID=?';
+		$sql = 'SELECT * FROM itemCreators WHERE creatorID=?';
 		$creator = Zotero_DB::rowQuery($sql, $creatorID, Zotero_Shards::getByLibraryID($libraryID));
 		if (!$creator) {
 			return false;
@@ -111,12 +114,9 @@ class Zotero_Creators {
 	
 	
 	public static function getCreatorsWithData($libraryID, $creator, $sortByItemCountDesc=false) {
-		$sql = "SELECT creatorID, firstName, lastName, fieldMode FROM creators ";
-		if ($sortByItemCountDesc) {
-			$sql .= "LEFT JOIN itemCreators USING (creatorID) ";
-		}
+		$sql = "SELECT creatorID, firstName, lastName, fieldMode FROM itemCreators ";
 		$sql .= "WHERE firstName = ? "
-			. "AND lastName = ? AND fieldMode=?";
+			. "AND lastName = ? AND fieldMode=? AND itemID=?";
 		if ($sortByItemCountDesc) {
 			$sql .= " GROUP BY creatorID ORDER BY IFNULL(COUNT(*), 0) DESC";
 		}
@@ -125,7 +125,8 @@ class Zotero_Creators {
 			array(
 				$creator->firstName,
 				$creator->lastName,
-				$creator->fieldMode
+				$creator->fieldMode,
+				$creator->itemID
 			),
 			Zotero_Shards::getByLibraryID($libraryID)
 		);

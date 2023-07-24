@@ -297,17 +297,17 @@ class Zotero_Cite {
 		$authorID = Zotero_CreatorTypes::getPrimaryIDForType($zoteroItem->itemTypeID);
 		$creators = $zoteroItem->getCreators();
 		foreach ($creators as $creator) {
-			if ($creator['creatorTypeID'] == $authorID) {
+			if ($creator->creatorTypeID == $authorID) {
 				$creatorType = "author";
 			}
 			else {
-				$creatorType = Zotero_CreatorTypes::getName($creator['creatorTypeID']);
+				$creatorType = Zotero_CreatorTypes::getName($creator->creatorTypeID);
 			}
 			
 			$creatorType = isset(self::$zoteroNameMap[$creatorType]) ? self::$zoteroNameMap[$creatorType] : false;
 			if (!$creatorType) continue;
 			
-			$nameObj = array('family' => $creator['ref']->lastName, 'given' => $creator['ref']->firstName);
+			$nameObj = array('family' => $creator->lastName, 'given' => $creator->firstName);
 			
 			if (isset($cslItem[$creatorType])) {
 				$cslItem[$creatorType][] = $nameObj;

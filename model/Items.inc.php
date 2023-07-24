@@ -186,8 +186,7 @@ class Zotero_Items {
 		
 		if (!empty($params['q'])) {
 			// Pull in creators
-			$sql .= "LEFT JOIN itemCreators IC ON (IC.itemID=I.itemID) "
-				. "LEFT JOIN creators C ON (C.creatorID=IC.creatorID) ";
+			$sql .= "LEFT JOIN itemCreators IC ON (IC.itemID=I.itemID) ";
 			
 			// Pull in dates
 			$dateFieldIDs = array_merge(
@@ -1732,10 +1731,10 @@ class Zotero_Items {
 						
 						// Same creator in this position
 						$existingCreator = $item->getCreator($orderIndex);
-						if ($existingCreator && $existingCreator['ref']->equals($newCreatorData)) {
+						if ($existingCreator && $existingCreator->equals($newCreatorData)) {
 							// Just change the creatorTypeID
-							if ($existingCreator['creatorTypeID'] != $newCreatorTypeID) {
-								$item->setCreator($orderIndex, $existingCreator['ref'], $newCreatorTypeID);
+							if ($existingCreator->creatorTypeID != $newCreatorTypeID) {
+								$item->setCreator($orderIndex, $existingCreator, $newCreatorTypeID);
 							}
 							continue;
 						}
@@ -1743,31 +1742,15 @@ class Zotero_Items {
 						// Same creator in a different position, so use that
 						$existingCreators = $item->getCreators();
 						for ($i=0,$len=sizeOf($existingCreators); $i<$len; $i++) {
-							if ($existingCreators[$i]['ref']->equals($newCreatorData)) {
-								$item->setCreator($orderIndex, $existingCreators[$i]['ref'], $newCreatorTypeID);
+							if (isset($existingCreators[$i]) && $existingCreators[$i]->equals($newCreatorData)) {
+								$item->setCreator($orderIndex, $existingCreators[$i], $newCreatorTypeID);
 								continue;
 							}
 						}
 						
-						// Make a fake creator to use for the data lookup
-						$newCreator = new Zotero_Creator(null, $item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID);
-
-						// Look for an equivalent creator in this shard
-						$candidates = Zotero_Creators::getCreatorsWithData($item->libraryID, $newCreator, true);
-						if ($candidates) {
-							$item->setCreator($orderIndex, $candidates[0], $newCreatorTypeID);
-							continue;
-						}
-						
-						// None found, so prepare to make a new one 
-						$creatorsToAdd[$orderIndex] = $newCreator;
-					}
-					// Save all new creators in bulk
-					if (count($creatorsToAdd) > 0) {
-						$addedCreators = Zotero_Creators::bulkInsert($item->libraryID, $creatorsToAdd);
-						foreach ($addedCreators as $order => $creator) { 
-							$item->setCreator($order, $creator, $creator->creatorTypeID);
-						}
+						// None found, so will create a new one 
+						$newCreator = new Zotero_Creator(null, $item->libraryID, null, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
+						$item->setCreator($orderIndex, $newCreator);
 					}
 
 					

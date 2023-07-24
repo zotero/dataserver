@@ -322,12 +322,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$participants = array();
 			if ($creators) {
 				foreach ($creators as $creator) {
-					if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeRecipient) ||
-							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewer)) {
+					if (($itemTypeID == $itemTypeLetter && $creator->creatorTypeID == $creatorTypeRecipient) ||
+							($itemTypeID == $itemTypeInterview && $creator->creatorTypeID == $creatorTypeInterviewer)) {
 						$participants[] = $creator;
 					}
-					else if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeAuthor) ||
-							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewee)) {
+					else if (($itemTypeID == $itemTypeLetter && $creator->creatorTypeID == $creatorTypeAuthor) ||
+							($itemTypeID == $itemTypeInterview && $creator->creatorTypeID == $creatorTypeInterviewee)) {
 						$authors[] = $creator;
 					}
 				}
@@ -338,7 +338,7 @@ class Zotero_Item extends Zotero_DataObject {
 			if ($includeAuthorAndDate) {
 				$names = array();
 				foreach($authors as $author) {
-					$names[] = $author['ref']->lastName;
+					$names[] = $author->lastName;
 				}
 				
 				// TODO: Use same logic as getFirstCreatorSQL() (including "et al.")
@@ -351,7 +351,7 @@ class Zotero_Item extends Zotero_DataObject {
 			if ($participants) {
 				$names = array();
 				foreach ($participants as $participant) {
-					$names[] = $participant['ref']->lastName;
+					$names[] = $participant->lastName;
 				}
 				switch (sizeOf($names)) {
 					case 1:
@@ -437,8 +437,8 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				
 				$creators = $this->getCreators();
-				if ($creators && $creators[0]['creatorTypeID'] === $creatorTypeAuthor) {
-					$strParts[] = $creators[0]['ref']->lastName;
+				if ($creators && $creators[0]->creatorTypeID === $creatorTypeAuthor) {
+					$strParts[] = $creators[0]->lastName;
 				}
 				
 				$title = '[' . implode(', ', $strParts) . ']';
@@ -593,14 +593,14 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = $this->getCreators();
 			if ($creators) {
 				foreach ($creators as $orderIndex=>$creator) {
-					if (Zotero_CreatorTypes::isCustomType($creator['creatorTypeID'])) {
+					if (Zotero_CreatorTypes::isCustomType($creator->creatorTypeID)) {
 						continue;
 					}
-					if (!Zotero_CreatorTypes::isValidForItemType($creator['creatorTypeID'], $itemTypeID)) {
+					if (!Zotero_CreatorTypes::isValidForItemType($creator->creatorTypeID, $itemTypeID)) {
 						// TODO: port
 						
 						// Reset to contributor (creatorTypeID 2), which exists in all
-						$this->setCreator($orderIndex, $creator['ref'], 2);
+						$this->setCreator($orderIndex, $creator, 2);
 					}
 				}
 			}
@@ -907,7 +907,7 @@ class Zotero_Item extends Zotero_DataObject {
 		foreach ($creatorTypeIDsToTry as $creatorTypeID) {
 			$loc = array();
 			foreach ($creators as $orderIndex=>$creator) {
-				if ($creator['creatorTypeID'] == $creatorTypeID) {
+				if ($creator->creatorTypeID == $creatorTypeID) {
 					$loc[] = $orderIndex;
 					
 					if (sizeOf($loc) == 3) {
@@ -921,17 +921,17 @@ class Zotero_Item extends Zotero_DataObject {
 					continue 2;
 				
 				case 1:
-					$creatorSummary = $creators[$loc[0]]['ref']->lastName;
+					$creatorSummary = $creators[$loc[0]]->lastName;
 					break;
 				
 				case 2:
-					$creatorSummary = $creators[$loc[0]]['ref']->lastName
+					$creatorSummary = $creators[$loc[0]]->lastName
 							. $localizedAnd
-							. $creators[$loc[1]]['ref']->lastName;
+							. $creators[$loc[1]]->lastName;
 					break;
 				
 				case 3:
-					$creatorSummary = $creators[$loc[0]]['ref']->lastName . $etAl;
+					$creatorSummary = $creators[$loc[0]]->lastName . $etAl;
 					break;
 			}
 			
@@ -1225,61 +1225,15 @@ class Zotero_Item extends Zotero_DataObject {
 					
 					// TODO: group queries
 					
-					$sql = "INSERT INTO itemCreators
-								(itemID, creatorID, creatorTypeID, orderIndex) VALUES ";
-					$placeholders = array();
-					$sqlValues = array();
-					
-					$cacheRows = array();
-					
+					$creatorsArray = [];
 					foreach ($indexes as $orderIndex) {
-						Z_Core::debug('Adding creator in position ' . $orderIndex, 4);
 						$creator = $this->getCreator($orderIndex);
-						
-						if (!$creator) {
-							continue;
-						}
-						
-						if ($creator['ref']->hasChanged()) {
-							Z_Core::debug("Auto-saving changed creator {$creator['ref']->id}");
-							try {
-								$creator['ref']->save();
-							}
-							catch (Exception $e) {
-								// TODO: Provide the item in question
-								/*if (strpos($e->getCode() == Z_ERROR_CREATOR_TOO_LONG)) {
-									$msg = $e->getMessage();
-									$msg = str_replace(
-										"with this name and shorten it.",
-										"with this name, or paste '$key' into the quick search bar "
-										. "in the Zotero toolbar, and shorten the name."
-									);
-									throw new Exception($msg, Z_ERROR_CREATOR_TOO_LONG);
-								}*/
-								throw $e;
-							}
-						}
-						
-						$placeholders[] = "(?, ?, ?, ?)";
-						array_push(
-							$sqlValues,
-							$itemID,
-							$creator['ref']->id,
-							$creator['creatorTypeID'],
-							$orderIndex
-						);
-						
-						$cacheRows[] = array(
-							'creatorID' => $creator['ref']->id,
-							'creatorTypeID' => $creator['creatorTypeID'],
-							'orderIndex' => $orderIndex
-						);
+						$creator->itemID = $itemID;
+						$creatorsArray[] = $creator;
 					}
 					
-					if ($sqlValues) {
-						$sql = $sql . implode(',', $placeholders);
-						Zotero_DB::query($sql, $sqlValues, $shardID);
-					}
+					Zotero_Creators::bulkInsert($this->libraryID, $creatorsArray);
+
 				}
 				
 				
@@ -1766,17 +1720,11 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!empty($this->changed['creators'])) {
 					$indexes = array_keys($this->changed['creators']);
 					
-					$sql = "INSERT INTO itemCreators
-								(itemID, creatorID, creatorTypeID, orderIndex) VALUES ";
-					$placeholders = array();
-					$sqlValues = array();
-					
-					$cacheRows = array();
-					
 					foreach ($indexes as $orderIndex) {
 						Z_Core::debug('Creator in position ' . $orderIndex . ' has changed', 4);
 						$creator = $this->getCreator($orderIndex);
 						
+						// TODO: can do one update instead of delete and save()
 						$sql2 = 'DELETE FROM itemCreators WHERE itemID=? AND orderIndex=?';
 						Zotero_DB::query($sql2, array($this->_id, $orderIndex), $shardID);
 						
@@ -1784,26 +1732,14 @@ class Zotero_Item extends Zotero_DataObject {
 							continue;
 						}
 						
-						if ($creator['ref']->hasChanged()) {
-							Z_Core::debug("Auto-saving changed creator {$creator['ref']->id}");
-							$creator['ref']->save();
+						if ($creator->hasChanged() || !isset($creator->id)) {
+							$creator->itemID = $this->_id;
+							Z_Core::debug("Auto-saving changed creator {$creator->id}");
+							$creator->save();
 						}
 						
-						
-						$placeholders[] = "(?, ?, ?, ?)";
-						array_push(
-							$sqlValues,
-							$this->_id,
-							$creator['ref']->id,
-							$creator['creatorTypeID'],
-							$orderIndex
-						);
 					}
 					
-					if ($sqlValues) {
-						$sql = $sql . implode(',', $placeholders);
-						Zotero_DB::query($sql, $sqlValues, $shardID);
-					}
 				}
 				
 				// Deleted item
@@ -2434,14 +2370,14 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function setCreator($orderIndex, Zotero_Creator $creator, $creatorTypeID) {
+	public function setCreator($orderIndex, Zotero_Creator $creator) {
 		if ($this->id && !$this->loaded['creators']) {
 			$this->loadCreators();
 		}
 		else {
 			$this->loaded['creators'] = true;
 		}
-		
+		$creatorTypeID = $creator->creatorTypeID;
 		if (!is_integer($orderIndex)) {
 			throw new Exception("orderIndex must be an integer");
 		}
@@ -2468,15 +2404,15 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		// If creator already exists at this position, cancel
 		if (isset($this->creators[$orderIndex])
-				&& $this->creators[$orderIndex]['ref']->id == $creator->id
-				&& $this->creators[$orderIndex]['creatorTypeID'] == $creatorTypeID
+				&& $this->creators[$orderIndex]->id == $creator->id
+				&& $this->creators[$orderIndex]->creatorTypeID == $creatorTypeID
 				&& !$creator->hasChanged()) {
 			Z_Core::debug("Creator in position $orderIndex hasn't changed", 4);
 			return false;
 		}
 		
-		$this->creators[$orderIndex]['ref'] = $creator;
-		$this->creators[$orderIndex]['creatorTypeID'] = $creatorTypeID;
+		$this->creators[$orderIndex] = $creator;
+		//$this->creators[$orderIndex]->creatorTypeID = $creatorTypeID;
 		$this->changed['creators'][$orderIndex] = true;
 		return true;
 	}
@@ -3855,12 +3791,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$displayText = '';
 			foreach ($creators as $creator) {
 				// Two fields
-				if ($creator['ref']->fieldMode == 0) {
-					$displayText = $creator['ref']->firstName . ' ' . $creator['ref']->lastName;
+				if ($creator->fieldMode == 0) {
+					$displayText = $creator->firstName . ' ' . $creator->lastName;
 				}
 				// Single field
-				else if ($creator['ref']->fieldMode == 1) {
-					$displayText = $creator['ref']->lastName;
+				else if ($creator->fieldMode == 1) {
+					$displayText = $creator->lastName;
 				}
 				else {
 					// TODO
@@ -3869,7 +3805,7 @@ class Zotero_Item extends Zotero_DataObject {
 				Zotero_Atom::addHTMLRow(
 					$html,
 					"creator",
-					Zotero_CreatorTypes::getLocalizedString($creator['creatorTypeID']),
+					Zotero_CreatorTypes::getLocalizedString($creator->creatorTypeID),
 					trim($displayText)
 				);
 			}
@@ -4443,16 +4379,16 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = $this->getCreators();
 			foreach ($creators as $creator) {
 				$c = array();
-				$c['creatorType'] = Zotero_CreatorTypes::getName($creator['creatorTypeID']);
+				$c['creatorType'] = Zotero_CreatorTypes::getName($creator->creatorTypeID);
 				
 				// Single-field mode
-				if ($creator['ref']->fieldMode == 1) {
-					$c['name'] = $creator['ref']->lastName;
+				if ($creator->fieldMode == 1) {
+					$c['name'] = $creator->lastName;
 				}
 				// Two-field mode
 				else {
-					$c['firstName'] = $creator['ref']->firstName;
-					$c['lastName'] = $creator['ref']->lastName;
+					$c['firstName'] = $creator->firstName;
+					$c['lastName'] = $creator->lastName;
 				}
 				$arr['creators'][] = $c;
 			}
@@ -4741,8 +4677,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = false;
 		}
 		if ($creators === false) {
-			$sql = "SELECT * FROM itemCreators
-					INNER JOIN creators USING (creatorID) WHERE itemID=? ORDER BY orderIndex";
+			$sql = "SELECT * FROM itemCreators WHERE itemID=? ORDER BY orderIndex";
 			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 			$creators = Zotero_DB::queryFromStatement($stmt, $this->id);
 			
@@ -4772,12 +4707,9 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 
 		foreach ($creators as $creator) {
-			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
+			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, null, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
 
-			$this->creators[$creator['orderIndex']] = array(
-				'creatorTypeID' => $creator['creatorTypeID'],
-				'ref' => $creatorObj
-			);
+			$this->creators[$creator['orderIndex']] = $creatorObj;
 		}
 	}
 	

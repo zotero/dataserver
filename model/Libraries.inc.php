@@ -390,7 +390,7 @@ class Zotero_Libraries {
 			// We fetch and delete all creators that have no items linked to them
 			// In production, this should be a cron job
 			if ($table == 'creators') {
-				$sql = "DELETE creators from creators LEFT JOIN itemCreators USING (creatorID)";
+				$sql = "DELETE itemCreators from itemCreators LEFT JOIN items USING (itemID)";
 				$deleteCreators = Zotero_DB::query($sql, [], $shardID);
 				continue;
 			}
