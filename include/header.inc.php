@@ -42,7 +42,7 @@ function zotero_autoload($className) {
 		else {
 			$auth = false;
 		}
-		$updatedShards = [1];
+		$updatedShards = [];
 		$newFiles = ["Item.inc.php", "Items.inc.php", "Cite.inc.php", "Library.inc.php", "Creator.inc.php", "Creators.inc.php"];
 		if (isset($GLOBALS['shardID']) && !in_array($GLOBALS['shardID'], $updatedShards) && in_array($fileName, $newFiles)) {
 			$path = Z_ENV_BASE_PATH . 'model/old_';
