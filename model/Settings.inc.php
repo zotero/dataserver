@@ -242,7 +242,7 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 				throw new Exception("'value' be a string", Z_ERROR_INVALID_INPUT);
 			}
 			
-			if ($val === "") {
+			if ($value === "") {
 				throw new Exception("'value' cannot be empty", Z_ERROR_INVALID_INPUT);
 			}
 			break;
