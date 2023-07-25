@@ -1477,7 +1477,9 @@ class Zotero_Item extends Zotero_DataObject {
 					if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
 						if (!in_array($parentItem->attachmentContentType, ['application/pdf', 'application/epub+zip', 'text/html'])) {
 							throw new Exception(
-								"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
+								// TEMP
+								//"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
+								"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF attachment",
 								Z_ERROR_INVALID_INPUT
 							);
 						}
@@ -1879,7 +1881,9 @@ class Zotero_Item extends Zotero_DataObject {
 						if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
 							if (!$parentItem->isPDFAttachment() && !$parentItem->isEPUBAttachment() && !$parentItem->isHTMLAttachment()) {
 								throw new Exception(
-									"Parent item of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
+									// TEMP
+									//"Parent item of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
+									"Parent item of $this->annotationType annotation must be a PDF attachment",
 									Z_ERROR_INVALID_INPUT
 								);
 							}
