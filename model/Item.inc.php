@@ -4595,6 +4595,27 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		if ($this->isAnnotation()) {
+			// Trigger upgrade warning for reader2 annotations in unsupported clients
+			if ($requestParams['schemaVersion'] < 29) {
+				// New annotation types
+				$block = in_array($this->annotationType, ['underline', 'text']);
+				if (!$block) {
+					$parent = $this->getSource();
+					$parentItem = Zotero_Items::get($this->_libraryID, $parent);
+					if (!$parentItem) {
+						throw new Exception("Parent item $this->_libraryID/$parent not found");
+					}
+					// Annotations on EPUBs or snapshots
+					$block = in_array(
+						$parentItem->attachmentContentType,
+						['application/epub+zip', 'text/html']
+					);
+				}
+				if ($block) {
+					$arr['invalidProp'] = 1;
+				}
+			}
+			
 			$props = ['type', 'authorName', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
 			foreach ($props as $prop) {
 				if ($prop == 'authorName' && $this->annotationAuthorName === '') {
