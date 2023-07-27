@@ -1676,6 +1676,11 @@ class Zotero_Items {
 			$item->setField("itemTypeID", Zotero_ItemTypes::getID($json->itemType));
 		}
 		
+		// And parentKey, which has to be set for getSource() to be available for other properties
+		if (isset($json->parentItem)) {
+			$item->setSourceKey($json->parentItem);
+		}
+		
 		$dateModifiedProvided = false;
 		// APIv2 and below
 		$changedDateModified = false;
@@ -1690,15 +1695,12 @@ class Zotero_Items {
 				case 'key':
 				case 'version':
 				case 'itemKey':
+				case 'parentItem':
 				case 'itemVersion':
 				case 'itemType':
 				case 'deleted':
 				case 'inPublications':
 					continue 2;
-				
-				case 'parentItem':
-					$item->setSourceKey($val);
-					break;
 				
 				case 'creators':
 					if (!$val && !$item->numCreators()) {

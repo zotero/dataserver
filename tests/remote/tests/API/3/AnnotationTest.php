@@ -96,6 +96,34 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_save_a_highlight_annotation_with_parentItem_specified_last() {
+		$json = [
+			'itemType' => 'annotation',
+			'annotationType' => 'highlight',
+			'annotationAuthorName' => 'First Last',
+			'annotationText' => 'This is highlighted text.',
+			'annotationColor' => '#ff8c19',
+			'annotationPageLabel' => '10',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			]),
+			'parentItem' => self::$attachmentKey,
+		];
+		
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+	}
+	
+	
 	public function test_should_save_a_note_annotation() {
 		$json = [
 			'itemType' => 'annotation',
