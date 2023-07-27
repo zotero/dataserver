@@ -1729,26 +1729,7 @@ class Zotero_Items {
 						
 						$newCreatorTypeID = Zotero_CreatorTypes::getID($newCreatorData->creatorType);
 						
-						// Same creator in this position
-						$existingCreator = $item->getCreator($orderIndex);
-						if ($existingCreator && $existingCreator->equals($newCreatorData)) {
-							// Just change the creatorTypeID
-							if ($existingCreator->creatorTypeID != $newCreatorTypeID) {
-								$item->setCreator($orderIndex, $existingCreator, $newCreatorTypeID);
-							}
-							continue;
-						}
-						
-						// Same creator in a different position, so use that
-						$existingCreators = $item->getCreators();
-						for ($i=0,$len=sizeOf($existingCreators); $i<$len; $i++) {
-							if (isset($existingCreators[$i]) && $existingCreators[$i]->equals($newCreatorData)) {
-								$item->setCreator($orderIndex, $existingCreators[$i], $newCreatorTypeID);
-								continue;
-							}
-						}
-						
-						// None found, so will create a new one 
+						// Make creator object
 						$newCreator = new Zotero_Creator(null, $item->libraryID, null, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
 						$item->setCreator($orderIndex, $newCreator);
 					}

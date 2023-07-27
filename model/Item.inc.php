@@ -2410,10 +2410,11 @@ class Zotero_Item extends Zotero_DataObject {
 			Z_Core::debug("Creator in position $orderIndex hasn't changed", 4);
 			return false;
 		}
-		
-		$this->creators[$orderIndex] = $creator;
-		//$this->creators[$orderIndex]->creatorTypeID = $creatorTypeID;
-		$this->changed['creators'][$orderIndex] = true;
+		if (!isset($this->creators[$orderIndex]) || !$this->creators[$orderIndex]->equals($creator)) {
+			$this->creators[$orderIndex] = $creator;
+			$this->creators[$orderIndex]->creatorTypeID = $creatorTypeID;
+			$this->changed['creators'][$orderIndex] = true;
+		}
 		return true;
 	}
 	

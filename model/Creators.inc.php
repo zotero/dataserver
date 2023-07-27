@@ -86,68 +86,6 @@ class Zotero_Creators {
 		Zotero_DB::queryFromStatement($stmt, $paramList);
 		return $orderedCreators;
 	}
-
-	public static function get($libraryID, $creatorID) {
-		if (!$libraryID) {
-			throw new Exception("Library ID not set");
-		}
-		
-		if (!$creatorID) {
-			throw new Exception("Creator ID not set");
-		}
-		
-		if (!empty(self::$creatorsByID[$creatorID])) {
-			return self::$creatorsByID[$creatorID];
-		}
-		
-		$sql = 'SELECT * FROM itemCreators WHERE creatorID=?';
-		$creator = Zotero_DB::rowQuery($sql, $creatorID, Zotero_Shards::getByLibraryID($libraryID));
-		if (!$creator) {
-			return false;
-		}
-		
-		$creator = new Zotero_Creator($creator['creatorID'], $libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'] );
-		
-		self::$creatorsByID[$creatorID] = $creator;
-		return self::$creatorsByID[$creatorID];
-	}
-	
-	
-	public static function getCreatorsWithData($libraryID, $creator, $sortByItemCountDesc=false) {
-		$sql = "SELECT creatorID, firstName, lastName, fieldMode FROM itemCreators ";
-		$sql .= "WHERE firstName = ? "
-			. "AND lastName = ? AND fieldMode=? AND itemID=?";
-		if ($sortByItemCountDesc) {
-			$sql .= " GROUP BY creatorID ORDER BY IFNULL(COUNT(*), 0) DESC";
-		}
-		$rows = Zotero_DB::query(
-			$sql,
-			array(
-				$creator->firstName,
-				$creator->lastName,
-				$creator->fieldMode,
-				$creator->itemID
-			),
-			Zotero_Shards::getByLibraryID($libraryID)
-		);
-		
-		// Case-sensitive filter, since the DB columns use a case-insensitive collation and we want
-		// it to use an index
-		$rows = array_filter($rows, function ($row) use ($creator) {
-			return $row['lastName'] == $creator->lastName && $row['firstName'] == $creator->firstName;
-		});
-
-		$result = [];
-		foreach($rows as $row) {
-			$c = new Zotero_Creator($row['creatorID'], $libraryID, $row['firstName'], $row['lastName'], $row['fieldMode'] ); 
-			if (empty(self::$creatorsByID[$row['creatorID']])) {
-				self::$creatorsByID[$row['creatorID']] = $c;
-			}
-			array_push($result, $c);
-		}
-		
-		return $result;
-	}
 	
 	
 /*
