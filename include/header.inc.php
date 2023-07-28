@@ -42,8 +42,17 @@ function zotero_autoload($className) {
 		else {
 			$auth = false;
 		}
-		$updatedShards = [];
-		$newFiles = ["Item.inc.php", "Items.inc.php", "Cite.inc.php", "Library.inc.php", "Creator.inc.php", "Creators.inc.php"];
+		$updatedShards = $GLOBALS['updatedShards'];
+		$newFiles = [
+			"Item.inc.php", 
+			"Items.inc.php", "Cite.inc.php", 
+			"Library.inc.php", 
+			"Creator.inc.php", 
+			"Creators.inc.php", 
+			"Tag.inc.php", 
+			"Tags.inc.php",
+			"TagsController.php"
+		];
 		if (isset($GLOBALS['shardID']) && !in_array($GLOBALS['shardID'], $updatedShards) && in_array($fileName, $newFiles)) {
 			$path = Z_ENV_BASE_PATH . 'model/old_';
 		}
@@ -80,7 +89,7 @@ function zotero_autoload($className) {
 		return;
 	}
 }
-
+$GLOBALS['updatedShards'] = [1];
 spl_autoload_register('zotero_autoload');
 
 // Read in configuration variables

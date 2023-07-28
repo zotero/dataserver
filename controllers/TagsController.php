@@ -187,11 +187,24 @@ class TagsController extends ApiController {
 				$tagNames = !empty($this->queryParams['tag'])
 					? explode(' || ', $this->queryParams['tag']): array();
 				Zotero_DB::beginTransaction();
-				$tagIDs = [];
-				foreach ($tagNames as $tagName) {
-					$tagIDs[] = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
+				// Different delete behavior depending on if we are on migrated shard or not
+				// because after migration $tag->key does not exist
+				if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+					$tagIDs = [];
+					foreach ($tagNames as $tagName) {
+						$tagIDs = array_merge($tagIDs, Zotero_Tags::getIDs($this->objectLibraryID, $tagName));
+					}
+					Zotero_Tags::bulkDelete($this->objectLibraryID, null, $tagIDs);
 				}
-				Zotero_Tags::bulkDelete($this->objectLibraryID, $tagIDs);
+				else {
+					foreach ($tagNames as $tagName) {
+						$tagIDs = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
+						foreach ($tagIDs as $tagID) {
+							$tag = Zotero_Tags::get($this->objectLibraryID, $tagID, true);
+							Zotero_Tags::delete($this->objectLibraryID, $tag->key, $this->objectUserID);
+						}
+					}
+				}
 				Zotero_DB::commit();
 				$this->e204();
 			}

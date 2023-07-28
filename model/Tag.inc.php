@@ -39,12 +39,12 @@ class Zotero_Tag {
 	private $linkedItems = array();
 	
 	public function __construct($id, $libraryID, $itemID, $name, $type, $version) {
-		$this->id = $id;
-		$this->libraryID = $libraryID;
-		$this->itemID = $itemID;
-		$this->name = $name;
-		$this->type = $type;
-		$this->version = $version;
+		$this->__set("id", $id);
+		$this->__set("libraryID", $libraryID);
+		$this->__set("itemID", $itemID);
+		$this->__set("name", $name);
+		$this->__set("type", $type);
+		$this->__set("version", $version);		
 
 		$this->previousData = array();
 		$this->linkedItemsLoaded = false;
@@ -63,7 +63,8 @@ class Zotero_Tag {
 	public function __get($field) {
 		
 		if (!property_exists('Zotero_Tag', $field)) {
-			throw new Exception("Zotero_Tag property '$field' doesn't exist");
+			return null;
+			//throw new Exception("Zotero_Tag property '$field' doesn't exist");
 		}
 		
 		return $this->$field;
@@ -83,7 +84,7 @@ class Zotero_Tag {
 		
 		$this->checkValue($field, $value);
 		
-		if ($this->$field != $value) {
+		if ($this->$field !== $value) {
 			$this->prepFieldChange($field);
 			$this->$field = $value;
 		}
@@ -130,202 +131,202 @@ class Zotero_Tag {
 	}
 	
 	
-	public function save($userID=false, $full=false) {
-		if (!$this->libraryID) {
-			trigger_error("Library ID must be set before saving", E_USER_ERROR);
-		}
+	// public function save($userID=false, $full=false) {
+	// 	if (!$this->libraryID) {
+	// 		trigger_error("Library ID must be set before saving", E_USER_ERROR);
+	// 	}
 		
-		Zotero_Tags::editCheck($this, $userID);
+	// 	Zotero_Tags::editCheck($this, $userID);
 		
-		if (!$this->hasChanged()) {
-			Z_Core::debug("Tag $this->id has not changed");
-			return false;
-		}
+	// 	if (!$this->hasChanged()) {
+	// 		Z_Core::debug("Tag $this->id has not changed");
+	// 		return false;
+	// 	}
 		
-		$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
+	// 	$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
 		
-		Zotero_DB::beginTransaction();
+	// 	Zotero_DB::beginTransaction();
 		
-		try {
-			$tagID = $this->id ? $this->id : Zotero_ID::get('tags');
-			$isNew = !$this->id;
+	// 	try {
+	// 		$tagID = $this->id ? $this->id : Zotero_ID::get('tags');
+	// 		$isNew = !$this->id;
 			
-			Z_Core::debug("Saving tag $tagID");
+	// 		Z_Core::debug("Saving tag $tagID");
 			
-			$key = $this->key ? $this->key : Zotero_ID::getKey();
-			$timestamp = Zotero_DB::getTransactionTimestamp();
-			$dateAdded = $this->dateAdded ? $this->dateAdded : $timestamp;
-			$version = ($this->changed['name'] || $this->changed['type'])
-				? Zotero_Libraries::getUpdatedVersion($this->libraryID)
-				: $this->version;
+	// 		$key = $this->key ? $this->key : Zotero_ID::getKey();
+	// 		$timestamp = Zotero_DB::getTransactionTimestamp();
+	// 		$dateAdded = $this->dateAdded ? $this->dateAdded : $timestamp;
+	// 		$version = ($this->changed['name'] || $this->changed['type'])
+	// 			? Zotero_Libraries::getUpdatedVersion($this->libraryID)
+	// 			: $this->version;
 			
-			$fields = "name=?, itemID=?, `type`=?, version=?";
-			$params = array(
-				$this->name,
-				$this->itemID,
-				$this->type ? $this->type : 0,
-				$version
-			);
+	// 		$fields = "name=?, itemID=?, `type`=?, version=?";
+	// 		$params = array(
+	// 			$this->name,
+	// 			$this->itemID,
+	// 			$this->type ? $this->type : 0,
+	// 			$version
+	// 		);
 			
-			try {
-				if ($isNew) {
-					$sql = "INSERT INTO tags SET tagID=?, $fields";
-					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
-					Zotero_DB::queryFromStatement($stmt, array_merge(array($tagID), $params));
+	// 		try {
+	// 			if ($isNew) {
+	// 				$sql = "INSERT INTO tags SET tagID=?, $fields";
+	// 				$stmt = Zotero_DB::getStatement($sql, true, $shardID);
+	// 				Zotero_DB::queryFromStatement($stmt, array_merge(array($tagID), $params));
 					
-					// Remove from delete log if it's there
-					$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
-					        AND objectType='tag' AND `key`=?";
-					Zotero_DB::query(
-						$sql, array($this->libraryID, $key), $shardID
-					);
-					$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
-					        AND objectType='tagName' AND `key`=?";
-					Zotero_DB::query(
-						$sql, array($this->libraryID, $this->name), $shardID
-					);
-				}
-				else {
-					$sql = "UPDATE tags SET $fields WHERE tagID=?";
-					$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-					Zotero_DB::queryFromStatement($stmt, array_merge($params, array($tagID)));
-				}
-			}
-			catch (Exception $e) {
-				// If an incoming tag is the same as an existing tag, but with a different key,
-				// then delete the old tag and add its linked items to the new tag
-				if (preg_match("/Duplicate entry .+ for key 'uniqueTags'/", $e->getMessage())) {
-					// GET existing tag
-					$existing = Zotero_Tags::getIDs($this->libraryID, $this->name);
-					if (!$existing) {
-						throw new Exception("Existing tag not found");
-					}
-					foreach ($existing as $id) {
-						$tag = Zotero_Tags::get($this->libraryID, $id, true);
-						if ($tag->__get('type') == $this->type) {
-							$linked = $tag->getLinkedItems(true);
-							Zotero_Tags::delete($this->libraryID, $tag->key);
-							break;
-						}
-					}
+	// 				// Remove from delete log if it's there
+	// 				$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
+	// 				        AND objectType='tag' AND `key`=?";
+	// 				Zotero_DB::query(
+	// 					$sql, array($this->libraryID, $key), $shardID
+	// 				);
+	// 				$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
+	// 				        AND objectType='tagName' AND `key`=?";
+	// 				Zotero_DB::query(
+	// 					$sql, array($this->libraryID, $this->name), $shardID
+	// 				);
+	// 			}
+	// 			else {
+	// 				$sql = "UPDATE tags SET $fields WHERE tagID=?";
+	// 				$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
+	// 				Zotero_DB::queryFromStatement($stmt, array_merge($params, array($tagID)));
+	// 			}
+	// 		}
+	// 		catch (Exception $e) {
+	// 			// If an incoming tag is the same as an existing tag, but with a different key,
+	// 			// then delete the old tag and add its linked items to the new tag
+	// 			if (preg_match("/Duplicate entry .+ for key 'uniqueTags'/", $e->getMessage())) {
+	// 				// GET existing tag
+	// 				$existing = Zotero_Tags::getIDs($this->libraryID, $this->name);
+	// 				if (!$existing) {
+	// 					throw new Exception("Existing tag not found");
+	// 				}
+	// 				foreach ($existing as $id) {
+	// 					$tag = Zotero_Tags::get($this->libraryID, $id, true);
+	// 					if ($tag->__get('type') == $this->type) {
+	// 						$linked = $tag->getLinkedItems(true);
+	// 						Zotero_Tags::delete($this->libraryID, $tag->key);
+	// 						break;
+	// 					}
+	// 				}
 					
-					// Save again
-					if ($isNew) {
-						$sql = "INSERT INTO tags SET tagID=?, $fields";
-						$stmt = Zotero_DB::getStatement($sql, true, $shardID);
-						Zotero_DB::queryFromStatement($stmt, array_merge(array($tagID), $params));
+	// 				// Save again
+	// 				if ($isNew) {
+	// 					$sql = "INSERT INTO tags SET tagID=?, $fields";
+	// 					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
+	// 					Zotero_DB::queryFromStatement($stmt, array_merge(array($tagID), $params));
 						
-						// Remove from delete log if it's there
-						$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
-						        AND objectType='tag' AND `key`=?";
-						Zotero_DB::query(
-							$sql, array($this->libraryID, $key), $shardID
-						);
-						$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
-						        AND objectType='tagName' AND `key`=?";
-						Zotero_DB::query(
-							$sql, array($this->libraryID, $this->name), $shardID
-						);
+	// 					// Remove from delete log if it's there
+	// 					$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
+	// 					        AND objectType='tag' AND `key`=?";
+	// 					Zotero_DB::query(
+	// 						$sql, array($this->libraryID, $key), $shardID
+	// 					);
+	// 					$sql = "DELETE FROM syncDeleteLogKeys WHERE libraryID=?
+	// 					        AND objectType='tagName' AND `key`=?";
+	// 					Zotero_DB::query(
+	// 						$sql, array($this->libraryID, $this->name), $shardID
+	// 					);
 
-					}
-					else {
-						$sql = "UPDATE tags SET $fields WHERE tagID=?";
-						$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-						Zotero_DB::queryFromStatement($stmt, array_merge($params, array($tagID)));
-					}
+	// 				}
+	// 				else {
+	// 					$sql = "UPDATE tags SET $fields WHERE tagID=?";
+	// 					$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
+	// 					Zotero_DB::queryFromStatement($stmt, array_merge($params, array($tagID)));
+	// 				}
 					
-					$new = array_unique(array_merge($linked, $this->getLinkedItems(true)));
-					$this->setLinkedItems($new);
-				}
-				else {
-					throw $e;
-				}
-			}
+	// 				$new = array_unique(array_merge($linked, $this->getLinkedItems(true)));
+	// 				$this->setLinkedItems($new);
+	// 			}
+	// 			else {
+	// 				throw $e;
+	// 			}
+	// 		}
 			
-			// Linked items
-			if ($full || $this->changed['linkedItems']) {
-				$removeKeys = array();
-				$currentKeys = $this->getLinkedItems(true);
+	// 		// Linked items
+	// 		if ($full || $this->changed['linkedItems']) {
+	// 			$removeKeys = array();
+	// 			$currentKeys = $this->getLinkedItems(true);
 				
-				if ($full) {
-					$sql = "SELECT `key` FROM itemTags JOIN items "
-						. "USING (itemID) WHERE tagID=?";
-					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
-					$dbKeys = Zotero_DB::columnQueryFromStatement($stmt, $tagID);
-					if ($dbKeys) {
-						$removeKeys = array_diff($dbKeys, $currentKeys);
-						$newKeys = array_diff($currentKeys, $dbKeys);
-					}
-					else {
-						$newKeys = $currentKeys;
-					}
-				}
-				else {
-					if (!empty($this->previousData['linkedItems'])) {
-						$removeKeys = array_diff(
-							$this->previousData['linkedItems'], $currentKeys
-						);
-						$newKeys = array_diff(
-							$currentKeys, $this->previousData['linkedItems']
-						);
-					}
-					else {
-						$newKeys = $currentKeys;
-					}
-				}
+	// 			if ($full) {
+	// 				$sql = "SELECT `key` FROM itemTags JOIN items "
+	// 					. "USING (itemID) WHERE tagID=?";
+	// 				$stmt = Zotero_DB::getStatement($sql, true, $shardID);
+	// 				$dbKeys = Zotero_DB::columnQueryFromStatement($stmt, $tagID);
+	// 				if ($dbKeys) {
+	// 					$removeKeys = array_diff($dbKeys, $currentKeys);
+	// 					$newKeys = array_diff($currentKeys, $dbKeys);
+	// 				}
+	// 				else {
+	// 					$newKeys = $currentKeys;
+	// 				}
+	// 			}
+	// 			else {
+	// 				if (!empty($this->previousData['linkedItems'])) {
+	// 					$removeKeys = array_diff(
+	// 						$this->previousData['linkedItems'], $currentKeys
+	// 					);
+	// 					$newKeys = array_diff(
+	// 						$currentKeys, $this->previousData['linkedItems']
+	// 					);
+	// 				}
+	// 				else {
+	// 					$newKeys = $currentKeys;
+	// 				}
+	// 			}
 				
-				if ($removeKeys) {
-					$sql = "DELETE itemTags FROM itemTags JOIN items USING (itemID) "
-						. "WHERE tagID=? AND items.key IN ("
-						. implode(', ', array_fill(0, sizeOf($removeKeys), '?'))
-						. ")";
-					Zotero_DB::query(
-						$sql,
-						array_merge(array($this->id), $removeKeys),
-						$shardID
-					);
-				}
+	// 			if ($removeKeys) {
+	// 				$sql = "DELETE itemTags FROM itemTags JOIN items USING (itemID) "
+	// 					. "WHERE tagID=? AND items.key IN ("
+	// 					. implode(', ', array_fill(0, sizeOf($removeKeys), '?'))
+	// 					. ")";
+	// 				Zotero_DB::query(
+	// 					$sql,
+	// 					array_merge(array($this->id), $removeKeys),
+	// 					$shardID
+	// 				);
+	// 			}
 				
-				if ($newKeys) {
-					$sql = "INSERT INTO itemTags (tagID, itemID) "
-						. "SELECT ?, itemID FROM items "
-						. "WHERE libraryID=? AND `key` IN ("
-						. implode(', ', array_fill(0, sizeOf($newKeys), '?'))
-						. ")";
-					Zotero_DB::query(
-						$sql,
-						array_merge(array($tagID, $this->libraryID), $newKeys),
-						$shardID
-					);
-				}
+	// 			if ($newKeys) {
+	// 				$sql = "INSERT INTO itemTags (tagID, itemID) "
+	// 					. "SELECT ?, itemID FROM items "
+	// 					. "WHERE libraryID=? AND `key` IN ("
+	// 					. implode(', ', array_fill(0, sizeOf($newKeys), '?'))
+	// 					. ")";
+	// 				Zotero_DB::query(
+	// 					$sql,
+	// 					array_merge(array($tagID, $this->libraryID), $newKeys),
+	// 					$shardID
+	// 				);
+	// 			}
 				
-				//Zotero.Notifier.trigger('add', 'collection-item', $this->id . '-' . $itemID);
-			}
+	// 			//Zotero.Notifier.trigger('add', 'collection-item', $this->id . '-' . $itemID);
+	// 		}
 			
-			Zotero_DB::commit();
+	// 		Zotero_DB::commit();
 			
-		}
-		catch (Exception $e) {
-			Zotero_DB::rollback();
-			throw ($e);
-		}
+	// 	}
+	// 	catch (Exception $e) {
+	// 		Zotero_DB::rollback();
+	// 		throw ($e);
+	// 	}
 		
-		// If successful, set values in object
-		if (!$this->id) {
-			$this->id = $tagID;
-		}
-		if (!$this->key) {
-			$this->key = $key;
-		}
+	// 	// If successful, set values in object
+	// 	if (!$this->id) {
+	// 		$this->id = $tagID;
+	// 	}
+	// 	if (!$this->key) {
+	// 		$this->key = $key;
+	// 	}
 		
-		$this->init();
+	// 	$this->init();
 		
-		if ($isNew) {
-			Zotero_Tags::cache($this);
-		}
+	// 	if ($isNew) {
+	// 		Zotero_Tags::cache($this);
+	// 	}
 		
-		return $this->id;
-	}
+	// 	return $this->id;
+	// }
 	
 	
 	public function getLinkedItems($asKeys=false) {
@@ -529,9 +530,9 @@ class Zotero_Tag {
 		// 	return;
 		// }
 		
-		$sql = "SELECT itemID FROM itemTags WHERE name=?";
+		$sql = "SELECT itemID FROM itemTags JOIN items USING (itemID) WHERE name=? AND libraryID=?";
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-		$itemIds = Zotero_DB::columnQueryFromStatement($stmt, $this->name);
+		$itemIds = Zotero_DB::columnQueryFromStatement($stmt, [$this->name, $this->libraryID]);
 		
 		$this->linkedItems = $itemIds ? $itemIds : array();
 		$this->linkedItemsLoaded = true;
@@ -542,7 +543,9 @@ class Zotero_Tag {
 		if (!property_exists($this, $field)) {
 			trigger_error("Invalid property '$field'", E_USER_ERROR);
 		}
-		
+		if (!isset($value)) {
+			return;
+		}
 		// Data validation
 		switch ($field) {
 			case 'id':
@@ -567,7 +570,7 @@ class Zotero_Tag {
 		
 		// Save a copy of the data before changing
 		// TODO: only save previous data if tag exists
-		if ($this->id && $this->exists() && !$this->previousData) {
+		if ($this->id && !$this->previousData) {
 			$this->previousData = $this->serialize();
 		}
 	}

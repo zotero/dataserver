@@ -378,19 +378,23 @@ class ItemsController extends ApiController {
 						if (!$tagIDs) {
 							$this->e404("Tag not found");
 						}
-						
-						foreach ($tagIDs as $tagID) {
-							$tag = new Zotero_Tag;
-							$tag->libraryID = $this->objectLibraryID;
-							$tag->id = $tagID;
-							// Use a real tag name, in case case differs
-							if (!$title) {
-								$title = "Items of Tag ‘" . $tag->name . "’";
+						if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+							$linkedItemKeys = Zotero_Tags::loadLinkedItemsKeys($this->objectLibraryID,  $this->scopeObjectName);
+							$itemKeys = array_merge($itemKeys, $linkedItemKeys);
+						}
+						else {	
+							foreach ($tagIDs as $tagID) {
+								$tag = new Zotero_Tag;
+								$tag->libraryID = $this->objectLibraryID;
+								$tag->id = $tagID;
+								// Use a real tag name, in case case differs
+								if (!$title) {
+									$title = "Items of Tag ‘" . $tag->name . "’";
+								}
+								$itemKeys = array_merge($itemKeys, $tag->getLinkedItems(true));
 							}
-							$itemKeys = array_merge($itemKeys, $tag->getLinkedItems(true));
 						}
 						$itemKeys = array_unique($itemKeys);
-						
 						break;
 					
 					default:

@@ -418,10 +418,10 @@ class Zotero_Items {
 			$negatives = array();
 			
 			foreach ($tagSets as $set) {
-				
+				$lowercaseTags = array_map('strtolower', $set['values']);
 				$tmpSQL = "SELECT itemID FROM items JOIN itemTags USING (itemID) "
-						. "WHERE itemTags.name IN (" . implode(',', array_fill(0, sizeOf($set['values']), '?')) . ")";
-				$ids = Zotero_DB::columnQuery($tmpSQL, $set['values'], $shardID);
+						. "WHERE LOWER(itemTags.name) IN (" . implode(',', array_fill(0, sizeOf($set['values']), '?')) . ")";
+				$ids = Zotero_DB::columnQuery($tmpSQL, $lowercaseTags, $shardID);
 				
 				if (!$ids) {
 					// If no negative tags, skip this tag set

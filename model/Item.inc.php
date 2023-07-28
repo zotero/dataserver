@@ -2166,7 +2166,7 @@ class Zotero_Item extends Zotero_DataObject {
 						$tag->itemID = $this->_id;
 					}
 					Zotero_Tags::bulkInsert($this->_libraryID, $toAdd);
-					Zotero_Tags::bulkDelete($this->_libraryID, $toRemove);
+					Zotero_Tags::bulkDelete($this->_libraryID, $this->_id, $toRemove);
 				}
 				
 				// Related items
@@ -3649,7 +3649,11 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$this->storePreviousData('tags');
-		$this->tags = [];
+
+		$existingTagNames = array_map(function($tag) {
+			return $tag->name;
+		}, $this->tags);
+		$foundNames = [];
 		foreach ($newTags as $newTag) {
 			// Allow the passed array to contain either strings or objects
 			if (is_string($newTag)) {
@@ -3660,10 +3664,28 @@ class Zotero_Item extends Zotero_DataObject {
 				$name = trim($newTag->tag);
 				$type = (int) isset($newTag->type) ? $newTag->type : 0;
 			}
-			
-			$this->tags[] = new Zotero_Tag(null, $this->libraryID, null, $name, $type, 0);
+			$skip = false;
+			foreach($this->tags as $existingTag) {
+				if ($existingTag->name == $name && $existingTag->type == $type) {
+					$skip = true;
+					$foundNames[] = $existingTag->name;
+					break;
+				}
+			}
+			if ($skip) {
+				continue;
+			}
+			$version = Zotero_Libraries::getUpdatedVersion($this->libraryID);
+			$this->tags[] = new Zotero_Tag(null, $this->libraryID, null, $name, $type, $version);
+			$this->changed['tags'] = true;
 		}
-		$this->changed['tags'] = true;
+		$toRemove = array_diff($existingTagNames, $foundNames);
+		if (sizeof($this->tags) !== sizeof($newTags)) {
+			$this->tags = array_filter($this->tags, function($existingTag) use ($toRemove) {
+				return !in_array($existingTag->name, $toRemove);
+			});
+			$this->changed['tags'] = true;
+		}
 	}
 	
 	
