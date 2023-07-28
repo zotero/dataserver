@@ -418,21 +418,10 @@ class Zotero_Items {
 			$negatives = array();
 			
 			foreach ($tagSets as $set) {
-				$tagIDs = array();
-				
-				foreach ($set['values'] as $tag) {
-					$ids = Zotero_Tags::getIDs($libraryID, $tag, true);
-					if (!$ids) {
-						$ids = array(0);
-					}
-					$tagIDs = array_merge($tagIDs, $ids);
-				}
-				
-				$tagIDs = array_unique($tagIDs);
 				
 				$tmpSQL = "SELECT itemID FROM items JOIN itemTags USING (itemID) "
-						. "WHERE tagID IN (" . implode(',', array_fill(0, sizeOf($tagIDs), '?')) . ")";
-				$ids = Zotero_DB::columnQuery($tmpSQL, $tagIDs, $shardID);
+						. "WHERE itemTags.name IN (" . implode(',', array_fill(0, sizeOf($set['values']), '?')) . ")";
+				$ids = Zotero_DB::columnQuery($tmpSQL, $set['values'], $shardID);
 				
 				if (!$ids) {
 					// If no negative tags, skip this tag set
@@ -446,7 +435,7 @@ class Zotero_Items {
 				
 				$ids = $ids ? $ids : array();
 				$sql2 .= " AND itemID " . ($set['negation'] ? "NOT " : "") . " IN ("
-					. implode(',', array_fill(0, sizeOf($ids), '?')) . ")";
+					. implode(',', array_fill(0, sizeof($ids), '?')) . ")";
 				$sqlParams2 = array_merge($sqlParams2, $ids);
 			}
 			
@@ -1728,7 +1717,7 @@ class Zotero_Items {
 						$orderIndex++;
 						
 						$newCreatorTypeID = Zotero_CreatorTypes::getID($newCreatorData->creatorType);
-						
+
 						// Make creator object
 						$newCreator = new Zotero_Creator(null, $item->libraryID, null, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
 						$item->setCreator($orderIndex, $newCreator);

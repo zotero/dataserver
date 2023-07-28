@@ -373,7 +373,7 @@ class Zotero_Libraries {
 		Zotero_DB::beginTransaction();
 		
 		$tables = array(
-			'collections', 'items', 'relations', 'savedSearches', 'tags',
+			'collections', 'items', 'relations', 'savedSearches',
 			'syncDeleteLogIDs', 'syncDeleteLogKeys', 'settings'
 		);
 		

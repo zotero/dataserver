@@ -1527,21 +1527,10 @@ class Zotero_Item extends Zotero_DataObject {
 					if ($this->isEmbeddedImageAttachment()) {
 						throw new Exception("Embedded image attachments cannot have tags");
 					}
-					
 					foreach ($this->tags as $tag) {
-						$tagID = Zotero_Tags::getID($this->libraryID, $tag->name, $tag->type);
-						if ($tagID) {
-							$tagObj = Zotero_Tags::get($this->_libraryID, $tagID);
-						}
-						else {
-							$tagObj = new Zotero_Tag;
-							$tagObj->libraryID = $this->_libraryID;
-							$tagObj->name = $tag->name;
-							$tagObj->type = (int) $tag->type ? $tag->type : 0;
-						}
-						$tagObj->addItem($this->_key);
-						$tagObj->save();
+						$tag->itemID = $itemID;
 					}
+					Zotero_Tags::bulkInsert($this->libraryID, $this->tags);
 				}
  				
 				// Related items
@@ -2174,27 +2163,10 @@ class Zotero_Item extends Zotero_DataObject {
 					$toRemove = array_udiff($oldTags, $newTags, $cmp);
 					
 					foreach ($toAdd as $tag) {
-						$name = $tag->name;
-						$type = $tag->type;
-						
-						$tagID = Zotero_Tags::getID($this->_libraryID, $name, $type);
-						if (!$tagID) {
-							$tag = new Zotero_Tag;
-							$tag->libraryID = $this->_libraryID;
-							$tag->name = $name;
-							$tag->type = $type;
-							$tagID = $tag->save();
-						}
-						
-						$tag = Zotero_Tags::get($this->_libraryID, $tagID);
-						$tag->addItem($this->_key);
-						$tag->save();
+						$tag->itemID = $this->_id;
 					}
-					
-					foreach ($toRemove as $tag) {
-						$tag->removeItem($this->_key);
-						$tag->save();
-					}
+					Zotero_Tags::bulkInsert($this->_libraryID, $toAdd);
+					Zotero_Tags::bulkDelete($this->_libraryID, $toRemove);
 				}
 				
 				// Related items
@@ -3646,28 +3618,11 @@ class Zotero_Item extends Zotero_DataObject {
 	 *
 	 * @return	array			Array of Zotero.Tag objects
 	 */
-	public function getTags($asIDs=false) {
-		if (!$this->id) {
-			return array();
+	public function getTags() {
+		if ($this->id && !$this->loaded['tags']) {
+			$this->loadTags();
 		}
-		
-		$sql = "SELECT tagID FROM tags JOIN itemTags USING (tagID)
-				WHERE itemID=? ORDER BY name";
-		$tagIDs = Zotero_DB::columnQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
-		if (!$tagIDs) {
-			return array();
-		}
-		
-		if ($asIDs) {
-			return $tagIDs;
-		}
-		
-		$tagObjs = array();
-		foreach ($tagIDs as $tagID) {
-			$tag = Zotero_Tags::get($this->libraryID, $tagID, true);
-			$tagObjs[] = $tag;
-		}
-		return $tagObjs;
+		return $this->tags;
 	}
 	
 	
@@ -3696,17 +3651,17 @@ class Zotero_Item extends Zotero_DataObject {
 		$this->storePreviousData('tags');
 		$this->tags = [];
 		foreach ($newTags as $newTag) {
-			$obj = new stdClass;
 			// Allow the passed array to contain either strings or objects
 			if (is_string($newTag)) {
-				$obj->name = trim($newTag);
-				$obj->type = 0;
+				$name = trim($newTag);
+				$type = 0;
 			}
 			else {
-				$obj->name = trim($newTag->tag);
-				$obj->type = (int) isset($newTag->type) ? $newTag->type : 0;
+				$name = trim($newTag->tag);
+				$type = (int) isset($newTag->type) ? $newTag->type : 0;
 			}
-			$this->tags[] = $obj;
+			
+			$this->tags[] = new Zotero_Tag(null, $this->libraryID, null, $name, $type, 0);
 		}
 		$this->changed['tags'] = true;
 	}
@@ -4747,14 +4702,14 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		Z_Core::debug("Loading tags for item $this->id");
 		
-		$sql = "SELECT tagID FROM itemTags JOIN tags USING (tagID) WHERE itemID=?";
-		$tagIDs = Zotero_DB::columnQuery(
+		$sql = "SELECT * FROM itemTags WHERE itemID=?";
+		$tags = Zotero_DB::query(
 			$sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID)
 		);
 		$this->tags = [];
-		if ($tagIDs) {
-			foreach ($tagIDs as $tagID) {
-				$this->tags[] = Zotero_Tags::get($this->libraryID, $tagID, true);
+		if ($tags) {
+			foreach ($tags as $tag) {
+				$this->tags[] = new Zotero_Tag($tag['tagID'], $this->libraryID, $tag['itemID'], $tag['name'], $tag['type'], $tag['version']);
 			}
 		}
 		$this->loaded['tags'] = true;

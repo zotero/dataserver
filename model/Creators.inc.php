@@ -29,13 +29,6 @@ class Zotero_Creators {
 	
 	protected static $ZDO_object = 'creator';
 	
-	protected static $primaryFields = array(
-		'id' => 'creatorID',
-		'libraryID' => '',
-		'firstName' => '',
-		'lastName' => '',
-		'fieldMode' => ''
-	);
 	private static $fields = array(
 		'firstName', 'lastName', 'fieldMode'
 	);

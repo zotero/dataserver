@@ -187,13 +187,11 @@ class TagsController extends ApiController {
 				$tagNames = !empty($this->queryParams['tag'])
 					? explode(' || ', $this->queryParams['tag']): array();
 				Zotero_DB::beginTransaction();
+				$tagIDs = [];
 				foreach ($tagNames as $tagName) {
-					$tagIDs = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
-					foreach ($tagIDs as $tagID) {
-						$tag = Zotero_Tags::get($this->objectLibraryID, $tagID, true);
-						Zotero_Tags::delete($this->objectLibraryID, $tag->key, $this->objectUserID);
-					}
+					$tagIDs[] = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
 				}
+				Zotero_Tags::bulkDelete($this->objectLibraryID, $tagIDs);
 				Zotero_DB::commit();
 				$this->e204();
 			}

@@ -27,33 +27,25 @@
 class Zotero_Tag {
 	private $id;
 	private $libraryID;
-	private $key;
+	private $itemID;
 	private $name;
 	private $type;
-	private $dateAdded;
-	private $dateModified;
 	private $version;
 	
-	private $loaded;
 	private $changed;
 	private $previousData;
 	
 	private $linkedItemsLoaded = false;
 	private $linkedItems = array();
 	
-	public function __construct() {
-		$numArgs = func_num_args();
-		if ($numArgs) {
-			throw new Exception("Constructor doesn't take any parameters");
-		}
-		
-		$this->init();
-	}
-	
-	
-	private function init() {
-		$this->loaded = false;
-		
+	public function __construct($id, $libraryID, $itemID, $name, $type, $version) {
+		$this->id = $id;
+		$this->libraryID = $libraryID;
+		$this->itemID = $itemID;
+		$this->name = $name;
+		$this->type = $type;
+		$this->version = $version;
+
 		$this->previousData = array();
 		$this->linkedItemsLoaded = false;
 		
@@ -61,8 +53,6 @@ class Zotero_Tag {
 		$props = array(
 			'name',
 			'type',
-			'dateAdded',
-			'dateModified',
 			'linkedItems'
 		);
 		foreach ($props as $prop) {
@@ -70,11 +60,7 @@ class Zotero_Tag {
 		}
 	}
 	
-	
 	public function __get($field) {
-		if (($this->id || $this->key) && !$this->loaded) {
-			$this->load(true);
-		}
 		
 		if (!property_exists('Zotero_Tag', $field)) {
 			throw new Exception("Zotero_Tag property '$field' doesn't exist");
@@ -88,23 +74,12 @@ class Zotero_Tag {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
-			case 'key':
-				if ($this->loaded) {
-					throw new Exception("Cannot set $field after tag is already loaded");
-				}
+			case 'itemID':
 				$this->checkValue($field, $value);
 				$this->$field = $value;
 				return;
 		}
 		
-		if ($this->id || $this->key) {
-			if (!$this->loaded) {
-				$this->load(true);
-			}
-		}
-		else {
-			$this->loaded = true;
-		}
 		
 		$this->checkValue($field, $value);
 		
@@ -115,19 +90,6 @@ class Zotero_Tag {
 	}
 	
 	
-	/**
-	 * Check if tag exists in the database          
-	 *
-	 * @return	bool			TRUE if the item exists, FALSE if not
-	 */
-	public function exists() {
-		if (!$this->id) {
-			trigger_error('$this->id not set');
-		}
-		
-		$sql = "SELECT COUNT(*) FROM tags WHERE tagID=?";
-		return !!Zotero_DB::valueQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
-	}
 	
 	
 	public function addItem($key) {
@@ -159,11 +121,11 @@ class Zotero_Tag {
 	
 	
 	public function hasChanged() {
-		// Exclude 'dateModified' from test
+		// Exclude 'dateg' from test
 		$changed = $this->changed;
-		if (!empty($changed['dateModified'])) {
-			unset($changed['dateModified']);
-		}
+		// if (!empty($changed['dateModified'])) {
+		// 	unset($changed['dateModified']);
+		// }
 		return in_array(true, array_values($changed));
 	}
 	
@@ -193,21 +155,15 @@ class Zotero_Tag {
 			$key = $this->key ? $this->key : Zotero_ID::getKey();
 			$timestamp = Zotero_DB::getTransactionTimestamp();
 			$dateAdded = $this->dateAdded ? $this->dateAdded : $timestamp;
-			$dateModified = $this->dateModified ? $this->dateModified : $timestamp;
 			$version = ($this->changed['name'] || $this->changed['type'])
 				? Zotero_Libraries::getUpdatedVersion($this->libraryID)
 				: $this->version;
 			
-			$fields = "name=?, `type`=?, dateAdded=?, dateModified=?,
-				libraryID=?, `key`=?, serverDateModified=?, version=?";
+			$fields = "name=?, itemID=?, `type`=?, version=?";
 			$params = array(
 				$this->name,
+				$this->itemID,
 				$this->type ? $this->type : 0,
-				$dateAdded,
-				$dateModified,
-				$this->libraryID,
-				$key,
-				$timestamp,
 				$version
 			);
 			
@@ -348,18 +304,6 @@ class Zotero_Tag {
 			
 			Zotero_DB::commit();
 			
-			Zotero_Tags::cachePrimaryData(
-				array(
-					'id' => $tagID,
-					'libraryID' => $this->libraryID,
-					'key' => $key,
-					'name' => $this->name,
-					'type' => $this->type ? $this->type : 0,
-					'dateAdded' => $dateAdded,
-					'dateModified' => $dateModified,
-					'version' => $version
-				)
-			);
 		}
 		catch (Exception $e) {
 			Zotero_DB::rollback();
@@ -444,12 +388,7 @@ class Zotero_Tag {
 	
 	public function serialize() {
 		$obj = array(
-			'primary' => array(
-				'tagID' => $this->id,
-				'dateAdded' => $this->dateAdded,
-				'dateModified' => $this->dateModified,
-				'key' => $this->key
-			),
+			'tagID' => $this->id,
 			'name' => $this->name,
 			'type' => $this->type,
 			'linkedItems' => $this->getLinkedItems(true),
@@ -460,9 +399,6 @@ class Zotero_Tag {
 	
 	
 	public function toResponseJSON() {
-		if (!$this->loaded) {
-			$this->load();
-		}
 		
 		$json = [
 			'tag' => $this->name
@@ -497,10 +433,6 @@ class Zotero_Tag {
 	
 	
 	public function toJSON() {
-		if (!$this->loaded) {
-			$this->load();
-		}
-		
 		$arr['tag'] = $this->name;
 		$arr['type'] = $this->type;
 		
@@ -538,7 +470,6 @@ class Zotero_Tag {
 		$xml->id = Zotero_URI::getTagURI($this);
 		
 		$xml->published = Zotero_Date::sqlToISO8601($this->dateAdded);
-		$xml->updated = Zotero_Date::sqlToISO8601($this->dateModified);
 		
 		$link = $xml->addChild("link");
 		$link['rel'] = "self";
@@ -584,107 +515,25 @@ class Zotero_Tag {
 	}
 	
 	
-	private function load() {
-		$libraryID = $this->libraryID;
-		$id = $this->id;
-		$key = $this->key;
-		
-		if (!$libraryID) {
-			throw new Exception("Library ID not set");
-		}
-		
-		if (!$id && !$key) {
-			throw new Exception("ID or key not set");
-		}
-		
-		// Cache tag data for the entire library
-		if (true) {
-			if ($id) {
-				Z_Core::debug("Loading data for tag $this->libraryID/$this->id");
-				$row = Zotero_Tags::getPrimaryDataByID($libraryID, $id);
-			}
-			else {
-				Z_Core::debug("Loading data for tag $this->libraryID/$this->key");
-				$row = Zotero_Tags::getPrimaryDataByKey($libraryID, $key);
-			}
-			
-			$this->loaded = true;
-			
-			if (!$row) {
-				return;
-			}
-			
-			if ($row['libraryID'] != $libraryID) {
-				throw new Exception("libraryID {$row['libraryID']} != $this->libraryID");
-			}
-			
-			foreach ($row as $key=>$val) {
-				$this->$key = $val;
-			}
-		}
-		// Load tag row individually
-		else {
-			// Use cached check for existence if possible
-			if ($libraryID && $key) {
-				if (!Zotero_Tags::existsByLibraryAndKey($libraryID, $key)) {
-					$this->loaded = true;
-					return;
-				}
-			}
-			
-			$shardID = Zotero_Shards::getByLibraryID($libraryID);
-			
-			$sql = Zotero_Tags::getPrimaryDataSQL();
-			if ($id) {
-				$sql .= "tagID=?";
-				$stmt = Zotero_DB::getStatement($sql, false, $shardID);
-				$data = Zotero_DB::rowQueryFromStatement($stmt, $id);
-			}
-			else {
-				$sql .= "libraryID=? AND `key`=?";
-				$stmt = Zotero_DB::getStatement($sql, false, $shardID);
-				$data = Zotero_DB::rowQueryFromStatement($stmt, array($libraryID, $key));
-			}
-			
-			$this->loaded = true;
-			
-			if (!$data) {
-				return;
-			}
-			
-			if ($data['libraryID'] != $libraryID) {
-				throw new Exception("libraryID {$data['libraryID']} != $libraryID");
-			}
-			
-			foreach ($data as $k=>$v) {
-				$this->$k = $v;
-			}
-		}
-	}
-	
 	
 	private function loadLinkedItems() {
 		Z_Core::debug("Loading linked items for tag $this->id");
 		
-		if (!$this->id && !$this->key) {
-			$this->linkedItemsLoaded = true;
-			return;
-		}
+		// if (!$this->id) {
+		// 	$this->linkedItemsLoaded = true;
+		// 	return;
+		// }
 		
-		if (!$this->loaded) {
-			$this->load();
-		}
+		// if (!$this->id) {
+		// 	$this->linkedItemsLoaded = true;
+		// 	return;
+		// }
 		
-		if (!$this->id) {
-			$this->linkedItemsLoaded = true;
-			return;
-		}
-		
-		$sql = "SELECT `key` FROM itemTags JOIN items USING (itemID) WHERE tagID=?";
+		$sql = "SELECT itemID FROM itemTags WHERE name=?";
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
-		$keys = Zotero_DB::columnQueryFromStatement($stmt, $this->id);
+		$itemIds = Zotero_DB::columnQueryFromStatement($stmt, $this->name);
 		
-		$this->linkedItems = $keys ? $keys : array();
+		$this->linkedItems = $itemIds ? $itemIds : array();
 		$this->linkedItemsLoaded = true;
 	}
 	
@@ -698,21 +547,8 @@ class Zotero_Tag {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
+			case 'itemID':
 				if (!Zotero_Utilities::isPosInt($value)) {
-					$this->invalidValueError($field, $value);
-				}
-				break;
-			
-			case 'key':
-				// 'I' used to exist in client
-				if (!preg_match('/^[23456789ABCDEFGHIJKLMNPQRSTUVWXYZ]{8}$/', $value)) {
-					$this->invalidValueError($field, $value);
-				}
-				break;
-			
-			case 'dateAdded':
-			case 'dateModified':
-				if (!preg_match("/^[0-9]{4}\-[0-9]{2}\-[0-9]{2} ([0-1][0-9]|[2][0-3]):([0-5][0-9]):([0-5][0-9])$/", $value)) {
 					$this->invalidValueError($field, $value);
 				}
 				break;

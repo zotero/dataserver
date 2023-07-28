@@ -24,25 +24,102 @@
     ***** END LICENSE BLOCK *****
 */
 
-class Zotero_Tags extends Zotero_ClassicDataObjects {
+class Zotero_Tags {
 	public static $maxLength = 255;
 	
 	protected static $ZDO_object = 'tag';
 	
-	protected static $primaryFields = array(
-		'id' => 'tagID',
-		'libraryID' => '',
-		'key' => '',
-		'name' => '',
-		'type' => '',
-		'dateAdded' => '',
-		'dateModified' => '',
-		'version' => ''
-	);
 	
 	private static $tagsByID = array();
 	private static $namesByHash = array();
 	
+	public static function bulkDelete($libraryID, $tags) {
+		if (sizeof($tags) == 0){
+			return;
+		}
+		$placeholdersArray = array();
+		$paramList = array();
+		// Allow Zotero_Tag object and array of ints
+		foreach ($tags as $tag) {
+			if (gettype($tag) == 'object') {
+				$id = $tag->id;
+			}
+			else if (gettype($tag) == 'integer'){
+				$id = $tag;
+			}
+
+			if (!isset($id)) {
+				throw new Exception("Delete not possible for tag without a set tagID");
+			}
+			$placeholdersArray[] = "?";
+			$paramList = array_merge($paramList, [
+				$id 
+			 ]);
+		}
+		$placeholdersStr = implode(", ", $placeholdersArray);
+		$sql = "DELETE FROM itemTags WHERE tagID in ($placeholdersStr)";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		Zotero_DB::queryFromStatement($stmt, $paramList);
+		return $tags;
+	}
+
+
+	public static function bulkInsert($libraryID, $tags) {
+		$placeholdersArray = array();
+		$paramList = array();
+		foreach ($tags as $tag) {
+			if (isset($tag->id)) {
+				throw new Exception("Insert not possible for tag with a set tagID");
+			}
+			$tag->id = Zotero_ID::get('tags');
+			$placeholdersArray[] = "(?, ?, ?, ?, ?)";
+			$paramList = array_merge($paramList, [
+				$tag->id,
+				$tag->itemID,
+				$tag->name,
+				$tag->type,
+				$tag->version,
+			 ]);
+		}
+		$placeholdersStr = implode(", ", $placeholdersArray);
+		$sql = "INSERT INTO itemTags (tagID, itemID, name, type, version) VALUES $placeholdersStr";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		Zotero_DB::queryFromStatement($stmt, $paramList);
+		return $tags;
+	}
+
+	public static function bulkGet($libraryID, $tagIDs) {
+		$placeholders = implode(',', array_fill(0, sizeOf($tagIDs), '?'));
+
+		$sql = "SELECT name, count(*) as count FROM itemTags WHERE tagID in ($placeholders) GROUP BY name";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		$tags = Zotero_DB::queryFromStatement($stmt, $tagIDs);
+		$tagObjects = [];
+		foreach($tags as $tag) {
+			$tagObjects[] = new Zotero_Tag(null, $libraryID, null, $tag['name'], null, null);
+		}
+		
+		return $tagObjects;
+	}
+
+	public static function delete($libraryID, $tagIDs) {
+		$placeholders = implode(',', array_fill(0, sizeOf($tagIDs), '?'));
+
+		$sql = "SELECT name, count(*) as count FROM itemTags WHERE tagID in ($placeholders) GROUP BY name";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		$tags = Zotero_DB::queryFromStatement($stmt, $tagIDs);
+		$tagObjects = [];
+		foreach($tags as $tag) {
+			$tagObjects[] = new Zotero_Tag(null, $libraryID, null, $tag['name'], null, null);
+		}
+		
+		return $tagObjects;
+	}
+
 	/*
 	 * Returns a tag and type for a given tagID
 	 */
@@ -89,7 +166,7 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		
 		// TODO: cache
 		
-		$sql = "SELECT tagID FROM tags WHERE ";
+		$sql = "SELECT tagID FROM itemTags WHERE ";
 		if ($caseInsensitive) {
 			$sql .= "LOWER(name)=?";
 			$params = [strtolower($name)];
@@ -98,7 +175,7 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 			$sql .= "name=?";
 			$params = [$name];
 		}
-		$sql .= " AND type=? AND libraryID=?";
+		$sql .= " AND type=?";
 		array_push($params, $type, $libraryID);
 		$tagID = Zotero_DB::valueQuery($sql, $params, Zotero_Shards::getByLibraryID($libraryID));
 		
@@ -113,7 +190,7 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		// Default empty library
 		if ($libraryID === 0) return [];
 		
-		$sql = "SELECT tagID FROM tags WHERE libraryID=? AND name";
+		$sql = "SELECT tagID FROM itemTags JOIN items USING (itemID) WHERE libraryID = ? AND name";
 		if ($caseInsensitive) {
 			$sql .= " COLLATE utf8mb4_unicode_ci ";
 		}
@@ -136,8 +213,8 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		
 		$shardID = Zotero_Shards::getByLibraryID($libraryID);
 		
-		$sql = "SELECT SQL_CALC_FOUND_ROWS DISTINCT tagID FROM tags "
-			. "JOIN itemTags USING (tagID) WHERE libraryID=? ";
+		$sql = "SELECT SQL_CALC_FOUND_ROWS DISTINCT tagID FROM itemTags "
+			. "JOIN items USING (itemID) WHERE libraryID=? ";
 		$sqlParams = array($libraryID);
 		
 		// Pass a list of tagIDs, for when the initial search is done via SQL
@@ -248,10 +325,7 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 		
 		$results['total'] = Zotero_DB::valueQuery("SELECT FOUND_ROWS()", false, $shardID);
 		if ($ids) {
-			$tags = array();
-			foreach ($ids as $id) {
-				$tags[] = Zotero_Tags::get($libraryID, $id);
-			}
+			$tags = Zotero_Tags::bulkGet($libraryID, $ids);
 			$results['results'] = $tags;
 		}
 		
