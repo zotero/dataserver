@@ -48,7 +48,7 @@ foreach ($shardIDs as $shardID) {
 	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP CONSTRAINT `itemTags_ibfk_2`;", false, $shardID);
 
 	// Create new itemTags table
-	Zotero_Admin_DB::query("CREATE TABLE `itemTagsNew` ( `tagID` BIGINT UNSIGNED NOT NULL, `itemID` BIGINT UNSIGNED NOT NULL, `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, `type` tinyint(1) unsigned NOT NULL DEFAULT '0', `version` int(10) unsigned NOT NULL DEFAULT '1', PRIMARY KEY (`tagID`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;", false, $shardID);
+	Zotero_Admin_DB::query("CREATE TABLE `itemTagsNew` ( `tagID` BIGINT UNSIGNED NOT NULL, `itemID` BIGINT UNSIGNED NOT NULL, `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, `type` tinyint(1) unsigned NOT NULL DEFAULT '0', `version` int(10) unsigned NOT NULL DEFAULT '1', PRIMARY KEY (`tagID`, `itemID`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;", false, $shardID);
 
 	// Add foreign key to item constraint
 	Zotero_Admin_DB::query("ALTER TABLE `itemTagsNew` ADD CONSTRAINT `itemTags_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;", false, $shardID);
