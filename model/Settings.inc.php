@@ -228,20 +228,28 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			}
 			break;
 		
-		// Integer or string settings
-		case 'lastPageIndex':
-			if (!is_integer($value) && !is_string($value)) {
-				throw new Exception("'value' must be an integer or string", Z_ERROR_INVALID_INPUT);
-			}
-			if ($value === "") {
-				throw new Exception("'value' cannot be empty", Z_ERROR_INVALID_INPUT);
-			}
-			break;
-		
 		// Integer settings
 		case 'lastRead':
 			if (!is_integer($value)) {
 				throw new Exception("'value' must be an integer", Z_ERROR_INVALID_INPUT);
+			}
+			break;
+		
+		case 'lastPageIndex':
+			if (!is_integer($value) && !is_string($value) && !is_float($value)) {
+				throw new Exception("'value' must be an integer, string, or decimal", Z_ERROR_INVALID_INPUT);
+			}
+			// Snapshots use 0 <= scrollYPercent <= 100 with 0-1 decimal places
+			if (is_float($value)) {
+				if ($value < 0 || $value > 100) {
+					throw new Exception("Decimal value must be between 0 and 100", Z_ERROR_INVALID_INPUT);
+				}
+				if ($value != round($value, 1)) {
+					throw new Exception("Decimal value must be to one decimal place", Z_ERROR_INVALID_INPUT);
+				}
+			}
+			if ($value === "") {
+				throw new Exception("'value' cannot be empty", Z_ERROR_INVALID_INPUT);
 			}
 			break;
 		
