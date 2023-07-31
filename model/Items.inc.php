@@ -1719,7 +1719,7 @@ class Zotero_Items {
 						$newCreatorTypeID = Zotero_CreatorTypes::getID($newCreatorData->creatorType);
 
 						// Make creator object
-						$newCreator = new Zotero_Creator(null, $item->libraryID, null, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
+						$newCreator = new Zotero_Creator(null, $item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
 						$item->setCreator($orderIndex, $newCreator);
 					}
 

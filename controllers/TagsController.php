@@ -172,6 +172,14 @@ class TagsController extends ApiController {
 							}
 							$title = "Tags of '" . $item->getDisplayTitle() . "'";
 							$tagIDs = $item->getTags(true);
+							if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+								$tags = $item->getTags(true);
+								$tagIDs = array_map(function($tag) {
+									return $tag->id;
+								}, $tags);
+							} else {
+								$tagIDs = $item->getTags(true);
+							}
 							break;
 						
 						default:

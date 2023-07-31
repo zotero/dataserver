@@ -52,19 +52,26 @@ class Zotero_Creators {
 		}, $result);
 		return array_diff($creatorIDs, $existingIDs);
 	}
+	
+	public static function bulkDelete($libraryID, $itemID, $creatorOrdersArray) {
+		$placeholders = implode(', ', array_fill(0, sizeOf($creatorOrdersArray), '?'));
+		$sql = "DELETE FROM itemCreators WHERE itemID=? AND orderIndex IN ($placeholders)";
+		Zotero_DB::query($sql, array_merge([$itemID],$creatorOrdersArray), Zotero_Shards::getByLibraryID($libraryID));
+	}
 
-	public static function bulkInsert($libraryID, $orderedCreators) {
+	public static function bulkInsert($libraryID, $itemID, $creators) {
 		$placeholdersArray = array();
 		$paramList = array();
-		foreach ($orderedCreators as $order => $creator) {
-			if (isset($creator->id)) {
+		foreach ($creators as $creator) {
+			$creatorID = $creator->id;
+			if (isset($creatorID)) {
 				throw new Exception("Insert not possible for creator with a set creatorID");
 			}
 			$creator->id = Zotero_ID::get('creators');
 			$placeholdersArray[] = "(?, ?, ?, ?, ?, ?, ?)";
 			$paramList = array_merge($paramList, [
 				$creator->id,
-				$creator->itemID,
+				$itemID,
 				$creator->firstName,
 				$creator->lastName,
 				$creator->fieldMode,
@@ -77,7 +84,6 @@ class Zotero_Creators {
 
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
 		Zotero_DB::queryFromStatement($stmt, $paramList);
-		return $orderedCreators;
 	}
 	
 	

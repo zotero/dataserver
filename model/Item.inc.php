@@ -1223,16 +1223,13 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!empty($this->changed['creators'])) {
 					$indexes = array_keys($this->changed['creators']);
 					
-					// TODO: group queries
-					
 					$creatorsArray = [];
 					foreach ($indexes as $orderIndex) {
 						$creator = $this->getCreator($orderIndex);
-						$creator->itemID = $itemID;
 						$creatorsArray[] = $creator;
 					}
 					
-					Zotero_Creators::bulkInsert($this->libraryID, $creatorsArray);
+					Zotero_Creators::bulkInsert($this->libraryID, $itemID, $creatorsArray);
 
 				}
 				
@@ -1527,10 +1524,7 @@ class Zotero_Item extends Zotero_DataObject {
 					if ($this->isEmbeddedImageAttachment()) {
 						throw new Exception("Embedded image attachments cannot have tags");
 					}
-					foreach ($this->tags as $tag) {
-						$tag->itemID = $itemID;
-					}
-					Zotero_Tags::bulkInsert($this->libraryID, $this->tags);
+					Zotero_Tags::bulkInsert($this->libraryID, $itemID, $this->tags);
 				}
  				
 				// Related items
@@ -1708,26 +1702,14 @@ class Zotero_Item extends Zotero_DataObject {
 				//
 				if (!empty($this->changed['creators'])) {
 					$indexes = array_keys($this->changed['creators']);
-					
+
+					$toAdd = [];
 					foreach ($indexes as $orderIndex) {
-						Z_Core::debug('Creator in position ' . $orderIndex . ' has changed', 4);
 						$creator = $this->getCreator($orderIndex);
-						
-						// TODO: can do one update instead of delete and save()
-						$sql2 = 'DELETE FROM itemCreators WHERE itemID=? AND orderIndex=?';
-						Zotero_DB::query($sql2, array($this->_id, $orderIndex), $shardID);
-						
-						if (!$creator) {
-							continue;
-						}
-						
-						if ($creator->hasChanged() || !isset($creator->id)) {
-							$creator->itemID = $this->_id;
-							Z_Core::debug("Auto-saving changed creator {$creator->id}");
-							$creator->save();
-						}
-						
+						$toAdd[] = $creator;
 					}
+					Zotero_Creators::bulkDelete($this->libraryID, $this->_id, $indexes);
+					Zotero_Creators::bulkInsert($this->libraryID, $this->_id, $toAdd);
 					
 				}
 				
@@ -2162,10 +2144,7 @@ class Zotero_Item extends Zotero_DataObject {
 					$toAdd = array_udiff($newTags, $oldTags, $cmp);
 					$toRemove = array_udiff($oldTags, $newTags, $cmp);
 					
-					foreach ($toAdd as $tag) {
-						$tag->itemID = $this->_id;
-					}
-					Zotero_Tags::bulkInsert($this->_libraryID, $toAdd);
+					Zotero_Tags::bulkInsert($this->_libraryID, $this->_id,  $toAdd);
 					Zotero_Tags::bulkDelete($this->_libraryID, $this->_id, $toRemove);
 				}
 				
@@ -3676,7 +3655,7 @@ class Zotero_Item extends Zotero_DataObject {
 				continue;
 			}
 			$version = Zotero_Libraries::getUpdatedVersion($this->libraryID);
-			$this->tags[] = new Zotero_Tag(null, $this->libraryID, null, $name, $type, $version);
+			$this->tags[] = new Zotero_Tag(null, $this->libraryID, $name, $type, $version);
 			$this->changed['tags'] = true;
 		}
 		$toRemove = array_diff($existingTagNames, $foundNames);
@@ -4685,7 +4664,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 
 		foreach ($creators as $creator) {
-			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, null, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
+			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
 
 			$this->creators[$creator['orderIndex']] = $creatorObj;
 		}
@@ -4731,7 +4710,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$this->tags = [];
 		if ($tags) {
 			foreach ($tags as $tag) {
-				$this->tags[] = new Zotero_Tag($tag['tagID'], $this->libraryID, $tag['itemID'], $tag['name'], $tag['type'], $tag['version']);
+				$this->tags[] = new Zotero_Tag($tag['tagID'], $this->libraryID, $tag['name'], $tag['type'], $tag['version']);
 			}
 		}
 		$this->loaded['tags'] = true;

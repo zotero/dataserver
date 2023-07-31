@@ -27,7 +27,6 @@
 class Zotero_Creator {
 	private $id;
 	private $libraryID;
-	private $itemID;
 	private $firstName = '';
 	private $lastName = '';
 	private $shortName = '';
@@ -38,10 +37,9 @@ class Zotero_Creator {
 
 	
 	
-	public function __construct($id, $libraryID, $itemID, $firstName, $lastName, $fieldMode, $creatorTypeID, $orderIndex) {
+	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode, $creatorTypeID, $orderIndex) {
 		$this->id = $id;
 		$this->libraryID = $libraryID;
-		$this->itemID = $itemID;
 		$this->firstName = $firstName;
 		$this->lastName = $lastName;
 		$this->fieldMode = $fieldMode;
@@ -50,7 +48,6 @@ class Zotero_Creator {
 		$this->changed = array();
 		$props = array(
 			'libraryID',
-			'itemID',
 			'firstName',
 			'lastName',
 			'shortName',
@@ -78,7 +75,6 @@ class Zotero_Creator {
 		switch ($field) {
 			case 'id':
 			case 'libraryID':
-			case 'itemID':
 				$this->checkValue($field, $value);
 				$this->$field = $value;
 				return;
@@ -104,132 +100,6 @@ class Zotero_Creator {
 	}
 	
 	
-	public function save($userID=false) {
-		if (!$this->libraryID) {
-			trigger_error("Library ID must be set before saving", E_USER_ERROR);
-		}
-		
-		Zotero_Creators::editCheck($this, $userID);
-		
-		// If empty, move on
-		if ($this->firstName === '' && $this->lastName === '') {
-			throw new Exception('First and last name are empty');
-		}
-		
-		if ($this->fieldMode == 1 && $this->firstName !== '') {
-			throw new Exception('First name must be empty in single-field mode');
-		}
-		
-		if (!$this->hasChanged() && isset($this->id)) {
-			Z_Core::debug("Creator $this->id has not changed");
-			return false;
-		}
-		
-		Zotero_DB::beginTransaction();
-		
-		try {
-			$creatorID = $this->id ? $this->id : Zotero_ID::get('creators');
-			$isNew = !$this->id;
-			
-			Z_Core::debug("Saving creator $this->id");
-			
-			$timestamp = Zotero_DB::getTransactionTimestamp();
-			
-			$fields = "itemID=?, firstName=?, lastName=?, fieldMode=?, creatorTypeID=?, orderIndex=?";
-			$params = array(
-				$this->itemID,
-				$this->firstName,
-				$this->lastName,
-				$this->fieldMode,
-				$this->creatorTypeID,
-				$this->orderIndex
-			);
-			$shardID = Zotero_Shards::getByLibraryID($this->libraryID);
-			
-			try {
-				if ($isNew) {
-					$sql = "INSERT INTO itemCreators SET creatorID=?, $fields";
-					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
-					Zotero_DB::queryFromStatement($stmt, array_merge(array($creatorID), $params));
-					
-				}
-				else {
-					$sql = "UPDATE itemCreators SET $fields WHERE creatorID=?";
-					$stmt = Zotero_DB::getStatement($sql, true, $shardID);
-					Zotero_DB::queryFromStatement($stmt, array_merge($params, array($creatorID)));
-				}
-			}
-			catch (Exception $e) {
-				if (strpos($e->getMessage(), " too long") !== false) {
-					if (strlen($this->firstName) > 255) {
-						$name = $this->firstName;
-					}
-					else if (strlen($this->lastName) > 255) {
-						$name = $this->lastName;
-					}
-					else {
-						throw $e;
-					}
-					$name = mb_substr($name, 0, 50);
-					throw new Exception(
-						"=Creator value '{$name}…' too long",
-						Z_ERROR_CREATOR_TOO_LONG
-					);
-				}
-				
-				throw $e;
-			}
-			
-			// The client updates the mod time of associated items here, but
-			// we don't, because either A) this is from syncing, where appropriate
-			// mod times come from the client or B) the change is made through
-			// $item->setCreator(), which updates the mod time.
-			//
-			// If the server started to make other independent creator changes,
-			// linked items would need to be updated.
-			
-			Zotero_DB::commit();
-			
-		}
-		catch (Exception $e) {
-			Zotero_DB::rollback();
-			throw ($e);
-		}
-		
-		// If successful, set values in object
-		if (!$this->id) {
-			$this->id = $creatorID;
-		}
-
-		
-		if ($isNew) {
-			Zotero_Creators::cache($this);
-		}
-		
-		// TODO: invalidate memcache?
-	}
-	
-	
-	public function getLinkedItems() {
-		if (!$this->id) {
-			return array();
-		}
-		
-		$items = array();
-		$sql = "SELECT itemID FROM itemCreators WHERE creatorID=?";
-		$itemIDs = Zotero_DB::columnQuery(
-			$sql,
-			$this->id,
-			Zotero_Shards::getByLibraryID($this->libraryID)
-		);
-		if (!$itemIDs) {
-			return $items;
-		}
-		foreach ($itemIDs as $itemID) {
-			$items[] = Zotero_Items::get($this->libraryID, $itemID);
-		}
-		return $items;
-	}
 	
 	
 	public function equals($creator) {		

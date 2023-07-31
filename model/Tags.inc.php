@@ -78,13 +78,12 @@ class Zotero_Tags {
 	}
 
 
-	public static function bulkInsert($libraryID, $tags) {
+	public static function bulkInsert($libraryID, $itemID, $tags) {
 		if (sizeof($tags) == 0){
 			return;
 		}
 		$placeholdersArray = array();
 		$paramList = array();
-		$itemIDs = [];
 		foreach ($tags as $tag) {
 			if (isset($tag->id)) {
 				throw new Exception("Insert not possible for tag with a set tagID");
@@ -93,12 +92,11 @@ class Zotero_Tags {
 	
 			$existinTagData = Zotero_DB::query($existingTagsSql, [$tag->name, $libraryID], Zotero_Shards::getByLibraryID($libraryID));
 	
-			$itemIDs[] = $tag->itemID;
 			$tag->id = sizeof($existinTagData) > 0 ? $existinTagData[0]['tagID'] : Zotero_ID::get('tags');
 			$placeholdersArray[] = "(?, ?, ?, ?, ?)";
 			$paramList = array_merge($paramList, [
 				$tag->id,
-				$tag->itemID,
+				$itemID,
 				$tag->name,
 				$tag->type,
 				sizeof($existinTagData) > 0 ? $existinTagData[0]['version'] : $tag->version,
@@ -125,20 +123,24 @@ class Zotero_Tags {
 		$tags = Zotero_DB::queryFromStatement($stmt, $tagIDs);
 		$tagObjects = [];
 		foreach($tags as $tag) {
-			$tagObjects[] = new Zotero_Tag($tag['tagID'], $libraryID, null, $tag['name'], $tag['type'], null);
+			$tagObjects[] = new Zotero_Tag($tag['tagID'], $libraryID, $tag['name'], $tag['type'], null);
 		}
 		
 		return $tagObjects;
 	}
 
-	public static function loadLinkedItemsKeys($libraryID, $tagID) {
-		$sql = "SELECT `key` FROM itemTags JOIN items USING (itemID) WHERE tagID=? AND libraryID=?";
+	public static function loadLinkedItemsKeys($libraryID, $tagName) {
+		$sql = "SELECT `key` FROM itemTags JOIN items USING (itemID) WHERE name=? AND libraryID=?";
 		$stmt = Zotero_DB::getStatement($sql, true, $libraryID);
-		$itemKeys = Zotero_DB::columnQueryFromStatement($stmt, [$tagID, $libraryID]);
-		return $itemKeys;
+		$itemKeys = Zotero_DB::columnQueryFromStatement($stmt, [$tagName, $libraryID]);
+		return $itemKeys ? $itemKeys : [];
 	}
 	
-	
+	// Temp function to make Deleted Controller not break due to ZoteroTags not being classic object
+	public static function getDeleteLogKeys($libraryID, $since, $bool) {
+		return [];
+	}
+
 	/*
 	 * Returns array of all tagIDs for this tag (of all types)
 	 */
