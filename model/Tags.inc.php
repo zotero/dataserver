@@ -84,22 +84,34 @@ class Zotero_Tags {
 		}
 		$placeholdersArray = array();
 		$paramList = array();
+
+		// Get array of all names, and check if tags with those names already exist in the DB.
+		// If yes - we use existing tag's ID and (most importantly) version.
+		// If no - new ID and version = 0.
+		$placeholders = implode(',', array_fill(0, sizeOf($tags), '?'));
+		$names = array_map(function($tag) { 
+			return $tag->name; 
+		}, $tags);
+		$existingTagsSql = "SELECT t.tagID, t.name,  MAX(t.version) as `version` from itemTags t JOIN items i USING (itemID) WHERE libraryID = ? AND name IN ($placeholders) GROUP BY tagID, `name`;"; 
+		$existinTagData = Zotero_DB::query($existingTagsSql, array_merge([$libraryID], $names), Zotero_Shards::getByLibraryID($libraryID));
+
+		$existingTags = [];
+		foreach($existinTagData as $existingTag) {
+			$existingTags[$existingTag['name']] = $existingTag;
+		}
 		foreach ($tags as $tag) {
 			if (isset($tag->id)) {
 				throw new Exception("Insert not possible for tag with a set tagID");
 			}
-			$existingTagsSql = "SELECT t.tagID, t.version from itemTags t JOIN items i USING (itemID) WHERE name = ? AND libraryID = ? ORDER BY version LIMIT 1;"; 
-	
-			$existinTagData = Zotero_DB::query($existingTagsSql, [$tag->name, $libraryID], Zotero_Shards::getByLibraryID($libraryID));
-	
-			$tag->id = sizeof($existinTagData) > 0 ? $existinTagData[0]['tagID'] : Zotero_ID::get('tags');
+			$existingTag = array_key_exists($tag->name, $existingTags) ? $existingTags[$tag->name] : null;
+			$tag->id = $existingTag['tagID'] ? $existingTag['tagID'] : Zotero_ID::get('tags');
 			$placeholdersArray[] = "(?, ?, ?, ?, ?)";
 			$paramList = array_merge($paramList, [
 				$tag->id,
 				$itemID,
 				$tag->name,
 				$tag->type,
-				sizeof($existinTagData) > 0 ? $existinTagData[0]['version'] : $tag->version,
+				$existingTag['version'] ? $existingTag['version'] : $tag->version,
 			 ]);
 		}
 
