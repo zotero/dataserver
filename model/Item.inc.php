@@ -2353,20 +2353,13 @@ class Zotero_Item extends Zotero_DataObject {
 			$creatorTypeID = Zotero_CreatorTypes::getPrimaryIDForType($this->itemTypeID);
 		}
 		
-		// If creator already exists at this position, cancel
-		if (isset($this->creators[$orderIndex])
-				&& $this->creators[$orderIndex]->id == $creator->id
-				&& $this->creators[$orderIndex]->creatorTypeID == $creatorTypeID
-				&& !$creator->hasChanged()) {
-			Z_Core::debug("Creator in position $orderIndex hasn't changed", 4);
-			return false;
-		}
 		if (!isset($this->creators[$orderIndex]) || !$this->creators[$orderIndex]->equals($creator)) {
 			$this->creators[$orderIndex] = $creator;
 			$this->creators[$orderIndex]->creatorTypeID = $creatorTypeID;
 			$this->changed['creators'][$orderIndex] = true;
+			return true;
 		}
-		return true;
+		return false;
 	}
 	
 	
@@ -3614,7 +3607,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$this->loaded['tags']) {
 			$this->loadTags();
 		}
-		
+
 		// Ignore empty tags
 		$newTags = array_filter($newTags, function ($tag) {
 			if (is_string($tag)) {
@@ -3633,6 +3626,8 @@ class Zotero_Item extends Zotero_DataObject {
 			return $tag->name;
 		}, $this->tags);
 		$foundNames = [];
+		$tagArray = [];
+		$changed = false;
 		foreach ($newTags as $newTag) {
 			// Allow the passed array to contain either strings or objects
 			if (is_string($newTag)) {
@@ -3655,8 +3650,12 @@ class Zotero_Item extends Zotero_DataObject {
 				continue;
 			}
 			$version = Zotero_Libraries::getUpdatedVersion($this->libraryID);
-			$this->tags[] = new Zotero_Tag(null, $this->libraryID, $name, $type, $version);
-			$this->changed['tags'] = true;
+			$tagArray[] = new Zotero_Tag(null, $this->libraryID, $name, $type, $version);
+			$changed = true;
+		}
+		$this->tags = array_merge($this->tags, $tagArray);
+		if ($changed) {
+			$this->changed['tags'] = $changed;
 		}
 		$toRemove = array_diff($existingTagNames, $foundNames);
 		if (sizeof($this->tags) !== sizeof($newTags)) {
@@ -4655,16 +4654,17 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 
 		if ($cache_used) {
-			$creatorsNotFound = Zotero_Creators::idsDoNotExist($this->libraryID, $creators);
+			// Check if the cached data is still valid - without creatorID
+			// $creatorsNotFound = Zotero_Creators::idsDoNotExist($this->libraryID, $creators);
 
-			foreach($creatorsNotFound as $missingCreator) {
-				Z_Core::$MC->delete($cacheKey);
-				throw new Exception("Creator {$creator['creatorID']} not found");
-			}
+			// foreach($creatorsNotFound as $missingCreator) {
+			// 	Z_Core::$MC->delete($cacheKey);
+			// 	throw new Exception("Creator {$creator['creatorID']} not found");
+			// }
 		}
 
 		foreach ($creators as $creator) {
-			$creatorObj = new Zotero_Creator($creator['creatorID'], $this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
+			$creatorObj = new Zotero_Creator($this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
 
 			$this->creators[$creator['orderIndex']] = $creatorObj;
 		}

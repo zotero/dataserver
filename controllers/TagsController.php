@@ -172,7 +172,7 @@ class TagsController extends ApiController {
 							}
 							$title = "Tags of '" . $item->getDisplayTitle() . "'";
 							$tagIDs = $item->getTags(true);
-							if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+							if (Z_TEMP_SHARD_MIGRATED) {
 								$tags = $item->getTags(true);
 								$tagIDs = array_map(function($tag) {
 									return $tag->id;
@@ -197,7 +197,7 @@ class TagsController extends ApiController {
 				Zotero_DB::beginTransaction();
 				// Different delete behavior depending on if we are on migrated shard or not
 				// because after migration $tag->key does not exist
-				if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+				if (Z_TEMP_SHARD_MIGRATED) {
 					$tagIDs = [];
 					foreach ($tagNames as $tagName) {
 						$tagIDs = array_merge($tagIDs, Zotero_Tags::getIDs($this->objectLibraryID, $tagName));

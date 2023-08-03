@@ -53,7 +53,7 @@ function zotero_autoload($className) {
 			"Tags.inc.php",
 			"TagsController.php"
 		];
-		if (isset($GLOBALS['shardID']) && !in_array($GLOBALS['shardID'], $updatedShards) && in_array($fileName, $newFiles)) {
+		if (defined('Z_TEMP_SHARD_MIGRATED') && !Z_TEMP_SHARD_MIGRATED && in_array($fileName, $newFiles)) {
 			$path = Z_ENV_BASE_PATH . 'model/old_';
 		}
 		else {

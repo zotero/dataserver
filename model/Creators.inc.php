@@ -37,40 +37,20 @@ class Zotero_Creators {
 	private static $maxLastNameLength = 255;
 	
 	private static $creatorsByID = array();
-	private static $primaryDataByCreatorID = array();
 	private static $primaryDataByLibraryAndKey = array();
-	
-	public static function idsDoNotExist($libraryID, $creators) {
-		$creatorIDs = array_map(function ($object) {
-			return $object['creatorID'];
-		}, $creators);
-		$placeholders = implode(',', array_fill(0, count($creatorIDs), '?'));
-		$sql = "SELECT creatorID FROM itemCreators WHERE creatorID IN ($placeholders)";
-		$result = Zotero_DB::query($sql, $creatorIDs, Zotero_Shards::getByLibraryID($libraryID));
-		$existingIDs = array_map(function ($object) {
-			return $object['creatorID'];
-		}, $result);
-		return array_diff($creatorIDs, $existingIDs);
-	}
 	
 	public static function bulkDelete($libraryID, $itemID, $creatorOrdersArray) {
 		$placeholders = implode(', ', array_fill(0, sizeOf($creatorOrdersArray), '?'));
 		$sql = "DELETE FROM itemCreators WHERE itemID=? AND orderIndex IN ($placeholders)";
-		Zotero_DB::query($sql, array_merge([$itemID],$creatorOrdersArray), Zotero_Shards::getByLibraryID($libraryID));
+		Zotero_DB::query($sql, array_merge([$itemID], $creatorOrdersArray), Zotero_Shards::getByLibraryID($libraryID));
 	}
 
 	public static function bulkInsert($libraryID, $itemID, $creators) {
 		$placeholdersArray = array();
 		$paramList = array();
 		foreach ($creators as $creator) {
-			$creatorID = $creator->id;
-			if (isset($creatorID)) {
-				throw new Exception("Insert not possible for creator with a set creatorID");
-			}
-			$creator->id = Zotero_ID::get('creators');
-			$placeholdersArray[] = "(?, ?, ?, ?, ?, ?, ?)";
+			$placeholdersArray[] = "(?, ?, ?, ?, ?, ?)";
 			$paramList = array_merge($paramList, [
-				$creator->id,
 				$itemID,
 				$creator->firstName,
 				$creator->lastName,
@@ -80,36 +60,13 @@ class Zotero_Creators {
 			 ]);
 		}
 		$placeholdersStr = implode(", ", $placeholdersArray);
-		$sql = "INSERT INTO itemCreators (creatorID, itemID, firstName, lastName, fieldMode, creatorTypeID, orderIndex) VALUES $placeholdersStr";
+		$sql = "INSERT INTO itemCreators (itemID, firstName, lastName, fieldMode, creatorTypeID, orderIndex) VALUES $placeholdersStr";
 
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
 		Zotero_DB::queryFromStatement($stmt, $paramList);
 	}
 	
 	
-/*
-	public static function updateLinkedItems($creatorID, $dateModified) {
-		Zotero_DB::beginTransaction();
-		
-		// TODO: add to notifier, if we have one
-		//$sql = "SELECT itemID FROM itemCreators WHERE creatorID=?";
-		//$changedItemIDs = Zotero_DB::columnQuery($sql, $creatorID);
-		
-		// This is very slow in MySQL 5.1.33 -- should be faster in MySQL 6
-		//$sql = "UPDATE items SET dateModified=?, serverDateModified=? WHERE itemID IN
-		//		(SELECT itemID FROM itemCreators WHERE creatorID=?)";
-		
-		$sql = "UPDATE items JOIN itemCreators USING (itemID) SET items.dateModified=?,
-					items.serverDateModified=?, serverDateModifiedMS=? WHERE creatorID=?";
-		$timestamp = Zotero_DB::getTransactionTimestamp();
-		$timestampMS = Zotero_DB::getTransactionTimestampMS();
-		Zotero_DB::query(
-			$sql,
-			array($dateModified, $timestamp, $timestampMS, $creatorID)
-		);
-		Zotero_DB::commit();
-	}
-*/	
 	
 	public static function cache(Zotero_Creator $creator) {
 		if (isset(self::$creatorsByID[$creator->id])) {

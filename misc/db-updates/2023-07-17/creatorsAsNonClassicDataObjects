@@ -22,50 +22,50 @@ foreach ($shardIDs as $shardID) {
 	// Creators 
 	echo "Migrating creators\n";
 	// Drop foreign key constraint
-	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` DROP CONSTRAINT `itemCreators_ibfk_1`;", false, $shardID);
-	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` DROP CONSTRAINT `itemCreators_ibfk_2`;", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` DROP CONSTRAINT `itemCreators_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreators` DROP CONSTRAINT `itemCreators_ibfk_2`", false, $shardID);
 
 	// Create new itemCreators table
-	Zotero_Admin_DB::query("CREATE TABLE `itemCreatorsNew` ( `creatorID` BIGINT UNSIGNED NOT NULL, `itemID` BIGINT UNSIGNED NOT NULL, `firstName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL, `lastName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL, `fieldMode` tinyint(1) UNSIGNED DEFAULT NULL, `creatorTypeID` smallint(5) UNSIGNED NOT NULL, `orderIndex` smallint(5) UNSIGNED NOT NULL, PRIMARY KEY (`creatorID`, `itemID`), KEY `creatorTypeID` (`creatorTypeID`), KEY `name` (`lastName`(7),`firstName`(6)) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;", false, $shardID);
+	Zotero_Admin_DB::query("CREATE TABLE `itemCreatorsNew` (`itemID` BIGINT UNSIGNED NOT NULL, `firstName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL, `lastName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL, `fieldMode` tinyint(1) UNSIGNED DEFAULT NULL, `creatorTypeID` smallint(5) UNSIGNED NOT NULL, `orderIndex` smallint(5) UNSIGNED NOT NULL, PRIMARY KEY (`itemID`, `orderIndex`)) ENGINE=InnoDB DEFAULT CHARSET=utf8", false, $shardID);
 
 	// Add foreign key to item constraint
-	Zotero_Admin_DB::query("ALTER TABLE `itemCreatorsNew` ADD CONSTRAINT `itemCreators_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemCreatorsNew` ADD CONSTRAINT `itemCreators_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
 
 	// Populate new table with data
-	Zotero_Admin_DB::query("INSERT INTO itemCreatorsNew (creatorID, firstName, lastName, fieldMode, itemID, creatorTypeID, orderIndex ) SELECT creatorID, firstName, lastName, fieldMode, itemID, creatorTypeID, orderIndex from creators INNER JOIN itemCreators USING (creatorID);", false, $shardID);
+	Zotero_Admin_DB::query("INSERT INTO itemCreatorsNew (firstName, lastName, fieldMode, itemID, creatorTypeID, orderIndex ) SELECT firstName, lastName, fieldMode, itemID, creatorTypeID, orderIndex from creators INNER JOIN itemCreators USING (creatorID)", false, $shardID);
 
 	// Drop old creators tables
-	Zotero_Admin_DB::query("DROP TABLE itemCreators;", false, $shardID);
-	Zotero_Admin_DB::query("DROP TABLE creators;", false, $shardID);
+	Zotero_Admin_DB::query("DROP TABLE itemCreators", false, $shardID);
+	Zotero_Admin_DB::query("DROP TABLE creators", false, $shardID);
 
 	// Rename old itemCreators table
-	Zotero_Admin_DB::query("RENAME TABLE itemCreatorsNew TO itemCreators;", false, $shardID);
+	Zotero_Admin_DB::query("RENAME TABLE itemCreatorsNew TO itemCreators", false, $shardID);
 
 	// Tags
 	echo "Migrating tags\n";
 	// Drop foreign key constraint
-	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP CONSTRAINT `itemTags_ibfk_1`;", false, $shardID);
-	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP CONSTRAINT `itemTags_ibfk_2`;", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP CONSTRAINT `itemTags_ibfk_1`", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTags` DROP CONSTRAINT `itemTags_ibfk_2`", false, $shardID);
 
 	// Create new itemTags table
-	Zotero_Admin_DB::query("CREATE TABLE `itemTagsNew` ( `tagID` BIGINT UNSIGNED NOT NULL, `itemID` BIGINT UNSIGNED NOT NULL, `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, `type` tinyint(1) unsigned NOT NULL DEFAULT '0', `version` int(10) unsigned NOT NULL DEFAULT '1', PRIMARY KEY (`tagID`, `itemID`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;", false, $shardID);
+	Zotero_Admin_DB::query("CREATE TABLE `itemTagsNew` ( `tagID` BIGINT UNSIGNED NOT NULL, `itemID` BIGINT UNSIGNED NOT NULL, `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, `type` tinyint(1) unsigned NOT NULL DEFAULT '0', `version` int(10) unsigned NOT NULL DEFAULT '1', PRIMARY KEY (`tagID`, `itemID`), KEY `nameType` (`name`, `type`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8", false, $shardID);
 
 	// Add foreign key to item constraint
-	Zotero_Admin_DB::query("ALTER TABLE `itemTagsNew` ADD CONSTRAINT `itemTags_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE;", false, $shardID);
+	Zotero_Admin_DB::query("ALTER TABLE `itemTagsNew` ADD CONSTRAINT `itemTags_ibfk_1` FOREIGN KEY (`itemID`) REFERENCES `items` (`itemID`) ON DELETE CASCADE", false, $shardID);
 
 	// Populate new table with data
-	Zotero_Admin_DB::query("INSERT INTO itemTagsNew (tagID, itemID, name, type, version) SELECT tagID, itemID, name, type, version from tags INNER JOIN itemTags USING (tagID);", false, $shardID);
+	Zotero_Admin_DB::query("INSERT INTO itemTagsNew (tagID, itemID, name, type, version) SELECT tagID, itemID, name, type, version from tags INNER JOIN itemTags USING (tagID)", false, $shardID);
 
 	// Drop old creators tables
-	Zotero_Admin_DB::query("DROP TABLE itemTags;", false, $shardID);
-	Zotero_Admin_DB::query("DROP TABLE tags;", false, $shardID);
+	Zotero_Admin_DB::query("DROP TABLE itemTags", false, $shardID);
+	Zotero_Admin_DB::query("DROP TABLE tags", false, $shardID);
 
 	// Rename old itemTags table
-	Zotero_Admin_DB::query("RENAME TABLE itemTagsNew TO itemTags;", false, $shardID);
+	Zotero_Admin_DB::query("RENAME TABLE itemTagsNew TO itemTags", false, $shardID);
 
 
 	echo "Bringing shard back up\n";
-	Zotero_DB::query("UPDATE shards SET state='up' WHERE shardID=?;", $shardID);
+	Zotero_DB::query("UPDATE shards SET state='up' WHERE shardID=?", $shardID);
 	echo "Done with shard $shardID\n\n";
 	sleep(1);
 }

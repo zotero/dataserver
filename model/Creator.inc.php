@@ -25,7 +25,6 @@
 */
 
 class Zotero_Creator {
-	private $id;
 	private $libraryID;
 	private $firstName = '';
 	private $lastName = '';
@@ -37,8 +36,7 @@ class Zotero_Creator {
 
 	
 	
-	public function __construct($id, $libraryID, $firstName, $lastName, $fieldMode, $creatorTypeID, $orderIndex) {
-		$this->id = $id;
+	public function __construct($libraryID, $firstName, $lastName, $fieldMode, $creatorTypeID, $orderIndex) {
 		$this->libraryID = $libraryID;
 		$this->firstName = $firstName;
 		$this->lastName = $lastName;
@@ -73,7 +71,6 @@ class Zotero_Creator {
 	
 	public function __set($field, $value) {
 		switch ($field) {
-			case 'id':
 			case 'libraryID':
 				$this->checkValue($field, $value);
 				$this->$field = $value;
@@ -117,7 +114,6 @@ class Zotero_Creator {
 		
 		// Data validation
 		switch ($field) {
-			case 'id':
 			case 'libraryID':
 			case 'creatorTypeID':
 				if (!Zotero_Utilities::isPosInt($value)) {

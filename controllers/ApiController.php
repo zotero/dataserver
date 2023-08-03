@@ -368,7 +368,7 @@ class ApiController extends Controller {
 		}
 		// Temporarily record shardID in GLOBALS so we can access it in header.inc.php
 		if (isset($this->objectLibraryID)) {
-			$GLOBALS['shardID'] =  Zotero_Shards::getByLibraryID($this->objectLibraryID);
+			define('Z_TEMP_SHARD_MIGRATED', in_array(Zotero_Shards::getByLibraryID($this->objectLibraryID), $GLOBALS['updatedShards']));
 		}
 		
 		$apiVersion = !empty($_SERVER['HTTP_ZOTERO_API_VERSION'])
@@ -560,7 +560,6 @@ class ApiController extends Controller {
 		}
 		
 		function getUserKey($userID) {
-			$GLOBALS['shardID'] = Zotero_Shards::getByUserID($userID);
 			$keys = Zotero_Keys::getUserKeys($userID);
 			foreach ($keys as $keyObj) {
 				$keyObj->erase();

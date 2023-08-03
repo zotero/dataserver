@@ -378,7 +378,7 @@ class ItemsController extends ApiController {
 						if (!$tagIDs) {
 							$this->e404("Tag not found");
 						}
-						if (in_array($GLOBALS['shardID'], $GLOBALS['updatedShards']) ) {
+						if (Z_TEMP_SHARD_MIGRATED) {
 							$linkedItemKeys = Zotero_Tags::loadLinkedItemsKeys($this->objectLibraryID,  $this->scopeObjectName);
 							$itemKeys = array_merge($itemKeys, $linkedItemKeys);
 						}
