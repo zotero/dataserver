@@ -136,7 +136,7 @@ CREATE TABLE `itemAnnotations` (
   `color` char(6) CHARACTER SET ascii NOT NULL,
   `pageLabel` varchar(50) NOT NULL,
   `sortIndex` varchar(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `position` text CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `position` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   PRIMARY KEY (`itemID`),
   KEY `parentItemID` (`parentItemID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
