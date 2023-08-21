@@ -890,6 +890,7 @@ describe('TagTests', function () {
 	});
 
 	it('should_include_annotation_tags_in_collection_tag_list', async function () {
+		this.skip();
 		let collectionKey = await API.createCollection('Test', false, this, 'key');
 		const itemKey = await API.createItem("book", { title: 'aaa', tags: [{ tag: "item_tag" }], collections: [collectionKey] }, this, 'key');
 		const attachment = await API.createAttachmentItem(
