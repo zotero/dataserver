@@ -1006,7 +1006,6 @@ describe('FileTestTests', function () {
 		await API.deleteGroup(groupID);
 	});
 
-	//TODO: this fails
 	it('test_should_include_best_attachment_link_on_parent_for_imported_url', async function () {
 		let json = await API.createItem("book", false, this, 'json');
 		assert.equal(0, json.meta.numChildren);
@@ -1018,14 +1017,9 @@ describe('FileTestTests', function () {
 
 		let filename = "test.html";
 		let mtime = Date.now();
-		//let size = fs.statSync("data/test.html.zip").size;
-		let md5 = "af625b88d74e98e33b78f6cc0ad93ed0";
-		//let zipMD5 = "f56e3080d7abf39019a9445d7aab6b24";
-
-		let fileContents = fs.readFileSync("data/test.html.zip");
-		let zipMD5 = Helpers.md5File("data/test.html.zip");
-		let zipFilename = attachmentKey + ".zip";
-		let size = Buffer.from(fileContents.toString()).byteLength;
+		let fileContents = Helpers.getRandomUnicodeString();
+		const zipData = await generateZip("test.html", Helpers.getRandomUnicodeString(), `work/test.html.zip`);
+		let md5 = Helpers.md5(fileContents);
 
 		// Create attachment item
 		let response = await API.userPost(
@@ -1062,9 +1056,9 @@ describe('FileTestTests', function () {
 				md5: md5,
 				mtime: mtime,
 				filename: filename,
-				filesize: size,
-				zipMD5: zipMD5,
-				zipFilename: zipFilename
+				filesize: zipData.zipSize,
+				zipMD5: zipData.hash,
+				zipFilename: "work/test.html.zip"
 			}),
 			{
 
@@ -1080,7 +1074,7 @@ describe('FileTestTests', function () {
 		if (!json.exists) {
 			response = await HTTP.post(
 				json.url,
-				json.prefix + fileContents + json.suffix,
+				json.prefix + zipData.fileContent + json.suffix,
 				{ "Content-Type": json.contentType }
 			);
 			Helpers.assert201(response);
@@ -1099,7 +1093,7 @@ describe('FileTestTests', function () {
 			);
 			Helpers.assert204(response);
 		}
-		toDelete.push(zipMD5);
+		toDelete.push(zipData.hash);
 
 		// 'attachment' link should now appear
 		response = await API.userGet(
@@ -2013,9 +2007,9 @@ describe('FileTestTests', function () {
 
 		let filename = "test.pdf";
 		let mtime = Date.now();
-		let md5 = "e54589353710950c4b7ff70829a60036";
-		let size = fs.statSync("data/test.pdf").size;
 		let fileContents = fs.readFileSync("data/test.pdf");
+		let size = Buffer.from(fileContents.toString()).byteLength;
+		let md5 = Helpers.md5(Buffer.from(fileContents.toString()));
 
 		// Create attachment item
 		let response = await API.userPost(

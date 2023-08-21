@@ -8,95 +8,53 @@ const { API3Before, API3After } = require("../shared.js");
 
 describe('AnnotationsTests', function () {
 	this.timeout(config.timeout);
-	let attachmentKey, attachmentJSON, bookKey;
+	let pdfAttachmentKey;
+	let epubAttachmentKey;
+	let snapshotAttachmentKey;
 
 	before(async function () {
 		await API3Before();
 		await resetGroups();
 		await API.groupClear(config.ownedPrivateGroupID);
 	
-		bookKey = await API.createItem("book", {}, null, 'key');
-		attachmentJSON = await API.createAttachmentItem(
+		let key = await API.createItem("book", {}, null, 'key');
+		let json = await API.createAttachmentItem(
 			"imported_url",
 			{ contentType: 'application/pdf' },
-			bookKey,
+			key,
 			null,
 			'jsonData'
 		);
-	
-		attachmentKey = attachmentJSON.key;
+		pdfAttachmentKey = json.key;
+
+		json = await API.createAttachmentItem(
+			"imported_url",
+			{ contentType: 'application/epub+zip' },
+			key,
+			null,
+			'jsonData'
+		);
+		epubAttachmentKey = json.key;
+
+		json = await API.createAttachmentItem(
+			"imported_url",
+			{ contentType: 'text/html' },
+			key,
+			null,
+			'jsonData'
+		);
+		snapshotAttachmentKey = json.key;
 	});
 
 	after(async function () {
 		await API3After();
 	});
 
-	it('new_annotation_types_test', async function () {
-		let annotationTypes = ["text", "underline", "highlight", "note"];
-
-		let attachmentContentTypes = [
-			{ type: 'application/pdf', sortIndex: "00000|000000|00000" },
-			{ type: 'text/html', sortIndex: "00000000" }
-		];
-		let annotationTemplate = {
-			itemType: "annotation",
-			parentItem: "",
-			annotationType: "",
-			annotationComment: "",
-			annotationColor: "",
-			annotationPageLabel: "",
-			annotationSortIndex: "",
-			annotationPosition: "",
-			tags: []
-		};
-		for (let attachmentType of attachmentContentTypes) {
-			let data = await API.createAttachmentItem(
-				"imported_url",
-				{ contentType: attachmentType.type },
-				bookKey,
-				null,
-				'jsonData'
-			);
-			let parentKey = data.key;
-			assert.ok(parentKey);
-			for (let type of annotationTypes) {
-				let payload = Object.assign({}, annotationTemplate);
-				payload.parentItem = parentKey;
-				payload.annotationType = type;
-				if (type == "highlight") {
-					payload.annotationText = "Some annotation text";
-				}
-				payload.annotationSortIndex = attachmentType.sortIndex + "|0000";
-				// 400 on wrong annotation sort index
-				let response = await API.userPost(
-					config.userID,
-					"items",
-					JSON.stringify([payload]),
-					{ "Content-Type": "application/json" }
-				);
-				Helpers.assert400ForObject(JSON.parse(response.data));
-				payload.annotationSortIndex = attachmentType.sortIndex;
-				response = await API.userPost(
-					config.userID,
-					"items",
-					JSON.stringify([payload]),
-					{ "Content-Type": "application/json" }
-				);
-				// text type only works with PDFS
-				if (attachmentType.type != 'application/pdf' && type == 'text') {
-					Helpers.assert400ForObject(JSON.parse(response.data));
-				}
-				else {
-					Helpers.assert200ForObject(JSON.parse(response.data));
-				}
-			}
-		}
-	});
 
 	it('test_should_reject_non_empty_annotationText_for_image_annotation', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'image',
 			annotationText: 'test',
 			annotationSortIndex: '00015|002431|00000',
@@ -113,13 +71,76 @@ describe('AnnotationsTests', function () {
 			JSON.stringify([json]),
 			{ "Content-Type": "application/json" }
 		);
-		Helpers.assert400ForObject(response, "'annotationText' can only be set for highlight annotations");
+		Helpers.assert400ForObject(response, "'annotationText' can only be set for highlight and underline annotations");
 	});
+
+	it('test_should_save_a_highlight_annotation_with_parentItem_specified_last', async function () {
+		let json = {
+			itemType: 'annotation',
+			annotationType: 'highlight',
+			annotationAuthorName: 'First Last',
+			annotationText: 'This is highlighted text.',
+			annotationColor: '#ff8c19',
+			annotationPageLabel: '10',
+			annotationSortIndex: '00015|002431|00000',
+			annotationPosition: JSON.stringify({
+				pageIndex: 123,
+				rects: [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			}),
+			parentItem: pdfAttachmentKey,
+		};
+	
+		let response = await API.userPost(
+			config.userID,
+			"items",
+			JSON.stringify([json]),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert200ForObject(response);
+	});
+
+	it('test_should_trigger_upgrade_error_for_epub_annotation_on_old_clients', async function () {
+		const json = {
+			itemType: 'annotation',
+			parentItem: epubAttachmentKey,
+			annotationType: 'highlight',
+			annotationText: 'foo',
+			annotationSortIndex: '00050|00013029',
+			annotationColor: '#ff8c19',
+			annotationPosition: JSON.stringify({
+				type: 'FragmentSelector',
+				conformsTo: 'http://www.idpf.org/epub/linking/cfi/epub-cfi.html',
+				value: 'epubcfi(/6/4!/4/2[pg-header]/2[pg-header-heading],/1:4,/1:11)'
+			})
+		};
+		const response = await API.userPost(
+			config.userID,
+			"items",
+			JSON.stringify([json]),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert200ForObject(response);
+		const jsonResponse = API.getJSONFromResponse(response).successful[0];
+		const annotationKey = jsonResponse.key;
+	
+		API.useSchemaVersion(28);
+		const getResponse = await API.userGet(
+			config.userID,
+			`items/${annotationKey}`
+		);
+		const getJson = API.getJSONFromResponse(getResponse);
+		const jsonData = getJson.data;
+		assert.property(jsonData, 'invalidProp');
+		API.resetSchemaVersion();
+	});
+	
 
 	it('test_should_not_allow_changing_annotation_type', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: 'This is highlighted text.',
 			annotationSortIndex: '00015|002431|00000',
@@ -159,7 +180,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_reject_invalid_color_value', async function () {
 		const json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: '',
 			annotationSortIndex: '00015|002431|00000',
@@ -186,7 +207,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_not_include_authorName_if_empty', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: 'This is highlighted text.',
 			annotationColor: '#ff8c19',
@@ -209,7 +230,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_use_default_yellow_if_color_not_specified', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: '',
 			annotationSortIndex: '00015|002431|00000',
@@ -235,7 +256,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_clear_annotation_fields', async function () {
 		const json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: 'This is highlighted text.',
 			annotationComment: 'This is a comment.',
@@ -268,7 +289,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_reject_empty_annotationText_for_image_annotation', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'image',
 			annotationText: '',
 			annotationSortIndex: '00015|002431|00000',
@@ -297,7 +318,7 @@ describe('AnnotationsTests', function () {
 		];
 		const json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'ink',
 			annotationColor: '#ff8c19',
 			annotationPageLabel: '10',
@@ -325,7 +346,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_save_a_note_annotation', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'note',
 			annotationComment: 'This is a comment.',
 			annotationSortIndex: '00015|002431|00000',
@@ -358,7 +379,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_update_annotation_text', async function () {
 		const json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: 'This is highlighted text.',
 			annotationComment: '',
@@ -410,7 +431,7 @@ describe('AnnotationsTests', function () {
 		});
 		let json = {
 			itemType: "annotation",
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: "ink",
 			annotationSortIndex: "00015|002431|00000",
 			annotationColor: "#ff8c19",
@@ -428,7 +449,7 @@ describe('AnnotationsTests', function () {
 		// TODO: Restore once output isn't HTML-encoded
 		//response, "Annotation position '" . mb_substr(positionJSON, 0, 50) . "…' is too long", 0
 			response,
-			"Annotation position is too long for attachment " + attachmentKey,
+			"Annotation position is too long for attachment " + pdfAttachmentKey,
 			0
 		);
 	});
@@ -436,7 +457,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_truncate_long_text', async function () {
 		const json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: '这是一个测试。'.repeat(5000),
 			annotationSortIndex: '00015|002431|00000',
@@ -463,7 +484,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_update_annotation_comment', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: 'This is highlighted text.',
 			annotationComment: '',
@@ -503,7 +524,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_save_a_highlight_annotation', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationAuthorName: 'First Last',
 			annotationText: 'This is highlighted text.',
@@ -543,7 +564,7 @@ describe('AnnotationsTests', function () {
 	// Create annotation
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'image',
 			annotationSortIndex: '00015|002431|00000',
 			annotationPosition: JSON.stringify({
@@ -577,7 +598,7 @@ describe('AnnotationsTests', function () {
 	it('test_should_reject_invalid_sortIndex', async function () {
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'highlight',
 			annotationText: '',
 			annotationSortIndex: '0000',
@@ -597,7 +618,7 @@ describe('AnnotationsTests', function () {
 		let label = Helpers.uniqueID(52);
 		let json = {
 			itemType: 'annotation',
-			parentItem: attachmentKey,
+			parentItem: pdfAttachmentKey,
 			annotationType: 'ink',
 			annotationSortIndex: '00015|002431|00000',
 			annotationColor: '#ff8c19',
@@ -617,7 +638,7 @@ describe('AnnotationsTests', function () {
 		Helpers.assert400ForObject(
 		// TODO: Restore once output isn't HTML-encoded
 		//response, "Annotation page label '" + label.substr(0, 50) + "…' is too long", 0
-			response, "Annotation page label is too long for attachment " + attachmentKey, 0
+			response, "Annotation page label is too long for attachment " + pdfAttachmentKey, 0
 		);
 	});
 });

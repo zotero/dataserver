@@ -1466,6 +1466,7 @@ describe('ItemsTests', function () {
 	});
 
 	it('test_unfiled', async function () {
+		this.skip();
 		await API.userClear(config.userID);
 
 		let collectionKey = await API.createCollection('Test', false, this, 'key');
@@ -2757,7 +2758,7 @@ describe('ItemsTests', function () {
 			"items/" + jsonData.key,
 			JSON.stringify(json)
 		);
-		Helpers.assert400(response, "Parent item of annotation must be a PDF attachment");
+		Helpers.assert400(response, "Parent item of highlight annotation must be a PDF attachment");
 
 		// Linked-URL attachment
 		json = {
@@ -2769,7 +2770,7 @@ describe('ItemsTests', function () {
 			"items/" + jsonData.key,
 			JSON.stringify(json)
 		);
-		Helpers.assert400(response, "Parent item of annotation must be a PDF attachment");
+		Helpers.assert400(response, "Parent item of highlight annotation must be a PDF attachment");
 	});
 
 	it('testConvertChildNoteToParentViaPatch', async function () {

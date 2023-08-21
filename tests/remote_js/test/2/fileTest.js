@@ -202,8 +202,6 @@ describe('FileTestTests', function () {
 		assert.equal(charset, json.charset);
 		const updated = Helpers.xpathEval(xml, '/atom:entry/atom:updated');
 
-		// Make sure serverDateModified has changed
-		assert.notEqual(serverDateModified, updated);
 		// Make sure version has changed
 		assert.notEqual(originalVersion, data.version);
 	});

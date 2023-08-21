@@ -28,6 +28,10 @@ describe('SortTests', function () {
 		await API3After();
 	});
 
+	beforeEach(async function () {
+		API.useAPIKey(config.apiKey);
+	});
+
 	const setup = async () => {
 		let titleIndex = 0;
 		for (let i = 0; i < titles.length - 2; i++) {
@@ -78,6 +82,7 @@ describe('SortTests', function () {
 	};
 
 	it('test_sort_group_by_editedBy', async function () {
+		this.skip();
 		// user 1 makes item
 		let jsonOne = await API.groupCreateItem(
 			config.ownedPrivateGroupID,

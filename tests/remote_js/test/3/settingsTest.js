@@ -662,4 +662,77 @@ describe('SettingsTests', function () {
 		);
 		Helpers.assert204(response);
 	});
+
+	it('test_lastPageIndex_should_accept_integers', async function () {
+		let json = {
+			lastPageIndex_u_ABCD2345: {
+				value: 12
+			}
+		};
+		let response = await API.userPost(
+			config.userID,
+			"settings",
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert204(response);
+	});
+
+	it('test_lastPageIndex_should_accept_percentages_with_one_decimal_place', async function () {
+		let json = {
+			lastPageIndex_u_ABCD2345: {
+				value: 12.2
+			}
+		};
+		let response = await API.userPost(
+			config.userID,
+			"settings",
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert204(response);
+	});
+
+	it('test_lastPageIndex_should_reject_percentages_with_two_decimal_places', async function () {
+		let json = {
+			lastPageIndex_u_ABCD2345: {
+				value: 12.23
+			}
+		};
+		let response = await API.userPost(
+			config.userID,
+			"settings",
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert400(response);
+	});
+
+	it('test_lastPageIndex_should_reject_percentages_below_0_or_above_100', async function () {
+		let json = {
+			lastPageIndex_u_ABCD2345: {
+				value: -1.2
+			}
+		};
+		let response = await API.userPost(
+			config.userID,
+			"settings",
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert400(response);
+
+		json = {
+			lastPageIndex_u_ABCD2345: {
+				value: 100.1
+			}
+		};
+		response = await API.userPost(
+			config.userID,
+			"settings",
+			JSON.stringify(json),
+			{ "Content-Type": "application/json" }
+		);
+		Helpers.assert400(response);
+	});
 });

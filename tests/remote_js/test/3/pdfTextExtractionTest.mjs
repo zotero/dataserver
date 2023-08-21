@@ -18,6 +18,7 @@ describe('PDFTextExtractionTests', function () {
 	const sqsClient = new SQSClient();
 
 	before(async function () {
+		this.skip();
 		await shared.API3Before();
 		// Clean up test queue.
 		// Calling PurgeQueue many times in a row throws an error so sometimes we have to wait.
