@@ -629,6 +629,24 @@ class Zotero_Collection extends Zotero_DataObject {
 		foreach ($rows as $row) {
 			$counts[$row['tagID']] = $row['numItems'];
 		}
+		// Fetch the tags of annotations as well
+		$annotationsSql = "SELECT tagID, COUNT(*) AS numItems FROM tags JOIN itemTags USING (tagID) 
+			JOIN itemAnnotations USING (itemID)
+			JOIN itemAttachments ON itemAttachments.itemID = itemAnnotations.parentItemID 
+			JOIN collectionItems ON collectionItems.itemID = itemAttachments.sourceItemID
+			WHERE collectionID=? GROUP BY tagID;";
+
+		$rows = Zotero_DB::query($annotationsSql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
+		if (!$rows) {
+			return $counts;
+		}
+		// Add numItems into the same array.
+		foreach ($rows as $row) {
+			if (!array_key_exists($row['tagID'], $counts)) {
+				$counts[$row['tagID']] = 0;
+			} 
+			$counts[$row['tagID']] += $row['numItems'];
+		}
 		return $counts;
 	}
 	
