@@ -678,6 +678,40 @@ describe('SettingsTests', function () {
 		Helpers.assert204(response);
 	});
 
+	it('should_add_zero_integer_value_for_lastPageIndex', async function() {
+		const settingKey = "lastPageIndex_u_NJP24DAM";
+		const value = 0;
+        
+		const libraryVersion = await API.getLibraryVersion();
+
+		const json = {
+			value: value
+		};
+
+		// Create
+		let response = await API.userPut(
+			config.userID,
+			`settings/${settingKey}`,
+			JSON.stringify(json),
+			{
+				"Content-Type": "application/json",
+				"If-Unmodified-Since-Version": "0"
+			}
+		);
+		Helpers.assert204(response);
+
+		response = await API.userGet(
+			config.userID,
+			`settings/${settingKey}`
+		);
+		Helpers.assert200(response);
+		Helpers.assertContentType(response, "application/json");
+		let responseBody = JSON.parse(response.data);
+		assert.isNotNull(responseBody);
+		assert.equal(responseBody.value, value);
+		assert.equal(responseBody.version, parseInt(libraryVersion) + 1);
+	});
+
 	it('test_lastPageIndex_should_accept_percentages_with_one_decimal_place', async function () {
 		let json = {
 			lastPageIndex_u_ABCD2345: {
