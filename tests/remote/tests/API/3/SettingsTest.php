@@ -342,6 +342,41 @@ class SettingsTests extends APITests {
 	}
 	
 	
+	public function test_should_add_zero_integer_value_for_lastPageIndex() {
+		$settingKey = "lastPageIndex_u_NJP24DAM";
+		$value = 0;
+		
+		$libraryVersion = API::getLibraryVersion();
+		
+		$json = [
+			"value" => $value
+		];
+		
+		// Create
+		$response = API::userPut(
+			self::$config['userID'],
+			"settings/$settingKey",
+			json_encode($json),
+			[
+				"Content-Type: application/json",
+				"If-Unmodified-Since-Version: 0"
+			]
+		);
+		$this->assert204($response);
+		
+		$response = API::userGet(
+			self::$config['userID'],
+			"settings/$settingKey"
+		);
+		$this->assert200($response);
+		$this->assertContentType("application/json", $response);
+		$json = json_decode($response->getBody(), true);
+		$this->assertNotNull($json);
+		$this->assertEquals($value, $json['value']);
+		$this->assertEquals($libraryVersion + 1, $json['version']);
+	}
+	
+	
 	public function testUpdateUserSettings() {
 		$settingKey = "tagColors";
 		$value = [
