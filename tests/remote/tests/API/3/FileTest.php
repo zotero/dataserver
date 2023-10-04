@@ -1589,6 +1589,19 @@ class FileTests extends APITests {
 		$this->assertArrayHasKey("exists", $json);
 		$version = $response->getHeader("Last-Modified-Version");
 		$this->assertGreaterThan($newVersion, $version);
+		
+		// Verify file on S3
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key/file"
+		);
+		$this->assert302($response);
+		$location = $response->getHeader("Location");
+		
+		$response = HTTP::get($location);
+		$this->assert200($response);
+		// S3 should return ZIP content type
+		$this->assertEquals('application/zip', $response->getHeader("Content-Type"));
 	}
 	
 	

@@ -115,7 +115,7 @@ class Zotero_Storage {
 		$cmd = $s3Client->getCommand('GetObject', [
 			'Bucket' => Z_CONFIG::$S3_BUCKET,
 			'Key' => $key,
-			'ResponseContentType' => $contentType
+			'ResponseContentType' => $info['zip'] ? 'application/zip' : $contentType
 		]);
 		return (string) $s3Client->createPresignedRequest($cmd, "+$ttl seconds")->getUri();
 	}
