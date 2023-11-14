@@ -1486,21 +1486,38 @@ class ItemTests extends APITests {
 	public function testDateModifiedChangeOnEdit() {
 		$json = API::createAttachmentItem("linked_file", [], false, $this, 'jsonData');
 		$modified = $json['dateModified'];
-		unset($json['dateModified']);
-		$json['note'] = "Test";
 		
-		sleep(1);
-		
-		$response = API::userPut(
-			self::$config['userID'],
-			"items/{$json['key']}",
-			json_encode($json),
-			array("If-Unmodified-Since-Version: " . $json['version'])
-		);
-		$this->assert204($response);
-		
-		$json = API::getItem($json['key'], $this, 'json')['data'];
-		$this->assertNotEquals($modified, $json['dateModified']);
+		for ($i = 1; $i <= 2; $i++) {
+			sleep(1);
+			unset($json['dateModified']);
+			
+			switch ($i) {
+				case 1:
+					$json['note'] = "Test";
+					break;
+				
+				case 2:
+					$json['tags'] = [
+						[
+							'tag' => 'A'
+						]
+					];
+					break;
+			}
+			
+			
+			$response = API::userPut(
+				self::$config['userID'],
+				"items/{$json['key']}",
+				json_encode($json),
+				["If-Unmodified-Since-Version: " . $json['version']]
+			);
+			$this->assert204($response);
+			
+			$json = API::getItem($json['key'], $this, 'json')['data'];
+			$this->assertNotEquals($modified, $json['dateModified'], "Date Modified not changed on loop $i");
+			$modified = $json['dateModified'];
+		}
 	}
 	
 	/**
@@ -1512,8 +1529,14 @@ class ItemTests extends APITests {
 		$json = API::createItem('book', false, $this, 'jsonData');
 		$modified = $json['dateModified'];
 		
-		for ($i = 1; $i <= 5; $i++) {
+		for ($i = 1; $i <= 4; $i++) {
 			sleep(1);
+			
+			// For all tests after the first one, unset Date Modified, which would normally cause
+			// it to be updated
+			if ($i > 1) {
+				unset($json['dateModified']);
+			}
 			
 			switch ($i) {
 			case 1:
@@ -1521,9 +1544,6 @@ class ItemTests extends APITests {
 				break;
 			
 			case 2:
-				// For all subsequent tests, unset field, which would normally cause it to be updated
-				unset($json['dateModified']);
-				
 				$json['collections'] = [$collectionKey];
 				break;
 			
@@ -1533,14 +1553,6 @@ class ItemTests extends APITests {
 			
 			case 4:
 				$json['deleted'] = false;
-				break;
-			
-			case 5:
-				$json['tags'] = [
-					[
-						'tag' => 'A'
-					]
-				];
 				break;
 			}
 			

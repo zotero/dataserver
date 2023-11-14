@@ -1893,7 +1893,7 @@ class Zotero_Items {
 		// Skip "Date Modified" update if only certain fields were updated (e.g., collections)
 		$skipDateModifiedUpdate = $dateModifiedProvided || !sizeOf(array_diff(
 			$item->getChanged(),
-			['collections', 'deleted', 'inPublications', 'relations', 'tags']
+			['collections', 'deleted', 'inPublications', 'relations']
 		));
 		
 		if ($item->hasChanged() && !$skipDateModifiedUpdate
