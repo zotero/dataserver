@@ -409,7 +409,7 @@ class Zotero_Libraries {
 				// but will probably almost always do the trick.
 				if ($table == 'collections'
 						// Newer MySQL
-						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth")
+						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth") !== false
 						// Older MySQL
 						|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
 					$sql = "DELETE FROM collections WHERE libraryID=? "
