@@ -108,7 +108,7 @@ class ApiController extends Controller {
 		$this->uri = Z_CONFIG::$API_BASE_URI . substr($_SERVER["REQUEST_URI"], 1);
 		$this->path = $_SERVER["REQUEST_URI"];
 		
-		if (!in_array($this->method, array('HEAD', 'OPTIONS', 'GET', 'PUT', 'POST', 'DELETE', 'PATCH'))) {
+		if (!in_array($this->method, array('HEAD', 'OPTIONS', 'GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'COPY'))) {
 			$this->e501();
 		}
 		
