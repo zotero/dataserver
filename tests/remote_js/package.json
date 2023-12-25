@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.338.0",
+    "@aws-sdk/client-sqs": "^3.348.0",
+    "config": "^3.3.9",
+    "jsdom": "^22.0.0",
+    "jszip": "^3.10.1",
+    "node-fetch": "^2.6.7",
+    "wgxpath": "^1.2.0"
+  },
+  "devDependencies": {
+    "@zotero/eslint-config": "^1.0.7",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0"
+  },
+  "scripts": {
+    "test": "mocha \"test/**/*.*js\""
+  }
+}
