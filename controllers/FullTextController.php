@@ -196,12 +196,7 @@ class FullTextController extends ApiController {
 		catch (\Aws\S3\Exception\S3Exception $e) { }
 
 		// Request reindexing
-		$lambdaClient = Z_Core::$AWS->createLambda();
-		$result = $lambdaClient->invoke([
-			'FunctionName' => Z_CONFIG::$REINDEX_LAMBDA_FUNCTION_NAME, 
-			'InvocationType' => 'Event',
-			'Payload' => json_encode(['libraryID' => $this->objectLibraryID]),
-		]);
+		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID])); 
 		$this->end();
 	}
 
