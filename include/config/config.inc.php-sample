@@ -91,6 +91,6 @@ class Z_CONFIG {
 	public static $CACHE_VERSION_RESPONSE_JSON_ITEM = 1;
 
 	public static $REINDEX_LAMBDA_FUNCTION_NAME = "FullTextReIndexer";
-	public static $REINDEX_WAIT_HOURS = 1;
+	public static $REINDEX_WAIT_MINUTES = 1;
 }
 ?>

@@ -163,12 +163,12 @@ class FullTextController extends ApiController {
 		
 		$redis = Z_Redis::get('request-limiter');
 
-		// Only allow requests to this endpoint to come in once every $REINDEX_WAIT_HOURS hours
+		// Only allow requests to this endpoint to come in once every $REINDEX_WAIT_MINUTES minutes
 		if ($redis->get("reindex_$this->objectLibraryID")) {
 			$this->e429("The request to reindex this library has already been submitted.");
 		}
 		else {
-			$redis->setex("reindex_$this->objectLibraryID", Z_CONFIG::$REINDEX_WAIT_HOURS * 3600, 1);
+			$redis->setex("reindex_$this->objectLibraryID", Z_CONFIG::$REINDEX_WAIT_MINUTES * 60, 1);
 		}
 
 		// Check for general library access
@@ -184,8 +184,18 @@ class FullTextController extends ApiController {
 			$this->e400("The library has been indexed.");
 		}
 
-		// If they are not and it has been long enough since last request, something went wrong with
-		// SQS or lambda so we can rerun the reindexing proces.
+		// If there exists _reindex_status file, reindexing is already in progress - do nothing
+		$s3Client = Z_Core::$AWS->createS3();
+		try {
+			$result = $s3Client->headObject([
+				'Bucket' => Z_CONFIG::$S3_BUCKET_FULLTEXT,
+				'Key' => $this->objectLibraryID . "/" . "_reindex_status"
+			]);
+			$this->e400("The library is being indexed.");
+		}
+		catch (\Aws\S3\Exception\S3Exception $e) { }
+
+		// Request reindexing
 		$lambdaClient = Z_Core::$AWS->createLambda();
 		$result = $lambdaClient->invoke([
 			'FunctionName' => Z_CONFIG::$REINDEX_LAMBDA_FUNCTION_NAME, 
