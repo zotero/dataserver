@@ -159,42 +159,66 @@ class FullTextController extends ApiController {
 	}
 
 	public function reindex() {
-		$this->allowMethods(['POST']);
+		// POST = request to reindex a library removed from ES
+		// GET = fetch the status of reindexing
+		$this->allowMethods(['POST', 'GET']);
 		
-		$redis = Z_Redis::get('request-limiter');
-
-		// Only allow requests to this endpoint to come in once every $REINDEX_WAIT_MINUTES minutes
-		if ($redis->get("reindex_$this->objectLibraryID")) {
-			$this->e429("The request to reindex this library has already been submitted.");
-		}
-		else {
-			$redis->setex("reindex_$this->objectLibraryID", Z_CONFIG::$REINDEX_WAIT_MINUTES * 60, 1);
-		}
-
 		// Check for general library access
 		if (!$this->permissions->canAccess($this->objectLibraryID)) {
 			$this->e403();
 		}
 
-		// Check how many records we have in Elasticsearch and how many attachments we have.
-		$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
-		$expectedCount = Zotero_Libraries::countAttachments($this->objectLibraryID);
-		// If they're equal, everything is indexed.
-		if ($esCount == $expectedCount) {
-			$this->e400("The library has been indexed.");
+		// Ensure that if multiple requests arrive at roughly the same time, only one goes through
+		if ($this->method == 'POST') {
+			$redis = Z_Redis::get('request-limiter');
+
+			if ($redis->get("reindex_$this->objectLibraryID")) {
+				$this->e429("The request to reindex this library has already been submitted.");
+			}
+			else {
+				$redis->setex("reindex_$this->objectLibraryID", Z_CONFIG::$REINDEX_WAIT_MINUTES * 60, 1);
+			}
 		}
 
-		// If there exists _reindex_status file, reindexing is already in progress - do nothing
+		$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
+		$status = "";
 		$s3Client = Z_Core::$AWS->createS3();
 		try {
-			$result = $s3Client->headObject([
+			// Try to fetch the current reindexing status
+			$result = $s3Client->getObject([
 				'Bucket' => Z_CONFIG::$S3_BUCKET_FULLTEXT,
 				'Key' => $this->objectLibraryID . "/" . "_reindex_status"
 			]);
-			$this->e400("The library is being indexed.");
+			$json = json_decode($result['Body']);
+			$status = $json->status;
 		}
 		catch (\Aws\S3\Exception\S3Exception $e) { }
 
+		// GET = return reindexing status
+		if ($this->method == "GET") {
+			if (($esCount == 0 && $status == 'complete') || $status == "") {
+				$status = 'none';
+			}
+			echo Zotero_Utilities::formatJSON(["reindexingStatus" => $status]);
+			$this->end();
+			return;
+		}
+		
+		// Reindexing is only possible when ES has no records for this library
+		if ($esCount !== 0) {
+			$this->e400("Reindexing is only possible when the library has no indexed records.");
+		}
+		// Cannot start reindexing if it has already been requested
+		if (in_array($status, ['requested', 'in_progress'])) {
+			$this->e400("The library is being indexed.");
+		}
+		// If the reindex status file exists, delete it before a fresh reindex run
+		if ($status !== "") {
+			$s3Client->deleteObject([
+				'Bucket' => Z_CONFIG::$S3_BUCKET_FULLTEXT,
+				'Key' => $this->objectLibraryID . "/" . "_reindex_status"
+			]);
+		}
 		// Request reindexing
 		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID])); 
 		$this->end();
