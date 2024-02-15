@@ -259,6 +259,25 @@ class Zotero_FullText {
 		}
 		return $keys;
 	}
+
+	public static function countInLibrary($libraryID) {
+		$params = [
+			'index' => self::$elasticsearchType . "_index",
+			'body'  => [
+				'query' => [
+					'bool' => [
+						'filter' => [
+							'term' => [
+								'libraryID' => $libraryID
+							]
+						]
+					]
+				]
+			]
+		];
+		$resp = Z_Core::$ES->count($params);
+		return $resp['count'];
+	}
 	
 	public static function deleteItemContent(Zotero_Item $item) {
 		$libraryID = $item->libraryID;
