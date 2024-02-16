@@ -157,4 +157,48 @@ class FullTextController extends ApiController {
 		
 		$this->end();
 	}
+
+	public function reindex() {
+		$this->allowMethods(['POST', 'GET']);
+
+		// General library access
+		if (!$this->permissions->canAccess($this->objectLibraryID)) {
+			$this->e403();
+		}
+
+		$isDeindexed = Zotero_Libraries::checkEsIndexStatus($this->objectLibraryID);
+
+		// GET - return indexing status of ES: indexing, indexed, deindexed
+		if ($this->method == "GET") {
+			// Current count of records in ES
+			$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
+			// Expected count of records in ES
+			$expectedCount = Zotero_Libraries::countIndexableAttachments($this->objectLibraryID);
+
+			if ($esCount === $expectedCount) {
+				$result = ["reindexingStatus" => "indexed"];
+			}
+			else if ($isDeindexed) {
+				$result = ["reindexingStatus" => "deindexed"];
+			}
+			else {
+				$result = ["reindexingStatus" => "indexing", "indexedCount" => $esCount, "expectedCount" => $expectedCount];
+			}
+			echo Zotero_Utilities::formatJSON($result);
+			$this->end();
+		}
+
+		// POST - request reindexing if the library was removed from ES
+		if (!$isDeindexed) {
+            $this->e400("Request was already submitted or the library was not removed from ElasticSearch");
+        }
+
+		// Send event to reindexing queue
+		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID]));
+
+		// Update DB
+		Zotero_Libraries::setEsIndexStatus($this->objectLibraryID, 0); 
+		$this->end();
+	}
+
 }
