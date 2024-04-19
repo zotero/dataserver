@@ -129,7 +129,8 @@ class StorageController extends ApiController {
 		if ($quota == self::UNLIMITED) {
 			$xml->quota = 'unlimited';
 		}
-		$usage = Zotero_Storage::getUserUsage($this->objectUserID, 'mb');
+		// TEMP: Use an uncached lookup until we make sure we're clearing the cache on all actions
+		$usage = Zotero_Storage::getUserUsage($this->objectUserID, 'mb', true);
 		$xml->usage->total = $usage['total'];
 		$xml->usage->library = $usage['library'];
 		

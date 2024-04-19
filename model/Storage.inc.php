@@ -904,12 +904,14 @@ class Zotero_Storage {
 		return $quota;
 	}
 	
-	public static function getUserUsage($userID, $unit = 'b') {
+	public static function getUserUsage($userID, $unit = 'b', $uncached = false) {
 		$cacheKey = "userStorageUsageBytes_" . $userID;
-		$usage = Z_Core::$MC->get($cacheKey);
-		if ($usage) {
-			$usage = self::usageToUnit($usage, $unit);
-			return $usage;
+		if (!$uncached) {
+			$usage = Z_Core::$MC->get($cacheKey);
+			if ($usage) {
+				$usage = self::usageToUnit($usage, $unit);
+				return $usage;
+			}
 		}
 		
 		$usage = [];
