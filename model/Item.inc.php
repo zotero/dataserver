@@ -3582,9 +3582,6 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!is_string($val)) {
 					throw new Exception("$fieldFull must be a string", Z_ERROR_INVALID_INPUT);
 				}
-				if (!$val) {
-					$val = '';
-				}
 				// Check annotationText length
 				if ($field == 'text') {
 					$val = mb_substr($val, 0, Zotero_Items::$maxAnnotationTextLength);

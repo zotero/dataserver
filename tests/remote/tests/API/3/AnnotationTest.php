@@ -455,6 +455,34 @@ class AnnotationTest extends APITests {
 	}
 	
 	
+	public function test_should_preserve_0_for_annotation_fields() {
+		$json = [
+			'itemType' => 'annotation',
+			'parentItem' => self::$pdfAttachmentKey,
+			'annotationType' => 'highlight',
+			'annotationText' => '0',
+			'annotationComment' => '0',
+			'annotationSortIndex' => '00015|002431|00000',
+			'annotationPosition' => json_encode([
+				'pageIndex' => 123,
+				'rects' => [
+					[314.4, 412.8, 556.2, 609.6]
+				]
+			])
+		];
+		$response = API::userPost(
+			self::$config['userID'],
+			"items",
+			json_encode([$json]),
+			["Content-Type: application/json"]
+		);
+		$this->assert200ForObject($response);
+		$json = API::getJSONFromResponse($response)['successful'][0];
+		$this->assertEquals('0', $json['data']['annotationText']);
+		$this->assertEquals('0', $json['data']['annotationComment']);
+	}
+	
+	
 	public function test_should_clear_annotation_fields() {
 		$json = [
 			'itemType' => 'annotation',
