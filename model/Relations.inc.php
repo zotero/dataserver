@@ -40,7 +40,8 @@ class Zotero_Relations extends Zotero_ClassicDataObjects {
 		'mendeleyDB:annotationUUID',
 		'mendeleyDB:relatedDocumentUUID',
 		'mendeleyDB:relatedRemoteDocumentUUID',
-		'mendeleyDB:relatedFileHash'
+		'mendeleyDB:relatedFileHash',
+		'mendeleyDB:notebookUUID'
 	];
 	
 	public static $externalPredicates = [
@@ -51,7 +52,8 @@ class Zotero_Relations extends Zotero_ClassicDataObjects {
 		'mendeleyDB:remoteFolderUUID',
 		'mendeleyDB:relatedDocumentUUID',
 		'mendeleyDB:relatedRemoteDocumentUUID',
-		'mendeleyDB:relatedFileHash'
+		'mendeleyDB:relatedFileHash',
+		'mendeleyDB:notebookUUID'
 	];
 	
 	protected static $ZDO_object = 'relation';
