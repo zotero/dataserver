@@ -851,7 +851,7 @@ class Zotero_Storage {
 				// Email doesn't match blacklist if one exists for domain
 				. "AND (domainBlacklist = '' "
 					. "OR SUBSTRING_INDEX(email, '@', -1) NOT REGEXP domainBlacklist)"
-			. ") WHERE userID=?";
+			. ") WHERE userID=? AND validated=1";
 		try {
 			$institutionalDomainQuota = Zotero_WWW_DB_2::valueQuery($sql, $userID);
 		}
@@ -864,7 +864,7 @@ class Zotero_Storage {
 		$sql = "SELECT IFNULL(MAX(storageQuota), 0) FROM $databaseName.users_email
 				JOIN $databaseName.storage_institution_email USING (email)
 				JOIN $databaseName.storage_institutions USING (institutionID)
-				WHERE userID=?";
+				WHERE userID=? AND validated=1";
 		try {
 			$institutionalEmailQuota = Zotero_WWW_DB_2::valueQuery($sql, $userID);
 		}
