@@ -420,6 +420,30 @@ class Zotero_Users {
 	}
 	
 	
+	/**
+	 * Find user by userID, username, or email address
+	 *
+	 * Used for admin scripts
+	 *
+	 * @return {Integer} - userID
+	 */
+	public static function find($q) {
+		if (is_numeric($q)) {
+			return $q;
+		}
+		// Email
+		if (strpos($q, '@') !== false) {
+			$sql = "SELECT userID FROM users_email WHERE email=?";
+			return Zotero_WWW_DB_2::valueQuery($sql, $q);
+		}
+		// Username
+		else {
+			$sql = "SELECT userID FROM users WHERE username=?";
+			return Zotero_WWW_DB_2::valueQuery($sql, $q);
+		}
+	}
+	
+	
 	public static function isDeletedUser($userID) {
 		if (!$userID) {
 			throw new Exception("Invalid user");
