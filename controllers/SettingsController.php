@@ -159,4 +159,14 @@ class SettingsController extends ApiController {
 		
 		$this->end();
 	}
+	
+	
+	/**
+	 * Settings values are stored as strings, so treat bigints as strings. No valid value should
+	 * ever be a bigint, but we don't want to convert them to floats, particularly for something
+	 * like lastPageIndex where we interpret floats as snapshot percentages rather than page numbers.
+	 */
+	protected function jsonDecode($json, $flags = 0) {
+		return parent::jsonDecode($json, JSON_BIGINT_AS_STRING);
+	}
 }

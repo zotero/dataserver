@@ -1328,8 +1328,8 @@ class ApiController extends Controller {
 	}
 	
 	
-	protected function jsonDecode($json) {
-		$obj = json_decode($json);
+	protected function jsonDecode($json, $flags = 0) {
+		$obj = json_decode($json, null, 20, $flags);
 		$this->checkJSONError();
 		Zotero_Utilities::cleanStringRecursive($obj);
         return $obj;

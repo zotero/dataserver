@@ -716,6 +716,38 @@ class SettingsTests extends APITests {
 	}
 	
 	
+	public function test_should_force_massive_integer_values_to_1() {
+		$json = [
+			"lastPageIndex_u_ABCD2345" => [
+				"value" => 9223372036854775807
+			],
+			"lastPageIndex_u_BCDE3456" => [
+				"value" => "9223372036854776000"
+			]
+		];
+		// Greater than max signed 64-bit integer, so edit JSON to include directly
+		// https://forums.zotero.org/discussion/121223/sync-problem-settings-failed-with-status-code-400
+		$json = str_replace('"9223372036854776000"', "9223372036854776000", json_encode($json));
+		$response = API::userPost(
+			self::$config['userID'],
+			"settings",
+			$json,
+			["Content-Type: application/json"]
+		);
+		$this->assert204($response);
+		
+		foreach (["ABCD2345", "BCDE3456"] as $settingKey) {
+			$response = API::userGet(
+				self::$config['userID'],
+				"settings/lastPageIndex_u_$settingKey"
+			);
+			$this->assert200($response);
+			$json = API::getJSONFromResponse($response);
+			$this->assertEquals(1, $json['value'], $settingKey);
+		}
+	}
+	
+	
 	public function test_lastPageIndex_should_reject_percentages_below_0_or_above_100() {
 		$json = [
 			"lastPageIndex_u_ABCD2345" => [
