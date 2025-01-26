@@ -557,18 +557,20 @@ class Zotero_Key {
 		$ip = IPAddress::getIP();
 		
 		// If we already logged access by this key from this IP address
-		// in the last minute, don't do it again
+		// in the last 10 minutes, don't do it again
 		$cacheKey = "keyAccessLogged_" . $this->id . "_" . md5($ip);
 		if (Z_Core::$MC->get($cacheKey)) {
 			return;
 		}
 		
 		try {
-			$sql = "UPDATE `keys` SET lastUsed=NOW() WHERE keyID=?";
-			Zotero_DB::query($sql, $this->id, 0, [ 'writeInReadMode' => true ]);
 			if ($ip) {
-				$sql = "REPLACE INTO keyAccessLog (keyID, ipAddress) VALUES (?, INET_ATON(?))";
+				$sql = "INSERT INTO keyAccessLog (keyID, ipAddress) VALUES (?, INET_ATON(?)) "
+					. "ON DUPLICATE KEY UPDATE timestamp=NOW()";
 				Zotero_DB::query($sql, [$this->id, $ip], 0, [ 'writeInReadMode' => true ]);
+			}
+			else {
+				Z_Core::logError("Warning: IP address not available for " . $_SERVER['REQUEST_URI']);
 			}
 		}
 		catch (Exception $e) {
@@ -635,7 +637,13 @@ class Zotero_Key {
 	
 	
 	private function getDates() {
-		$row = Zotero_DB::rowQuery("SELECT dateAdded, lastUsed FROM `keys` WHERE keyID=?", $this->id);
+		// Get more recent of `keys.lastUsed` and latest `keyAccessLog.timestamp` while we prepare
+		// to remove lastUsed
+		$sql = "SELECT dateAdded, GREATEST(lastUsed, IFNULL(timestamp, TIMESTAMP('0000-00-00 00:00:00'))) AS lastUsed "
+			. "FROM `keys` LEFT JOIN keyAccessLog USING (keyID) "
+			. "WHERE keyID=? "
+			. "ORDER BY timestamp DESC LIMIT 1";
+		$row = Zotero_DB::rowQuery($sql, $this->id);
 		return [
 			'dateAdded' => $row['dateAdded'],
 			'lastUsed' => $row['lastUsed']
