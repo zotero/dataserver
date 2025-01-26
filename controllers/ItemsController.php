@@ -435,8 +435,11 @@ class ItemsController extends ApiController {
 						$this->e404("Item not found");
 					}
 					
-					if ($item->isAttachment() && !$item->isPDFAttachment()) {
-						$this->e400("/children cannot be called on non-PDF attachments");
+					if ($item->isAttachment()
+							&& !$item->isPDFAttachment()
+							&& !$item->isEPUBAttachment()
+							&& !$item->isHTMLAttachment()) {
+						$this->e400("/children can only be called on PDF, EPUB, and snapshot attachments");
 					}
 					
 					// Create new child items
