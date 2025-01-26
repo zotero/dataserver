@@ -659,7 +659,7 @@ class Zotero_Users {
 		}
 		
 		// Remove all data
-		Zotero_Users::clearAllData($userID);
+		self::clearAllData($userID);
 		
 		// Remove old user publications library
 		$libraryID = self::getLibraryIDFromUserID($userID, 'publications');
