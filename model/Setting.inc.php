@@ -71,6 +71,11 @@ class Zotero_Setting {
 			$this->loaded = true;
 		}
 		
+		// TEMP
+		if (strpos($this->name, 'lastPageIndex') === 0 && is_float($value) && $value > 100 && $value < 105) {
+			$value = 100.0;
+		}
+		
 		$this->checkProperty($prop, $value);
 		
 		// If the existing field is an object or an array (e.g. [{"name", "value"}] for tagColors),
