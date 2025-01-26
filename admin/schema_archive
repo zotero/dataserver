@@ -1,0 +1,50 @@
+#!/bin/bash
+set -euo pipefail
+
+#
+# Store gzipped copy of current schema.json without CSL mappings or locales for checking whether
+# fields were valid in a previous version. This needs to be run before making type/field changes so
+# that there's an archived version of the highest version before the version that introduces changes.
+#
+
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+
+current_schema_file="$SCRIPT_DIR/../htdocs/zotero-schema/schema.json"
+version=$(jq -r '.version' "$current_schema_file")
+schema_dir="$(realpath "$SCRIPT_DIR/../misc/schema")"
+target_file="$schema_dir/$version.gz"
+
+cd "$schema_dir"
+
+jq 'del(.locales, .csl)' "$current_schema_file" > "$version.tmp"
+
+# If the highest existing version is identical (i.e., there've only been changes in data that we
+# don't include in archived versions, such as locales), delete it in favor of the new one
+if ls *.gz 1> /dev/null 2>&1; then
+	prev_version="$(ls *.gz | sed 's/.gz//' | sort -n | tail -n 1)"
+	
+	if [ $prev_version -lt $version ]; then
+		# Remove .version from both old and new for the comparison
+		gunzip -c "$prev_version.gz" | jq 'del(.version)' > a.tmp
+		jq 'del(.version)' "$version.tmp" > b.tmp
+		
+		if cmp -s a.tmp b.tmp; then
+			echo "No schema changes since version $prev_version -- deleting $prev_version.gz"
+			echo
+			rm "$prev_version.gz"
+		fi
+	fi
+fi
+
+gzip -c "$version.tmp" > "$target_file"
+
+rm -f $version.tmp a.tmp b.tmp
+
+echo "Schema $version saved as $target_file"
+echo
+
+ls *.gz | sed 's/.gz//' | sort -n | jq -R -s 'split("\n") | map(select(length > 0) | tonumber)' > versions
+
+echo "Versions file updated:"
+echo
+cat versions

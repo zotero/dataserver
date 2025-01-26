@@ -4,9 +4,9 @@
     
     This file is part of the Zotero Data Server.
     
-    Copyright © 2019 Corporation for Digital Scholarship
+    Copyright © 2025 Corporation for Digital Scholarship
                      Vienna, Virginia, USA
-                     http://digitalscholar.org
+                     https://www.zotero.org
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -28,6 +28,9 @@ namespace Zotero;
 
 class Schema {
 	private static $schema;
+	private static $previousSchemas;
+	private static $knownVersions;
+	private static $effectiveVersions;
 	private static $version;
 	private static $versionCacheKey = "schemaVersion";
 	
@@ -37,7 +40,7 @@ class Schema {
 	}
 	
 	
-	public static function get() {
+	public static function getCurrent() {
 		if (!self::$schema) {
 			self::init();
 		}
@@ -45,6 +48,29 @@ class Schema {
 	}
 	
 	
+	/**
+	 * Get a specific schema version
+	 *
+	 * Either the current version or an archived version without CSL mappings and locales
+	 */
+	public static function getByVersion(int $version) {
+		if ($version == self::getVersion()) {
+			return self::getCurrent();
+		}
+		if (!isset(self::$previousSchemas[$version])) {
+			$version = self::getEffectiveVersion($version);
+			self::$previousSchemas[$version] = self::readFromArchiveFile($version);
+		}
+		return self::$previousSchemas[$version];
+	}
+	
+	
+	/**
+	 * Get current version from database
+	 *
+	 * This could briefly be older than the latest schema.json file, if files have been updated but
+	 * admin/schema_update hasn't been run.
+	 */
 	public static function getVersion() {
 		if (self::$version) {
 			return self::$version;
@@ -61,6 +87,44 @@ class Schema {
 		self::$version = $version;
 		\Z_Core::$MC->set(self::$versionCacheKey, $version, 60);
 		return $version;
+	}
+	
+	
+	/**
+	 * Get the schema version we should use for the given version number -- the given version or
+	 * the lowest known version above the given verson
+	 */
+	public static function getEffectiveVersion(int|null $version): int {
+		$currentVersion = self::getVersion();
+		if (!$version || $version == $currentVersion) {
+			return $currentVersion;
+		}
+		if (isset(self::$effectiveVersions[$version])) {
+			return self::$effectiveVersions[$version];
+		}
+		if ($version > $currentVersion) {
+			\Z_Core::debug("Schema version $version is greater than the current version");
+			return $currentVersion;
+		}
+		if (!self::$knownVersions) {
+			self::$knownVersions = json_decode(file_get_contents(
+				Z_ENV_BASE_PATH . "misc/schema/versions"
+			));
+		}
+		// If greater than the highest version in the version file, use the current version instead
+		if ($version > self::$knownVersions[array_key_last(self::$knownVersions)]) {
+			return $currentVersion;
+		}
+		$effectiveVersion = self::$knownVersions[0];
+		foreach (self::$knownVersions as $v) {
+			if ($version <= $v) {
+				$effectiveVersion = $v;
+			}
+			if ($version == $v) {
+				break;
+			}
+		}
+		return self::$effectiveVersions[$version] = $effectiveVersion;
 	}
 	
 	
@@ -122,9 +186,27 @@ class Schema {
 	
 	
 	public static function readFromFile() {
-		$schema = file_get_contents(Z_ENV_BASE_PATH . 'htdocs/zotero-schema/schema.json');
+		$schema = file_get_contents(Z_ENV_BASE_PATH . "htdocs/zotero-schema/schema.json");
 		$schema = json_decode($schema, true);
 		return $schema;
+	}
+	
+	
+	/**
+	 * Get an archived schema without CSL mappings or locales
+	 *
+	 * Archived schemas are stored using admin/schema_archive.
+	 */
+	private static function readFromArchiveFile(int $version) {
+		$schema = file_get_contents(Z_ENV_BASE_PATH . "misc/schema/$version.gz");
+		if ($schema === false) {
+			throw new \Exception("Schema version $version not found");
+		}
+		$schema = gzdecode($schema);
+		if ($schema === false) {
+			throw new \Exception("Unable to decode gzipped schema version $version");
+		}
+		return json_decode($schema, true);
 	}
 	
 	

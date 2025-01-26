@@ -1,5 +1,10 @@
 #!/usr/bin/php
 <?php
+
+//
+// Update DB from current schema
+//
+
 set_include_path("../include");
 require("header.inc.php");
 

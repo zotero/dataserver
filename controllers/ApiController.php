@@ -392,6 +392,11 @@ class ApiController extends Controller {
 			$this->isLegacySchemaClient = ToolkitVersionComparator::compare(
 				$_SERVER['HTTP_X_ZOTERO_VERSION'], "5.0.78"
 			) < 0;
+			
+			// Zotero 5.0 didn't send Zotero-Schema-Version, which would cause Z5 clients to use
+			// the latest schema and break on unknown empty fields when uploading items. Instead,
+			// set to 29 so they use the last schema before new fields.
+			$_SERVER['HTTP_ZOTERO_SCHEMA_VERSION'] = "29";
 		}
 		
 		if (!empty($extra['publications'])) {

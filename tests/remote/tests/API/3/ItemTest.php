@@ -3310,4 +3310,80 @@ class ItemTests extends APITests {
 		);
 		$this->assertStringContainsString("\"title\": \"$title\"", $response->getBody());
 	}
+	
+	
+	public function test_should_not_return_empty_fields_from_newer_schema_to_old_client() {
+		// TODO: Remove once we actually update the schema
+		$this->markTestSkipped();
+		
+		API::useSchemaVersion(false);
+		
+		$json = API::createItem("book", [], $this, 'jsonData');
+		$key = $json['key'];
+		
+		$this->assertArrayHasKey('originalDate', $json);
+		
+		// Property should show up if schema version not specified
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key"
+		);
+		$this->assert200($response);
+		$this->assertArrayHasKey('originalDate', API::getJSONFromResponse($response)['data']);
+		
+		// Property should show up in schema version 33
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'Zotero-Schema-Version: 33'
+			]
+		);
+		$this->assert200($response);
+		$this->assertArrayHasKey('originalDate', API::getJSONFromResponse($response)['data']);
+		
+		// Property should show up in unknown future version
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'Zotero-Schema-Version: 3000'
+			]
+		);
+		$this->assert200($response);
+		$this->assertArrayHasKey('originalDate', API::getJSONFromResponse($response)['data']);
+		
+		// Property shouldn't show up in schema version 29
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'Zotero-Schema-Version: 29'
+			]
+		);
+		$this->assert200($response);
+		$this->assertArrayNotHasKey('originalDate', API::getJSONFromResponse($response)['data']);
+		
+		// But should still show up if actually populated, which will trigger an unknown-field
+		// error in Zotero clients
+		$originalDate = '1883';
+		$json['originalDate'] = $originalDate;
+		$response = API::userPut(
+			self::$config['userID'],
+			"items/$key",
+			json_encode($json)
+		);
+		$this->assert204($response);
+		$response = API::userGet(
+			self::$config['userID'],
+			"items/$key",
+			[
+				'Zotero-Schema-Version: 29'
+			]
+		);
+		$this->assert200($response);
+		$this->assertArrayHasKey('originalDate', API::getJSONFromResponse($response)['data']);
+		$this->assertEquals($originalDate, API::getJSONFromResponse($response)['data']['originalDate']);
+		
+	}
 }

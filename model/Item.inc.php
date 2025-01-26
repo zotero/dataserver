@@ -4431,6 +4431,10 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	
 	public function toJSON($asArray=false, $requestParams=array(), $includeEmpty=false, $unformattedFields=false) {
+		$schemaVersion = $requestParams['schemaVersion'] ?? null;
+		$effectiveSchemaVersion = \Zotero\Schema::getEffectiveVersion($schemaVersion);
+		$isCurrentSchemaVersion = \Zotero\Schema::getVersion() == $effectiveSchemaVersion;
+		
 		$isPublications = !empty($requestParams['publications']);
 		
 		if ($this->_id || $this->_key) {
@@ -4526,8 +4530,22 @@ class Zotero_Item extends Zotero_DataObject {
 				$value = $this->getField($field);
 			}
 			
-			if (!$includeEmpty && ($value === false || $value === null && $value === "")) {
-				continue;
+			$valueIsEmpty = $value === false || $value === null || $value === "";
+			if ($valueIsEmpty) {
+				if (!$includeEmpty) {
+					continue;
+				}
+				// If request is for an older schema version, don't include empty fields if not in
+				// that version. Otherwise, all write requests and requests for items that don't
+				// even use new fields would trigger unknown-field errors.
+				if (!$isCurrentSchemaVersion) {
+					$valid = Zotero_ItemFields::isValidForType(
+						$field, $this->itemTypeID, $effectiveSchemaVersion
+					);
+					if (!$valid) {
+						continue;
+					}
+				}
 			}
 			
 			$fieldName = Zotero_ItemFields::getName($field);
@@ -4597,7 +4615,7 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		if ($this->isAnnotation()) {
 			// Trigger upgrade warning for reader2 annotations in unsupported clients
-			if ($requestParams['schemaVersion'] < 29) {
+			if ($schemaVersion && $schemaVersion < 29) {
 				// New annotation types
 				$block = in_array($this->annotationType, ['underline', 'text']);
 				if (!$block) {
