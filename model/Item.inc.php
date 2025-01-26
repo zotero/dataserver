@@ -1392,9 +1392,9 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Attachment
 				if ($this->isAttachment()) {
-					$sql = "INSERT INTO itemAttachments
-							(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash)
-							VALUES (?,?,?,?,?,?,?,?)";
+					$sql = "INSERT INTO itemAttachments "
+						. "(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash) "
+						. "VALUES (?,?,?,?,?,?,?,?)";
 					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
 					
 					$parent = $this->getSource();
