@@ -34,10 +34,10 @@ class Z_Redis {
 					true
 				);
 				
-				$redis->setOption(RedisCluster::OPT_SERIALIZER, RedisCluster::SERIALIZER_NONE);
+				$redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_NONE);
 				
 				if (!empty(Z_CONFIG::$REDIS_PREFIX)) {
-					$redis->setOption(RedisCluster::OPT_PREFIX, Z_CONFIG::$REDIS_PREFIX);
+					$redis->setOption(Redis::OPT_PREFIX, Z_CONFIG::$REDIS_PREFIX);
 				}
 			}
 			// Non-cluster mode
