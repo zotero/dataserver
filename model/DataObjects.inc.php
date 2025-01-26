@@ -552,7 +552,7 @@ trait Zotero_DataObjects {
 		}
 		
 		if (!Zotero_Libraries::userCanEdit($obj->libraryID, $userID, $obj)) {
-			throw new Exception("Cannot edit " . self::$objectType
+			throw new Exception("Cannot edit " . self::$objectType . " " . $obj->key
 				. " in library $obj->libraryID", Z_ERROR_LIBRARY_ACCESS_DENIED);
 		}
 	}
