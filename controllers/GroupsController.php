@@ -292,6 +292,13 @@ class GroupsController extends ApiController {
 			$this->e403();
 		}
 		
+		if (!is_numeric($this->scopeObjectID)) {
+			$this->e400("Invalid group ID", Z_ERROR_INVALID_INPUT);
+		}
+		if (!is_numeric($this->objectID)) {
+			$this->e400("Invalid user ID", Z_ERROR_INVALID_INPUT);
+		}
+		
 		$groupID = $this->scopeObjectID;
 		$userID = $this->objectID;
 		

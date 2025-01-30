@@ -318,7 +318,7 @@ class ApiController extends Controller {
 		
 		// Get object user
 		if (isset($this->objectUserID)) {
-			if (!$this->objectUserID) {
+			if (!$this->objectUserID || !is_numeric($this->objectUserID)) {
 				$this->e400("Invalid user ID", Z_ERROR_INVALID_INPUT);
 			}
 			
@@ -352,7 +352,7 @@ class ApiController extends Controller {
 		}
 		// Get object group
 		else if (isset($this->objectGroupID)) {
-			if (!$this->objectGroupID) {
+			if (!$this->objectGroupID || !is_numeric($this->objectGroupID)) {
 				$this->e400("Invalid group ID", Z_ERROR_INVALID_INPUT);
 			}
 			// Make sure group exists

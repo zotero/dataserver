@@ -54,10 +54,13 @@ class Router {
 					if ($p[0]) {
 						switch ($p[0]) {
 						case 'i':
-							if (!is_numeric($part)) {
+							if ($part === false) {
 								continue 2;
 							}
-							$part = (int) $part;
+							// Cast to integer if it's supposed to be an integer
+							if (is_numeric($part)) {
+								$part = (int) $part;
+							}
 							break;
 							
 						default:

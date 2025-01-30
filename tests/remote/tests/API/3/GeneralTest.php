@@ -4,9 +4,9 @@
     
     This file is part of the Zotero Data Server.
     
-    Copyright © 2013 Center for History and New Media
-                     George Mason University, Fairfax, Virginia, USA
-                     http://zotero.org
+    Copyright © 2025 Corporation for Digital Scholarship
+                     Vienna, VA, USA
+                     https://www.zotero.org
     
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -38,6 +38,15 @@ class GeneralTests extends APITests {
 	public static function tearDownAfterClass(): void {
 		parent::tearDownAfterClass();
 		API::userClear(self::$config['userID']);
+	}
+	
+	
+	public function test_should_return_400_if_string_passed_as_userID() {
+		$response = API::userGet(
+			"foo",
+			"items"
+		);
+		$this->assert400($response);
 	}
 	
 	
