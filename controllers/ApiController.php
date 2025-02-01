@@ -316,6 +316,11 @@ class ApiController extends Controller {
 		// Request limiter needs initialized authentication parameters
 		$this->initRequestLimiter();
 		
+		// Work around bug in Zotero Connector direct-to-server setup
+		if ($_SERVER["REQUEST_URI"] == '/users/undefined/keys/current') {
+			$this->objectUserID = null;
+		}
+		
 		// Get object user
 		if (isset($this->objectUserID)) {
 			if (!$this->objectUserID || !is_numeric($this->objectUserID)) {
