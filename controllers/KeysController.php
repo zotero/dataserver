@@ -148,8 +148,7 @@ class KeysController extends ApiController {
 			$keyObj->erase();
 			Zotero_DB::commit();
 			
-			header("HTTP/1.1 204 No Content");
-			exit;
+			$this->e204();
 		}
 		
 		else {
@@ -316,20 +315,11 @@ class KeysController extends ApiController {
 			}
 		}
 		
-		if ($this->apiVersion >= 3) {
-			$this->end();
-		}                             
-		else {
+		if ($this->apiVersion < 3) { 
+			unset($this->queryParams['format']);
 			header('Content-Type: application/xml');
-			$xmlstr = $this->responseXML->asXML();
-			
-			$doc = new DOMDocument('1.0');
-			
-			$doc->loadXML($xmlstr);
-			$doc->formatOutput = true;
-			echo $doc->saveXML();
-			exit;
 		}
+		$this->end();
 	}
 	
 	
