@@ -30,9 +30,9 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 	public static $allowedSettings = [
 		'feeds',
 		'tagColors',
-		'readerCustomThemes',
 		'/^lastPageIndex_(u|g[0-9]+)_[A-Z0-9]{8}$/',
-		'/^lastRead_(g[0-9]+)_[A-Z0-9]{8}$/'
+		'/^lastRead_(g[0-9]+)_[A-Z0-9]{8}$/',
+		'readerCustomThemes'
 	];
 	
 	protected static $ZDO_object = 'setting';
