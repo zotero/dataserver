@@ -54,7 +54,7 @@ class StorageController extends ApiController {
 		}
 		
 		echo $lastSync;
-		exit;
+		$this->end();
 	}
 	
 	
@@ -66,8 +66,7 @@ class StorageController extends ApiController {
 		
 		$sql = "DELETE FROM storageFileLibraries WHERE libraryID = ?";
 		Zotero_DB::query($sql, $this->objectLibraryID);
-		header("HTTP/1.1 204 No Content");
-		exit;
+		$this->e204();
 	}
 	
 	
@@ -147,9 +146,10 @@ class StorageController extends ApiController {
 		
 		Zotero_DB::commit();
 		
-		header('application/xml');
-		echo $xml->asXML();
-		exit;
+		$this->responseXML = $xml;
+		unset($this->queryParams['format']);
+		header('Content-Type: application/xml');
+		$this->end();
 	}
 	
 	
