@@ -258,7 +258,7 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 		// String settings
 		default:
 			if (!is_string($value)) {
-				throw new Exception("'value' be a string", Z_ERROR_INVALID_INPUT);
+				throw new Exception("'value' must be a string", Z_ERROR_INVALID_INPUT);
 			}
 			
 			if ($value === "") {
