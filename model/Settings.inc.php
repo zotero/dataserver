@@ -219,6 +219,7 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			break;
 		
 		// Array settings
+		case 'readerCustomThemes':
 		case 'tagColors':
 			if (!is_array($value)) {
 				throw new Exception("'value' must be an array", Z_ERROR_INVALID_INPUT);
