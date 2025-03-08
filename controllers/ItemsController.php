@@ -952,6 +952,7 @@ class ItemsController extends ApiController {
 					$usageMB = round($usage['total'] / 1024 / 1024, 1);
 					header("Zotero-Storage-Usage: $usageMB");
 					header("Zotero-Storage-Quota: $quota");
+					header("Zotero-Storage-UserID: ". ($group ? $group->ownerUserID : $this->objectUserID));
 					$this->e413("File would exceed quota ($requestedMB > $quota)");
 				}
 				

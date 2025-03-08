@@ -1605,6 +1605,77 @@ class FileTests extends APITests {
 	}
 	
 	
+	public function test_should_reject_file_in_personal_library_if_it_would_put_user_over_quota() {
+		API::userClear(self::$config['userID']);
+		
+		$key = API::createAttachmentItem("imported_file", [
+			'contentType' => 'application/pdf'
+		], null, $this, 'key');
+		
+		$response = API::userPost(
+			self::$config['userID'],
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => 'd41d8cd98f00b204e9800998ecf8427e',
+				"mtime" => $mtime = time() * 1000,
+				"filename" => "file.pdf",
+				"filesize" => 500 * 1024 * 1024, // 500 MiB
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert413($response, "File would exceed quota (500 &gt; 300)");
+		$this->assertEquals(300, $response->getHeader('Zotero-Storage-Quota'));
+		$this->assertEquals(self::$config['userID'], $response->getHeader('Zotero-Storage-UserID'));
+	}
+	
+	
+	public function test_should_reject_file_in_group_library_if_it_would_put_owner_over_quota() {
+		$ownerUserID = self::$config['userID2'];
+		$groupID = API::createGroup([
+			'owner' => $ownerUserID,
+			'type' => 'PublicClosed',
+			'name' => \Zotero_Utilities::randomString(14),
+			'libraryReading' => 'all',
+			'fileEditing' => 'members'
+		]);
+		$response = API::superPost(
+			"groups/$groupID/users",
+			'<user id="' . self::$config['userID'] . '" role="member"/>',
+			["Content-Type: text/xml"]
+		);
+		$this->assert200($response);
+		$key = API::groupCreateAttachmentItem(
+			$groupID,
+			"imported_file", [
+				'contentType' => 'application/pdf'
+			],
+			null,
+			$this,
+			'key'
+		);
+		$response = API::groupPost(
+			$groupID,
+			"items/$key/file",
+			$this->implodeParams([
+				"md5" => 'd41d8cd98f00b204e9800998ecf8427e',
+				"mtime" => $mtime = time() * 1000,
+				"filename" => "file.pdf",
+				"filesize" => 500 * 1024 * 1024, // 500 MiB
+			]),
+			[
+				"Content-Type: application/x-www-form-urlencoded",
+				"If-None-Match: *"
+			]
+		);
+		$this->assert413($response, "File would exceed quota (500 &gt; 300)");
+		$this->assertEquals(300, $response->getHeader('Zotero-Storage-Quota'));
+		$this->assertEquals($ownerUserID, $response->getHeader('Zotero-Storage-UserID'));
+	}
+	
+	
 	public function test_add_embedded_image_attachment() {
 		API::userClear(self::$config['userID']);
 		
