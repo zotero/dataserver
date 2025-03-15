@@ -174,8 +174,7 @@ class GroupsController extends ApiController {
 			$group->erase();
 			Zotero_DB::commit();
 			
-			header("HTTP/1.1 204 No Content");
-			exit;
+			$this->e204();
 		}
 		
 		
@@ -490,8 +489,7 @@ class GroupsController extends ApiController {
 			
 			Zotero_DB::commit();
 			
-			header("HTTP/1.1 204 No Content");
-			exit;
+			$this->e204();
 		}
 		
 		// Single user
