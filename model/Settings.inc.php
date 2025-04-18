@@ -28,6 +28,9 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 	public static $MAX_VALUE_LENGTH = 30000;
 	
 	public static $allowedSettings = [
+		'attachmentRenameTemplate',
+		'autoRenameFiles',
+		'autoRenameFilesFileTypes',
 		'feeds',
 		'tagColors',
 		'/^lastPageIndex_(u|g[0-9]+)_[A-Z0-9]{8}$/',
@@ -219,6 +222,7 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			break;
 		
 		// Array settings
+		case 'autoRenameFilesFileTypes':
 		case 'readerCustomThemes':
 		case 'tagColors':
 			if (!is_array($value)) {
