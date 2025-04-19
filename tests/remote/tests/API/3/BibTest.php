@@ -345,6 +345,16 @@ class BibTests extends APITests {
 	}
 	
 	
+	public function test_should_format_citation_list_for_style_without_bibliography() {
+		$response = API::userGet(
+			self::$config['userID'],
+			"items?format=bib&style=bluebook-law-review"
+		);
+		$this->assert200($response);
+		$this->assertStringStartsWith("<ol>\n\t<li><span style=\"font-variant:small-caps;\">Jane Smith</span>", $response->getBody());
+	}
+	
+	
 	public function testFormatBibLocale() {
 		$response = API::userGet(
 			self::$config['userID'],
