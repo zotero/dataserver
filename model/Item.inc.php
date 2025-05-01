@@ -3568,7 +3568,7 @@ class Zotero_Item extends Zotero_DataObject {
 					}
 				}
 				else if ($parentItem->isHTMLAttachment()) {
-					if (!preg_match('/^\d{8}$/', $val)) {
+					if (!preg_match('/^\d{7,8}$/', $val)) {
 						throw new Exception("Invalid sortIndex '$val' for HTML annotation", Z_ERROR_INVALID_INPUT);
 					}
 				}
