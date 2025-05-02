@@ -52,14 +52,6 @@ class Zotero_Cite {
 		$json = self::getJSONFromItems($items);
 		$response = self::makeRequest($queryParams, 'bibliography', $json);
 		$response = self::processBibliographyResponse($response);
-		
-		// If the style didn't produce a bibliography, make a second request for citations and turn
-		// them into an ordered list
-		if (!$response) {
-			$citeResp = self::makeRequest($queryParams, 'citation', $json);
-			$response = self::processCitationListResponse($citeResp);
-		}
-		
 		if ($response) {
 			Z_Core::$MC->set($key, $response, 900);
 		}
@@ -305,17 +297,17 @@ class Zotero_Cite {
 		$authorID = Zotero_CreatorTypes::getPrimaryIDForType($zoteroItem->itemTypeID);
 		$creators = $zoteroItem->getCreators();
 		foreach ($creators as $creator) {
-			if ($creator->creatorTypeID == $authorID) {
+			if ($creator['creatorTypeID'] == $authorID) {
 				$creatorType = "author";
 			}
 			else {
-				$creatorType = Zotero_CreatorTypes::getName($creator->creatorTypeID);
+				$creatorType = Zotero_CreatorTypes::getName($creator['creatorTypeID']);
 			}
 			
 			$creatorType = isset(self::$zoteroNameMap[$creatorType]) ? self::$zoteroNameMap[$creatorType] : false;
 			if (!$creatorType) continue;
 			
-			$nameObj = array('family' => $creator->lastName, 'given' => $creator->firstName);
+			$nameObj = array('family' => $creator['ref']->lastName, 'given' => $creator['ref']->firstName);
 			
 			if (isset($cslItem[$creatorType])) {
 				$cslItem[$creatorType][] = $nameObj;
@@ -543,32 +535,7 @@ class Zotero_Cite {
 	}
 	
 	
-	/**
-	* Convert a citeserver `&citations=1` response to an HTML ordered list
-	*
-	* @param  stdClass $response  Parsed JSON from citeserver
-	* @return string|false
-	*/
-	private static function processCitationListResponse($response) {
-		if (empty($response->citations)) {
-			return false;
-		}
-		$citations = [];
-		foreach ($response->citations as $c) {
-			$citations[(int) $c[0]] = $c[1]; // [position, html]
-		}
-		ksort($citations);
-		return "<ol>\n\t<li>".implode("</li>\n\t<li>", $citations)."</li>\n</ol>";
-	}
-	
-	
 	public static function processBibliographyResponse($response, $css='inline') {
-		// If the style doesn't define a bibliography, let the caller know so it can
-		// issue a second citeserver request for citations
-		if (empty($response->bibliography)) {
-			return false;
-		}
-		
 		//
 		// Ported from Zotero.Cite.makeFormattedBibliography() in Zotero client
 		//

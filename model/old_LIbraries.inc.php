@@ -373,7 +373,7 @@ class Zotero_Libraries {
 		Zotero_DB::beginTransaction();
 		
 		$tables = array(
-			'collections', 'items', 'relations', 'savedSearches',
+			'collections', 'creators', 'items', 'relations', 'savedSearches', 'tags',
 			'syncDeleteLogIDs', 'syncDeleteLogKeys', 'settings'
 		);
 		
@@ -409,7 +409,7 @@ class Zotero_Libraries {
 				// but will probably almost always do the trick.
 				if ($table == 'collections'
 						// Newer MySQL
-						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth") !== false
+						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth")
 						// Older MySQL
 						|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
 					$sql = "DELETE FROM collections WHERE libraryID=? "
