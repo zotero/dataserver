@@ -241,6 +241,13 @@ class Zotero_Settings extends Zotero_ClassicDataObjects {
 			}
 			break;
 		
+		// Boolean settings
+		case 'autoRenameFiles':
+			if (!is_bool($value)) {
+				throw new Exception("'value' must be a boolean", Z_ERROR_INVALID_INPUT);
+			}
+			break;
+		
 		case 'lastPageIndex':
 			if (!is_integer($value) && !is_string($value) && !is_float($value)) {
 				throw new Exception("'value' must be an integer, string, or decimal", Z_ERROR_INVALID_INPUT);
