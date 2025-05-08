@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reviewed: no -->
+<sect1 id="zend.loader.spl-autoloader">
+    <title>The SplAutoloader Interface</title>
+
+    <sect2 id="zend.loader.spl-autoloader.intro">
+        <title>Overview</title>
+
+        <para>
+            While any valid PHP callback may be registered with
+            <function>spl_autoload_register()</function>, Zend Framework autoloaders often provide
+            more flexibility by being stateful and allowing configuration. To provide a common
+            interface, Zend Framework provides the <interfacename>SplAutoloader</interfacename>
+            interface.
+        </para>
+
+        <para>
+            Objects implementing this interface provide a standard mechanism for configuration, a
+            method that may be invoked to attempt to load a class, and a method for registering with
+            the SPL autoloading mechanism.
+        </para>
+    </sect2>
+
+    <sect2 id="zend.loader.spl-autoloader.quick-start">
+        <title>Quick Start</title>
+
+        <para>
+            To create your own autoloading mechanism, simply create a class implementing the
+            <interfacename>SplAutoloader</interfacename> interface (you may review the methods
+            defined in the <link linkend="zend.loader.spl-autoloader.methods">Methods
+            section</link>). As a simple example, consider the following autoloader, which will look
+            for a class file named after the class within a list of registered directories.
+        </para>
+
+        <programlisting language="php"><![CDATA[
+require_once 'Zend/Loader/SplAutoloader.php';
+
+class Custom_ModifiedIncludePathAutoloader implements Zend_Loader_SplAutoloader
+{
+    protected $paths = array();
+
+    public function __construct($options = null)
+    {
+        if (null !== $options) {
+            $this->setOptions($options);
+        }
+    }
+
+    public function setOptions($options)
+    {
+        if (!is_array($options) && !($options instanceof Traversable)) {
+            throw new InvalidArgumentException();
+        }
+
+        foreach ($options as $path) {
+            if (!in_array($path, $this->paths)) {
+                $this->paths[] = $path;
+            }
+        }
+        return $this;
+    }
+
+    public function autoload($classname)
+    {
+        $filename = $classname . '.php';
+        foreach ($this->paths as $path) {
+            $test = $path . DIRECTORY_SEPARATOR . $filename;
+            if (file_exists($test)) {
+                return include($test);
+            }
+        }
+        return false;
+    }
+
+    public function register()
+    {
+        spl_autoload_register(array($this, 'autoload'));
+    }
+}
+]]></programlisting>
+    </sect2>
+
+    <sect2 id="zend.loader.spl-autoloader.options">
+        <title>Configuration Options</title>
+
+        <para>
+            This component defines no configuration options, as it is an interface.
+        </para>
+    </sect2>
+
+    <sect2 id="zend.loader.spl-autoloader.methods">
+        <title>Available Methods</title>
+
+        <variablelist>
+            <varlistentry id="zend.loader.spl-autoloader.methods.constructor">
+                <term>
+                    <methodsynopsis>
+                        <methodname>__construct</methodname>
+                        <methodparam>
+                            <funcparams>$options = null</funcparams>
+                        </methodparam>
+                    </methodsynopsis>
+                </term>
+
+                <listitem>
+                    <para>
+                        Initialize and configure an autoloader
+                    </para>
+                    <para>
+                        Autoloader constructors should optionally receive configuration options.
+                        Typically, if received, these will be passed to the
+                        <methodname>setOptions()</methodname> method to process.
+                    </para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry id="zend.loader.spl-autoloader.methods.set-options">
+                <term>
+                    <methodsynopsis>
+                        <methodname>setOptions</methodname>
+                        <methodparam>
+                            <funcparams>$options</funcparams>
+                        </methodparam>
+                    </methodsynopsis>
+                </term>
+
+                <listitem>
+                    <para>
+                        Configure the autoloader state
+                    </para>
+                    <para>
+                        Used to configure the autoloader. Typically, it should expect either an array or
+                        a <interfacename>Traversable</interfacename> object, though validation of the
+                        options is left to implementation. Additionally, it is recommended that the
+                        method return the autoloader instance in order to implement a fluent interface.
+                    </para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry id="zend.loader.spl-autoloader.methods.autoload">
+                <term>
+                    <methodsynopsis>
+                        <methodname>autoload</methodname>
+                        <methodparam>
+                            <funcparams>$classname</funcparams>
+                        </methodparam>
+                    </methodsynopsis>
+                </term>
+
+                <listitem>
+                    <para>
+                        Attempt to resolve a class name to the file defining it
+                    </para>
+                    <para>
+                        This method should be used to resolve a class name to the file defining it. When
+                        a positive match is found, return the class name; otherwise, return a boolean
+                        false.
+                    </para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry id="zend.loader.spl-autoloader.methods.register">
+                <term>
+                    <methodsynopsis>
+                        <methodname>register</methodname>
+                    </methodsynopsis>
+                </term>
+
+                <listitem>
+                    <para>
+                        Register the autoloader with the SPL autoloader
+                    </para>
+                    <para>
+                        Should be used to register the autoloader instance with
+                        <function>spl_autoload_register()</function>. Invariably, the method
+                        should look like the following:
+                    </para>
+
+                    <programlisting language="php"><![CDATA[
+public function register()
+{
+    spl_autoload_register(array($this, 'autoload'));
+}
+]]></programlisting>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </sect2>
+
+    <sect2 id="zend.loader.spl-autoloader.examples">
+        <title>Examples</title>
+
+        <para>
+            Please see the <link linkend="zend.loader.spl-autoloader.quick-start">Quick Start</link>
+            for a complete example.
+        </para>
+    </sect2>
+</sect1>
