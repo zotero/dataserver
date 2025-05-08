@@ -1,0 +1,17 @@
+*
+!admin
+!config
+!controllers
+!htdocs
+!include
+!init
+!misc
+!model
+!scripts
+!tmp
+!vendor
+!zf1
+!COPYING
+!composer.json
+!composer.lock
+!entrypoint.sh

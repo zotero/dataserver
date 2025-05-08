@@ -205,7 +205,10 @@ Zotero_DB::addCallback("reset", array(Z_Core::$MC, "reset"));
 //
 // Set up AWS service factory
 //
+// TODO: probably need to make the scheme configurable also
 $awsConfig = [
+	'endpoint' => Z_CONFIG::$S3_ENDPOINT,
+	'scheme' => strpos(Z_CONFIG::$S3_ENDPOINT, 'https') === 0 ? 'https' : 'http',
 	'region' => !empty(Z_CONFIG::$AWS_REGION) ? Z_CONFIG::$AWS_REGION : 'us-east-1',
 	'version' => 'latest',
 	'signature' => 'v4',

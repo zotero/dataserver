@@ -56,7 +56,7 @@ class Zend_Service_Amazon_S3 extends Zend_Service_Amazon_Abstract
      */
     protected $_endpoint;
 
-    const S3_ENDPOINT = 's3.amazonaws.com';
+    const S3_ENDPOINT = Z_CONFIG::$S3_ENDPOINT;
 
     const S3_ACL_PRIVATE = 'private';
     const S3_ACL_PUBLIC_READ = 'public-read';
@@ -110,7 +110,7 @@ class Zend_Service_Amazon_S3 extends Zend_Service_Amazon_Abstract
     {
         parent::__construct($accessKey, $secretKey, $region);
 
-        $this->setEndpoint('http://'.self::S3_ENDPOINT);
+        $this->setEndpoint(self::S3_ENDPOINT);
     }
 
     /**
