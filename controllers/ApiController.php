@@ -83,7 +83,7 @@ class ApiController extends Controller {
 		set_exception_handler(array($this, 'handleException'));
 		// TODO: Throw error on some notices but allow DB/Memcached/etc. failures?
 		//set_error_handler(array($this, 'handleError'), E_ALL | E_USER_ERROR | E_RECOVERABLE_ERROR);
-		set_error_handler(array($this, 'handleError'), E_USER_ERROR | E_RECOVERABLE_ERROR);
+		set_error_handler([$this, 'handleError'], E_USER_ERROR | E_RECOVERABLE_ERROR | E_DEPRECATED);
 		require_once('../model/Error.inc.php');
 		
 		// On testing sites, include notifications in headers
@@ -1378,8 +1378,13 @@ class ApiController extends Controller {
 		$this->e500();
 	}
 	
-	public function handleError($no, $str, $file, $line) {
-		$e = new ErrorException($str, $no, 0, $file, $line);
+	public function handleError($errno, $errstr, $errfile, $errline) {
+		if ($errno == E_DEPRECATED) {
+			error_log("Deprecated: $errstr in $errfile on line $errline");
+			return true;
+		}
+		
+		$e = new ErrorException($errstr, $errno, 0, $errfile, $errline);
 		$this->handleException($e);
 	}
 	
