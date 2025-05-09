@@ -35,6 +35,7 @@ class ApiController extends Controller {
 	protected $apiVersion;
 	protected $method;
 	protected $uri;
+	protected $path;
 	protected $queryParams = array();
 	protected $ifUnmodifiedSince;
 	protected $body;
@@ -60,8 +61,10 @@ class ApiController extends Controller {
 	protected $legacyPublications = false;
 	protected $fileMode;
 	protected $fileView;
+	protected $fileViewURL;
 	protected $cookieAuth = false;
 	protected $libraryVersion;
+	protected $etag;
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
 	protected $isLegacySchemaClient = false;
