@@ -53,7 +53,7 @@ class Zotero_Attachments {
 		return $number;
 	}
 	
-	public static function getTemporaryURL(Zotero_Item $item) {
+	public static function getTemporaryURL(Zotero_Item $item, $onlyStream = false) {
 		$info = Zotero_Storage::getLocalFileItemInfo($item);
 		$storageFileID = $info['storageFileID'];
 		$mtime = $info['mtime'];
@@ -65,7 +65,7 @@ class Zotero_Attachments {
 		}
 		
 		$hash = $info['hash'];
-		$zip = $info['zip'];
+		$zip = $info['zip'] && !$onlyStream;
 		
 		if (strlen($item->attachmentPath) < 9 ||
 			substr($item->attachmentPath, 0, 8) != 'storage:') {

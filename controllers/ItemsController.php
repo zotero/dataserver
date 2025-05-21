@@ -806,6 +806,15 @@ class ItemsController extends ApiController {
 			header("Zotero-File-Compressed: " . ($info['zip'] ? 'Yes' : 'No'));
 			
 			StatsD::increment("storage.download", 1);
+			
+			$useAttachmentProxy = true;
+			if ($useAttachmentProxy) {
+				$url = Zotero_Attachments::getTemporaryURL($item, true);
+				if (!$url) {
+					$this->e500();
+				}
+			}
+			
 			$this->redirect($url);
 			exit;
 		}
