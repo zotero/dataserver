@@ -644,12 +644,16 @@ class Zotero_Storage {
 		// Suffix
 		$suffix = "\r\n--$boundary--";
 		
-		return array(
-			'url' => self::getUploadBaseURL(),
+		$attachmentProxy = true;
+		
+		return [
+			'url' => $attachmentProxy
+				? Zotero_Attachments::getTemporaryUploadURL($item)
+				: self::getUploadBaseURL(),
 			'contentType' => "multipart/form-data; boundary=$boundary",
 			'prefix' => $prefix,
 			'suffix' => $suffix
-		);
+		];
 	}
 	
 	

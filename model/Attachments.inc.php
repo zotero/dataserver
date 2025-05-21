@@ -78,7 +78,8 @@ class Zotero_Attachments {
 			'expires' => time() + self::$urlTTL,
 			'hash' => $hash,
 			'contentType' => $item->attachmentContentType,
-			'charset' => $item->attachmentCharset
+			'charset' => $item->attachmentCharset,
+			'item' => $item->libraryKey,
 		];
 		
 		if ($zip) {
@@ -91,6 +92,22 @@ class Zotero_Attachments {
 		$url = self::generateSignedURL($payload, $filename);
 		Z_Core::$MC->set($cacheKey, $url, self::$urlTTL - 15);
 		return $url;
+	}
+	
+	/**
+	 * Get a signed, time-limited attachment-proxy URL for an upload
+	 *
+	 * @return string  Proxy URL the client will POST to
+	 */
+	public static function getTemporaryUploadURL(Zotero_Item $item) {
+		$ttl = 60 * 10; // 10 minutes
+		$payload = [
+			'expires' => time() + $ttl,
+			'item' => $item->libraryKey,
+			'url' => Zotero_Storage::getUploadBaseURL()
+		];
+		// "upload" is just a placeholder path segment -- the proxy never uses it
+		return self::generateSignedURL($payload, 'upload');
 	}
 	
 	public static function generateSignedURL($payload, $filename) {
