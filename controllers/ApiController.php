@@ -60,7 +60,6 @@ class ApiController extends Controller {
 	protected $legacyPublications = false;
 	protected $fileMode;
 	protected $fileView;
-	protected $httpAuth = false;
 	protected $cookieAuth = false;
 	protected $libraryVersion;
 	protected $libraryVersionOnFailure = false;
@@ -209,20 +208,6 @@ class ApiController extends Controller {
 				$this->userID = 0;
 				$this->permissions = new Zotero_Permissions;
 				$this->permissions->setSuper();
-			}
-			
-			// Allow HTTP Auth for file access
-			else if (!empty($extra['allowHTTP']) || !empty($extra['auth'])) {
-				$userID = Zotero_Users::authenticate(
-					'password',
-					array('username' => $username, 'password' => $password)
-				);
-				if (!$userID) {
-					$this->e401('Invalid login');
-				}
-				$this->httpAuth = true;
-				$this->userID = $userID;
-				$this->grantUserPermissions($userID);
 			}
 		}
 		

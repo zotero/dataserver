@@ -187,26 +187,6 @@ class ItemsController extends ApiController {
 				if ($this->isWriteMethod() && $this->fileMode) {
 					$this->e404();
 				}
-				
-				// Possibly temporary workaround to block unnecessary full syncs
-				if ($this->fileMode && $this->httpAuth && $this->method == 'POST') {
-					// If > 2 requests for missing file, trigger a full sync via 404
-					$cacheKey = "apiMissingFile_"
-						. $this->objectLibraryID . "_"
-						. $this->objectKey;
-					$set = Z_Core::$MC->get($cacheKey);
-					if (!$set) {
-						Z_Core::$MC->set($cacheKey, 1, 86400);
-					}
-					else if ($set < 2) {
-						Z_Core::$MC->increment($cacheKey);
-					}
-					else {
-						Z_Core::$MC->delete($cacheKey);
-						$this->e404("A file sync error occurred. Please sync again.");
-					}
-					$this->e500("A file sync error occurred. Please sync again.");
-				}
 			}
 			
 			if ($this->isWriteMethod()) {
@@ -837,37 +817,34 @@ class ItemsController extends ApiController {
 				$group = null;
 			}
 			
-			// If not the 4.0 client, require If-Match or If-None-Match
-			if (!$this->httpAuth) {
-				if (empty($_SERVER['HTTP_IF_MATCH']) && empty($_SERVER['HTTP_IF_NONE_MATCH'])) {
-					$this->e428("If-Match/If-None-Match header not provided");
+			if (empty($_SERVER['HTTP_IF_MATCH']) && empty($_SERVER['HTTP_IF_NONE_MATCH'])) {
+				$this->e428("If-Match/If-None-Match header not provided");
+			}
+			
+			if (!empty($_SERVER['HTTP_IF_MATCH'])) {
+				if (!preg_match('/^"?([a-f0-9]{32})"?$/', $_SERVER['HTTP_IF_MATCH'], $matches)) {
+					$this->e400("Invalid ETag in If-Match header");
 				}
 				
-				if (!empty($_SERVER['HTTP_IF_MATCH'])) {
-					if (!preg_match('/^"?([a-f0-9]{32})"?$/', $_SERVER['HTTP_IF_MATCH'], $matches)) {
-						$this->e400("Invalid ETag in If-Match header");
-					}
-					
-					if (!$item->attachmentStorageHash) {
-						$this->e412("If-Match set but file does not exist");
-					}
-					
-					if ($item->attachmentStorageHash != $matches[1]) {
-						$this->libraryVersion = $item->version;
-						$this->libraryVersionOnFailure = true;
-						$this->e412("ETag does not match current version of file");
-					}
+				if (!$item->attachmentStorageHash) {
+					$this->e412("If-Match set but file does not exist");
 				}
-				else {
-					if ($_SERVER['HTTP_IF_NONE_MATCH'] != "*") {
-						$this->e400("Invalid value for If-None-Match header");
-					}
-					
-					if ($item->attachmentStorageHash) {
-						$this->libraryVersion = $item->version;
-						$this->libraryVersionOnFailure = true;
-						$this->e412("If-None-Match: * set but file exists");
-					}
+				
+				if ($item->attachmentStorageHash != $matches[1]) {
+					$this->libraryVersion = $item->version;
+					$this->libraryVersionOnFailure = true;
+					$this->e412("ETag does not match current version of file");
+				}
+			}
+			else {
+				if ($_SERVER['HTTP_IF_NONE_MATCH'] != "*") {
+					$this->e400("Invalid value for If-None-Match header");
+				}
+				
+				if ($item->attachmentStorageHash) {
+					$this->libraryVersion = $item->version;
+					$this->libraryVersionOnFailure = true;
+					$this->e412("If-None-Match: * set but file exists");
 				}
 			}
 			
@@ -1008,22 +985,15 @@ class ItemsController extends ApiController {
 				
 				// If we already have a file, add/update storageFileItems row and stop
 				if (!empty($storageFileID)) {
-					Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info, $this->httpAuth);
+					Zotero_Storage::updateFileItemInfo($item, $storageFileID, $info);
 					Zotero_DB::commit();
 					
 					StatsD::increment("storage.upload.existing", 1);
 					
-					if ($this->httpAuth) {
-						$this->queryParams['format'] = null;
-						header('Content-Type: application/xml');
-						echo "<exists/>";
-					}
-					else {
-						$this->queryParams['format'] = null;
-						header('Content-Type: application/json');
-						$this->libraryVersion = $item->version;
-						echo json_encode(array('exists' => 1));
-					}
+					$this->queryParams['format'] = null;
+					header('Content-Type: application/json');
+					$this->libraryVersion = $item->version;
+					echo json_encode(array('exists' => 1));
 					$this->end();
 				}
 				
@@ -1034,51 +1004,29 @@ class ItemsController extends ApiController {
 				// User over queue limit
 				if (!$uploadKey) {
 					header('Retry-After: ' . Zotero_Storage::$uploadQueueTimeout);
-					if ($this->httpAuth) {
-						$this->e413("Too many queued uploads");
-					}
-					else {
-						$this->e429("Too many queued uploads");
-					}
+					$this->e429("Too many queued uploads");
 				}
 				
 				StatsD::increment("storage.upload.new", 1);
 				
-				// Output XML for client requests (which use HTTP Auth)
-				if ($this->httpAuth) {
-					$params = Zotero_Storage::generateUploadPOSTParams($item, $info, true);
-					
-					$this->queryParams['format'] = null;
-					header('Content-Type: application/xml');
-					$xml = new SimpleXMLElement('<upload/>');
-					$xml->url = Zotero_Storage::getUploadBaseURL();
-					$xml->key = $uploadKey;
-					foreach ($params as $key=>$val) {
-						$xml->params->$key = $val;
+				if (!empty($_REQUEST['params']) && $_REQUEST['params'] == "1") {
+					$params = array(
+						"url" => Zotero_Storage::getUploadBaseURL(),
+						"params" => array()
+					);
+					foreach (Zotero_Storage::generateUploadPOSTParams($item, $info) as $key=>$val) {
+						$params['params'][$key] = $val;
 					}
-					echo $xml->asXML();
 				}
-				// Output JSON for API requests
 				else {
-					if (!empty($_REQUEST['params']) && $_REQUEST['params'] == "1") {
-						$params = array(
-							"url" => Zotero_Storage::getUploadBaseURL(),
-							"params" => array()
-						);
-						foreach (Zotero_Storage::generateUploadPOSTParams($item, $info) as $key=>$val) {
-							$params['params'][$key] = $val;
-						}
-					}
-					else {
-						$params = Zotero_Storage::getUploadPOSTData($item, $info);
-					}
-					
-					$params['uploadKey'] = $uploadKey;
-					
-					$this->queryParams['format'] = null;
-					header('Content-Type: application/json');
-					echo json_encode($params);
+					$params = Zotero_Storage::getUploadPOSTData($item, $info);
 				}
+				
+				$params['uploadKey'] = $uploadKey;
+				
+				$this->queryParams['format'] = null;
+				header('Content-Type: application/json');
+				echo json_encode($params);
 				exit;
 			}
 			

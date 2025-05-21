@@ -4,7 +4,7 @@ $router = new Router();
 
 // Set controller to 404 to block access to an action via a particular URL
 
-$router->map('/', array('controller' => 'Api', 'action' => 'noop', 'extra' => array('allowHTTP' => true)));
+$router->map('/', ['controller' => 'Api', 'action' => 'noop']);
 
 // Global items
 $router->map('/globalitems', ['controller' => 'GlobalItems', 'extra' => ['globalItems' => true]]);
@@ -24,15 +24,15 @@ $router->map('/users/i:objectUserID/laststoragesync', array('controller' => 'Sto
 $router->map('/groups/i:objectGroupID/laststoragesync', array('controller' => 'Storage', 'action' => 'laststoragesync', 'extra' => array('auth' => true)));
 $router->map('/users/i:objectUserID/storageadmin', array('controller' => 'Storage', 'action' => 'storageadmin'));
 $router->map('/storagepurge', array('controller' => 'Storage', 'action' => 'storagepurge'));
-$router->map('/users/i:objectUserID/removestoragefiles', array('controller' => 'Storage', 'action' => 'removestoragefiles', 'extra' => array('allowHTTP' => true)));
-$router->map('/users/i:objectUserID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
-$router->map('/users/i:objectUserID/items/:objectKey/file/view', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true, 'view' => true)));
+$router->map('/users/i:objectUserID/removestoragefiles', ['controller' => 'Storage', 'action' => 'removestoragefiles']);
+$router->map('/users/i:objectUserID/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['file' => true]]);
+$router->map('/users/i:objectUserID/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['file' => true, 'view' => true]]);
 $router->map('/users/i:objectUserID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
-$router->map('/users/i:objectUserID/publications/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'publications' => true]]);
-$router->map('/users/i:objectUserID/publications/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['allowHTTP' => true, 'file' => true, 'view' => true, 'publications' => true]]);
+$router->map('/users/i:objectUserID/publications/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['file' => true, 'publications' => true]]);
+$router->map('/users/i:objectUserID/publications/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['file' => true, 'view' => true, 'publications' => true]]);
 $router->map('/users/i:objectUserID/publications/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true, 'publications' => true]]);
-$router->map('/groups/i:objectGroupID/items/:objectKey/file', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true)));
-$router->map('/groups/i:objectGroupID/items/:objectKey/file/view', array('controller' => 'Items', 'extra' => array('allowHTTP' => true, 'file' => true, 'view' => true)));
+$router->map('/groups/i:objectGroupID/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['file' => true]]);
+$router->map('/groups/i:objectGroupID/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['file' => true, 'view' => true]]);
 $router->map('/groups/i:objectGroupID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
 
 // Full-text content
