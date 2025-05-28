@@ -1,0 +1,40 @@
+{
+    "verbose": 0,
+    "apiURLPrefix": "http://localhost/",
+    "rootUsername": "",
+    "rootPassword": "",
+    "awsRegion": "",
+    "s3Bucket": "",
+    "awsAccessKey": "",
+    "awsSecretKey": "",
+	"timeout": 30000,
+	"numOwnedGroups": 3,
+	"numPublicGroups": 2,
+
+	"userID": 1,
+	"libraryID": 1,
+	"username": "testuser",
+	"password": "letmein",
+	"displayName": "testuser",
+	"emailPrimary": "test@test.com",
+	"emailSecondary": "test@test.com",
+	"ownedPrivateGroupID": 1,
+	"ownedPrivateGroupLibraryID": 1,
+	"ownedPrivateGroupName": "Test Group",
+
+	"userID2": 2,
+	"username2": "testuser2",
+	"password2": "letmein2",
+	"displayName2": "testuser2",
+	"ownedPrivateGroupID2": 0,
+	"ownedPrivateGroupLibraryID2": 0,
+
+	"fullTextExtractorSQSUrl" : "",
+	"isLocalRun": false,
+	"es": {
+		"host": "",
+		"index": "item_fulltext_index",
+		"type": "item_fulltext"
+	}
+
+}
