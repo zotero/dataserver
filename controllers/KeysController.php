@@ -88,7 +88,7 @@ class KeysController extends ApiController {
 						unset($json['name']);
 					}
 					
-					header('application/json');
+					header('Content-Type: application/json');
 					echo Zotero_Utilities::formatJSON($json);
 					
 					if ($syncStart) {
@@ -223,7 +223,7 @@ class KeysController extends ApiController {
 				}
 				
 				if ($this->apiVersion >= 3) {
-					header('application/json');
+					header('Content-Type: application/json');
 					echo Zotero_Utilities::formatJSON($keyObj->toJSON($options));
 				}
 				else {

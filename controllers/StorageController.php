@@ -147,7 +147,7 @@ class StorageController extends ApiController {
 		
 		Zotero_DB::commit();
 		
-		header('application/xml');
+		header('Content-Type: application/xml');
 		echo $xml->asXML();
 		exit;
 	}
