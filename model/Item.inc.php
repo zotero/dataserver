@@ -5020,18 +5020,6 @@ class Zotero_Item extends Zotero_DataObject {
 			return [$rel->predicate, $rel->object];
 		}, $relations);
 		
-		// Related items are bidirectional, so include any with this item as the object
-		$reverseRelations = Zotero_Relations::getByURIs(
-			$this->libraryID, false, Zotero_Relations::$relatedItemPredicate, $itemURI
-		);
-		foreach ($reverseRelations as $rel) {
-			$r = [$rel->predicate, $rel->subject];
-			// Only add if not already added in other direction
-			if (!in_array($r, $relations)) {
-				$relations[] = $r;
-			}
-		}
-		
 		// Also include any owl:sameAs relations with this item as the object
 		// (as sent by client via classic sync)
 		$reverseRelations = Zotero_Relations::getByURIs(
@@ -5052,18 +5040,6 @@ class Zotero_Item extends Zotero_DataObject {
 			$prefix = Zotero_URI::getLibraryURI($this->libraryID) . "/items/";
 			$predicate = Zotero_Relations::$relatedItemPredicate;
 			foreach ($relatedItemKeys as $key) {
-				$relations[] = [$predicate, $prefix . $key];
-			}
-		}
-		// Reverse as well
-		$sql = "SELECT `key` FROM itemRelated IR JOIN items I USING (itemID) WHERE IR.linkedItemID=?";
-		$reverseRelatedItemKeys = Zotero_DB::columnQuery(
-			$sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID)
-		);
-		if ($reverseRelatedItemKeys) {
-			$prefix = Zotero_URI::getLibraryURI($this->libraryID) . "/items/";
-			$predicate = Zotero_Relations::$relatedItemPredicate;
-			foreach ($reverseRelatedItemKeys as $key) {
 				$relations[] = [$predicate, $prefix . $key];
 			}
 		}
