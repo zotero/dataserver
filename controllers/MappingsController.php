@@ -34,7 +34,7 @@ class MappingsController extends ApiController {
 		$locale = !empty($_GET['locale'])
 			? \Zotero\Schema::resolveLocale($_GET['locale'])
 			: 'en-US';
-		
+
 		if ($this->subset == 'itemTypeFields') {
 			if (empty($_GET['itemType'])) {
 				$this->e400("'itemType' not provided");
@@ -63,7 +63,7 @@ class MappingsController extends ApiController {
 			// Notes and attachments don't have creators
 			if ($itemType == 'note' || $itemType == 'attachment') {
 				echo "[]";
-				exit;
+				$this->end();
 			}
 		}
 		
@@ -77,9 +77,8 @@ class MappingsController extends ApiController {
 		$ttl = 60;
 		$json = Z_Core::$MC->get($cacheKey);
 		if ($json) {
-			header("Content-Type: application/json");
 			echo $json;
-			exit;
+			$this->end();
 		}
 		
 		switch ($this->subset) {
@@ -132,12 +131,10 @@ class MappingsController extends ApiController {
 			);
 		}
 		
-		header("Content-Type: application/json");
 		$json = Zotero_Utilities::formatJSON($json);
 		Z_Core::$MC->set($cacheKey, $json, $ttl);
-		
 		echo $json;
-		exit;
+		$this->end();
 	}
 	
 	
@@ -145,7 +142,7 @@ class MappingsController extends ApiController {
 		if (empty($_GET['itemType'])) {
 			$this->e400("'itemType' not provided");
 		}
-		
+
 		$itemType = $_GET['itemType'];
 		if ($itemType == 'attachment') {
 			if (empty($_GET['linkMode'])) {
@@ -202,9 +199,8 @@ class MappingsController extends ApiController {
 		$ttl = 60;
 		$json = Z_Core::$MC->get($cacheKey);
 		if ($json) {
-			header("Content-Type: application/json");
 			echo $json;
-			exit;
+			$this->end();
 		}
 		
 		// Generate template
@@ -327,12 +323,10 @@ class MappingsController extends ApiController {
 			unset($json['relations']);
 		}
 		
-		header("Content-Type: application/json");
 		
 		$json = Zotero_Utilities::formatJSON($json);
 		Z_Core::$MC->set($cacheKey, $json, $ttl);
-		
 		echo $json;
-		exit;
+		$this->end();
 	}
 }

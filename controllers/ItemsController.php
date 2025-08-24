@@ -790,7 +790,6 @@ class ItemsController extends ApiController {
 				}
 				StatsD::increment("storage.view", 1);
 				$this->redirect($url);
-				exit;
 			}
 			
 			// File download
@@ -816,7 +815,6 @@ class ItemsController extends ApiController {
 			}
 			
 			$this->redirect($url);
-			exit;
 		}
 		
 		else if ($this->method == 'POST' || $this->method == 'PATCH') {
@@ -1079,7 +1077,7 @@ class ItemsController extends ApiController {
 					header('Content-Type: application/json');
 					echo json_encode($params);
 				}
-				exit;
+				$this->end();
 			}
 			
 			//
@@ -1141,9 +1139,8 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
-				header("HTTP/1.1 204 No Content");
 				header("Last-Modified-Version: " . $item->version);
-				exit;
+				$this->e204();
 			}
 			
 			
@@ -1194,12 +1191,11 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
-				header("HTTP/1.1 204 No Content");
-				exit;
+				$this->e204();
 			}
 			
 			throw new Exception("Invalid request", Z_ERROR_INVALID_INPUT);
 		}
-		exit;
+		$this->end();
 	}
 }

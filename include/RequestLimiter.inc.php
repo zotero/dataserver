@@ -104,6 +104,12 @@ class Z_RequestLimiter {
 			return null;
 		}
 		$prefix = self::REDIS_PREFIX .'rrl:' . $params['bucket'];
+
+		// If bucket should wait for full capacity, reject
+		if (self::$redis->get($prefix . ".fc")) {
+			return false;
+		}
+		
 		$keys = [$prefix . '.tk', $prefix . '.ts'];
 		$args = [$params['replenishRate'], $params['capacity'], time()];
 		try {
@@ -113,7 +119,14 @@ class Z_RequestLimiter {
 			Z_Core::logError("Warning: " . $e);
 			return null;
 		}
-		return !!$res[0];
+		// If capacity was reached, save how soon it will be re-filled. 
+		// Requests before that will be rejected.
+		$allowed = !!$res[0];
+		if (!$allowed) {
+			self::addFullCapacityTimeout($prefix, $params['replenishRate'], $params['capacity']);
+			return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -185,5 +198,11 @@ class Z_RequestLimiter {
 			}
 		}
 		return $res;
+	}
+
+	//Save how soon a given bucket will be at full capacity
+	private static function addFullCapacityTimeout($prefix, $rate, $capacity) {
+		$full_capacity_ts =  $capacity / $rate;
+		self::$redis->setex($prefix . ".fc", (int) $full_capacity_ts, 1);
 	}
 }

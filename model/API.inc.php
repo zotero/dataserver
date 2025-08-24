@@ -54,7 +54,8 @@ class Zotero_API {
 					'action' => [
 						'default' => 'atom',
 						'fulltext' => 'versions',
-						'itemContent' => 'json'
+						'itemContent' => 'json',
+						'newItem' => 'json'
 					]
 				],
 				2 => [
@@ -63,7 +64,8 @@ class Zotero_API {
 						'fulltext' => 'versions',
 						'itemContent' => 'json',
 						'deleted' => 'json',
-						'settings' => 'json'
+						'settings' => 'json',
+						'newItem' => 'json'
 					]
 				]
 			]
