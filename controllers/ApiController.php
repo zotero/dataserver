@@ -56,6 +56,7 @@ class ApiController extends Controller {
 	protected $objectKey;
 	protected $objectName;
 	protected $subset;
+	protected $getOnly;
 	protected $singleObject;
 	protected $publications = false;
 	protected $legacyPublications = false;
@@ -444,6 +445,7 @@ class ApiController extends Controller {
 		
 		$this->scopeObject = !empty($extra['scopeObject']) ? $extra['scopeObject'] : $this->scopeObject;
 		$this->subset = !empty($extra['subset']) ? $extra['subset'] : $this->subset;
+		$this->getOnly = !empty($extra['getOnly']) ? $extra['getOnly'] : $this->getOnly;
 		
 		$this->fileMode = !empty($extra['file'])
 							? (!empty($_GET['info']) ? 'info' : 'download')
