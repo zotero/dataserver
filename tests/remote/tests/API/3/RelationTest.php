@@ -98,22 +98,24 @@ class RelationTests extends APITests {
 			$this->assertEquals($object, $json['relations'][$predicate]);
 		}
 		
-		// And item 2, since related items are bidirectional
+		// Relation does not yet exist on item 2
 		$item2JSON = API::getItem($item2JSON['key'], $this, 'json')['data'];
-		$this->assertCount(1, $item2JSON['relations']);
-		$this->assertEquals($item1URI, $item2JSON["relations"]["dc:relation"]);
+		$this->assertCount(0, $item2JSON['relations']);
 		
-		// Sending item 2's unmodified JSON back up shouldn't cause the item to be updated.
-		// Even though we're sending a relation that's technically not part of the item,
-		// when it loads the item it will load the reverse relations too and therefore not
-		// add a relation that it thinks already exists.
+		// Update item 2
+		$relationsTwo["dc:relation"] = $item1URI;
+		$item2JSON["relations"] = $relationsTwo;
 		$response = API::userPut(
 			self::$config['userID'],
 			"items/{$item2JSON['key']}",
 			json_encode($item2JSON)
 		);
 		$this->assert204($response);
-		$this->assertEquals($item2JSON['version'], $response->getHeader("Last-Modified-Version"));
+
+		// Relation now exists on item 2
+		$item2JSON = API::getItem($item2JSON['key'], $this, 'json')['data'];
+		$this->assertCount(1, $item2JSON['relations']);
+		$this->assertEquals($item1URI, $item2JSON["relations"]["dc:relation"]);
 	}
 	
 	
@@ -134,6 +136,7 @@ class RelationTests extends APITests {
 		$item2JSON = API::getItemTemplate('book');
 		$item2JSON->key = $item2Key;
 		$item2JSON->version = 0;
+		$item2JSON->relations->{'dc:relation'} = $item1URI;
 		
 		$response = API::postItems([$item1JSON, $item2JSON]);
 		$this->assert200($response);
@@ -148,6 +151,57 @@ class RelationTests extends APITests {
 		$json = API::getItem($item2JSON->key, $this, 'json')['data'];
 		$this->assertCount(1, $json['relations']);
 		$this->assertEquals($item1URI, $json['relations']['dc:relation']);
+	}
+
+	public function testUnrelateTwoItems() {
+		$uriPrefix = "http://zotero.org/users/" . self::$config['userID'] . "/items/";
+		
+		// Create two items related to one another
+		$item1JSON = API::createItem("book", null, $this, 'jsonData');
+		$item2JSON = API::createItem("book", null, $this, 'jsonData');
+		
+		$item1JSON["relations"] = [
+			"dc:relation" => $uriPrefix . $item2JSON['key']
+		];
+		$item2JSON["relations"] = [
+			"dc:relation" => $uriPrefix . $item1JSON['key']
+		];
+		$response = API::userPut(
+			self::$config['userID'],
+			"items/{$item1JSON['key']}",
+			json_encode($item1JSON)
+		);
+		$this->assert204($response);
+
+		$item1JSON = API::getItem($item1JSON['key'], $this, 'json')['data'];
+		$item2JSON['version'] = $item1JSON['version'];
+		$response = API::userPut(
+			self::$config['userID'],
+			"items/{$item2JSON['key']}",
+			json_encode($item2JSON)
+		);
+		$t = $response->getBody();
+		$this->assert204($response);
+
+		// Remove relation from one of the items
+		$this->assertCount(1, $item1JSON['relations']);
+		$item1JSON['relations'] = [];
+		$item2JSON = API::getItem($item2JSON['key'], $this, 'json')['data'];
+		$item1JSON['version'] = $item2JSON['version'];
+		$response = API::userPut(
+			self::$config['userID'],
+			"items/{$item1JSON['key']}",
+			json_encode($item1JSON)
+		);
+
+		// Ensure it is gone from item 1
+		$this->assert204($response);
+		$item1JSON = API::getItem($item1JSON['key'], $this, 'json')['data'];
+		$this->assertCount(0, $item1JSON['relations']);
+
+		// But not yet removed from item 2
+		$item2JSON = API::getItem($item2JSON['key'], $this, 'json')['data'];
+		$this->assertCount(1, $item2JSON['relations']);
 	}
 	
 	
@@ -254,7 +308,7 @@ class RelationTests extends APITests {
 		];
 		$response = API::postItems([$item1Data, $item2Data]);
 		$this->assert200ForObject($response, false, 0);
-		$this->assertUnchangedForObject($response, 1);
+		$this->assert200ForObject($response, false, 1);
 	}
 	
 	
