@@ -162,105 +162,6 @@ class Zotero_Cite {
 	}
 	
 	
-	//
-	// Ported from cite.js in the Zotero client
-	//
-	
-	/**
-	 * Mappings for names
-	 * Note that this is the reverse of the text variable map, since all mappings should be one to one
-	 * and it makes the code cleaner
-	 */
-	private static $zoteroNameMap = array(
-		"author" => "author",
-		"editor" => "editor",
-		"bookAuthor" => "container-author",
-		"composer" => "composer",
-		"interviewer" => "interviewer",
-		"recipient" => "recipient",
-		"seriesEditor" => "collection-editor",
-		"translator" => "translator"
-	);
-	
-	/**
-	 * Mappings for text variables
-	 */
-	private static $zoteroFieldMap = array(
-		"title" => array("title"),
-		"container-title" => array("publicationTitle",  "reporter", "code"), /* reporter and code should move to SQL mapping tables */
-		"collection-title" => array("seriesTitle", "series"),
-		"collection-number" => array("seriesNumber"),
-		"publisher" => array("publisher", "distributor"), /* distributor should move to SQL mapping tables */
-		"publisher-place" => array("place"),
-		"authority" => array("court"),
-		"page" => array("pages"),
-		"volume" => array("volume"),
-		"issue" => array("issue"),
-		"number-of-volumes" => array("numberOfVolumes"),
-		"number-of-pages" => array("numPages"),
-		"edition" => array("edition"),
-		"version" => array("versionNumber"),
-		"section" => array("section"),
-		"genre" => array("type", "artworkSize"), /* artworkSize should move to SQL mapping tables, or added as a CSL variable */
-		"medium" => array("medium", "system"),
-		"archive" => array("archive"),
-		"archive_location" => array("archiveLocation"),
-		"event" => array("meetingName", "conferenceName"), /* these should be mapped to the same base field in SQL mapping tables */
-		"event-place" => array("place"),
-		"abstract" => array("abstractNote"),
-		"URL" => array("url"),
-		"DOI" => array("DOI"),
-		"ISBN" => array("ISBN"),
-		"call-number" => array("callNumber"),
-		"note" => array("extra"),
-		"number" => array("number"),
-		"references" => array("history"),
-		"shortTitle" => array("shortTitle"),
-		"journalAbbreviation" => array("journalAbbreviation"),
-		"language" => array("language")
-	);
-	
-	private static $zoteroDateMap = array(
-		"issued" => "date",
-		"accessed" => "accessDate"
-	);
-	
-	private static $zoteroTypeMap = array(
-		'book' => "book",
-		'bookSection' => "chapter",
-		'journalArticle' => "article-journal",
-		'magazineArticle' => "article-magazine",
-		'newspaperArticle' => "article-newspaper",
-		'thesis' => "thesis",
-		'encyclopediaArticle' => "entry-encyclopedia",
-		'dictionaryEntry' => "entry-dictionary",
-		'conferencePaper' => "paper-conference",
-		'letter' => "personal_communication",
-		'manuscript' => "manuscript",
-		'interview' => "interview",
-		'film' => "motion_picture",
-		'artwork' => "graphic",
-		'webpage' => "webpage",
-		'report' => "report",
-		'bill' => "bill",
-		'case' => "legal_case",
-		'hearing' => "bill",				// ??
-		'patent' => "patent",
-		'statute' => "bill",				// ??
-		'email' => "personal_communication",
-		'map' => "map",
-		'blogPost' => "post-weblog",
-		'instantMessage' => "personal_communication",
-		'forumPost' => "post",
-		'audioRecording' => "song",		// ??
-		'presentation' => "speech",
-		'videoRecording' => "motion_picture",
-		'tvBroadcast' => "broadcast",
-		'radioBroadcast' => "broadcast",
-		'podcast' => "song",			// ??
-		'computerProgram' => "book"		// ??
-	);
-	
 	private static $quotedRegexp = '/^".+"$/';
 	
 	public static function retrieveItem($zoteroItem) {
@@ -271,8 +172,8 @@ class Zotero_Cite {
 		// don't return URL or accessed information for journal articles if a
 		// pages field exists
 		$itemType = Zotero_ItemTypes::getName($zoteroItem->itemTypeID);
-		$cslType = isset(self::$zoteroTypeMap[$itemType]) ? self::$zoteroTypeMap[$itemType] : false;
-		if (!$cslType) $cslType = "article";
+		$typeMap = \Zotero\Schema::getCSLTypeMap();
+		$cslType = $typeMap[$itemType] ?? "document";
 		$ignoreURL = (($zoteroItem->getField("accessDate", true, true, true) || $zoteroItem->getField("url", true, true, true)) &&
 				in_array($itemType, array("journalArticle", "newspaperArticle", "magazineArticle"))
 				&& $zoteroItem->getField("pages", false, false, true)
@@ -285,7 +186,7 @@ class Zotero_Cite {
 		
 		// get all text variables (there must be a better way)
 		// TODO: does citeproc-js permit short forms?
-		foreach (self::$zoteroFieldMap as $variable=>$fields) {
+		foreach (\Zotero\Schema::getCSLFieldMap() as $variable => $fields) {
 			if ($variable == "URL" && $ignoreURL) continue;
 			
 			foreach($fields as $field) {
@@ -304,6 +205,7 @@ class Zotero_Cite {
 		// separate name variables
 		$authorID = Zotero_CreatorTypes::getPrimaryIDForType($zoteroItem->itemTypeID);
 		$creators = $zoteroItem->getCreators();
+		$nameMap = \Zotero\Schema::getCSLNameMap();
 		foreach ($creators as $creator) {
 			if ($creator['creatorTypeID'] == $authorID) {
 				$creatorType = "author";
@@ -312,21 +214,21 @@ class Zotero_Cite {
 				$creatorType = Zotero_CreatorTypes::getName($creator['creatorTypeID']);
 			}
 			
-			$creatorType = isset(self::$zoteroNameMap[$creatorType]) ? self::$zoteroNameMap[$creatorType] : false;
-			if (!$creatorType) continue;
+			$cslCreatorType = $nameMap[$creatorType] ?? false;
+			if (!$cslCreatorType) continue;
 			
 			$nameObj = array('family' => $creator['ref']->lastName, 'given' => $creator['ref']->firstName);
 			
-			if (isset($cslItem[$creatorType])) {
-				$cslItem[$creatorType][] = $nameObj;
+			if (isset($cslItem[$cslCreatorType])) {
+				$cslItem[$cslCreatorType][] = $nameObj;
 			}
 			else {
-				$cslItem[$creatorType] = array($nameObj);
+				$cslItem[$cslCreatorType] = array($nameObj);
 			}
 		}
 		
 		// get date variables
-		foreach (self::$zoteroDateMap as $key=>$val) {
+		foreach (\Zotero\Schema::getCSLDateMap() as $key => $val) {
 			$date = $zoteroItem->getField($val, false, true, true);
 			if ($date) {
 				/*if (Zotero_Date::isSQLDateTime($date)) {
