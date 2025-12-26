@@ -192,7 +192,7 @@ class Zotero_ItemFields {
 	
 	private static function isValidForTypeCached(int $fieldID, int $itemTypeID, int $schemaVersion) {
 		if (isset(self::$isValidForTypeCache[$schemaVersion][$itemTypeID][$fieldID])) {
-			return true;
+			return self::$isValidForTypeCache[$schemaVersion][$itemTypeID][$fieldID];
 		}
 		if (!self::getID($fieldID)) {
 			throw new Exception("Invalid fieldID '$fieldID'");
