@@ -119,8 +119,6 @@ class Schema {
 		foreach (self::$knownVersions as $v) {
 			if ($version <= $v) {
 				$effectiveVersion = $v;
-			}
-			if ($version == $v) {
 				break;
 			}
 		}
