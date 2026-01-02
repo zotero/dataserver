@@ -33,6 +33,11 @@ class Schema {
 	private static $effectiveVersions;
 	private static $version;
 	private static $versionCacheKey = "schemaVersion";
+
+	private static $cslTypeMap;
+	private static $cslFieldMap;
+	private static $cslDateMap;
+	private static $cslNameMap;
 	
 	
 	public static function init() {
@@ -181,8 +186,69 @@ class Schema {
 		});
 		return $locales[0];
 	}
-	
-	
+
+
+	/**
+	 * Get CSL type mapping (Zotero type -> CSL type).
+	 * Inverts the schema's csl.types, which maps CSL type -> Zotero types.
+	 */
+	public static function getCSLTypeMap(): array {
+		if (self::$cslTypeMap !== null) {
+			return self::$cslTypeMap;
+		}
+		$schema = self::getCurrent();
+		self::$cslTypeMap = [];
+		foreach ($schema['csl']['types'] as $cslType => $zoteroTypes) {
+			foreach ($zoteroTypes as $zoteroType) {
+				self::$cslTypeMap[$zoteroType] = $cslType;
+			}
+		}
+		return self::$cslTypeMap;
+	}
+
+
+	/**
+	 * Get CSL field mapping (CSL field -> Zotero fields).
+	 * Returns the schema's csl.fields.text.
+	 */
+	public static function getCSLFieldMap(): array {
+		if (self::$cslFieldMap !== null) {
+			return self::$cslFieldMap;
+		}
+		$schema = self::getCurrent();
+		self::$cslFieldMap = $schema['csl']['fields']['text'];
+		return self::$cslFieldMap;
+	}
+
+
+	/**
+	 * Get CSL date field mapping (CSL date -> Zotero date).
+	 * Returns the schema's csl.fields.date.
+	 */
+	public static function getCSLDateMap(): array {
+		if (self::$cslDateMap !== null) {
+			return self::$cslDateMap;
+		}
+		$schema = self::getCurrent();
+		self::$cslDateMap = $schema['csl']['fields']['date'];
+		return self::$cslDateMap;
+	}
+
+
+	/**
+	 * Get CSL name mapping (Zotero creator type -> CSL name)
+	 * Returns the schema's csl.names.
+	 */
+	public static function getCSLNameMap(): array {
+		if (self::$cslNameMap !== null) {
+			return self::$cslNameMap;
+		}
+		$schema = self::getCurrent();
+		self::$cslNameMap = $schema['csl']['names'];
+		return self::$cslNameMap;
+	}
+
+
 	public static function readFromFile() {
 		$schema = file_get_contents(Z_ENV_BASE_PATH . "htdocs/zotero-schema/schema.json");
 		$schema = json_decode($schema, true);
