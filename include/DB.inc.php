@@ -249,7 +249,7 @@ class Zotero_DB {
 			'username' => $info['user'],
 			'password' => $info['pass'],
 			'dbname'   => $info['db'],
-			'charset'  => !empty($info['charset']) ? $info['charset'] : 'utf8',
+			'charset'  => !empty($info['charset']) ? $info['charset'] : 'utf8mb4',
 			'driver_options' => [
 				"MYSQLI_OPT_CONNECT_TIMEOUT" => 5
 			]
