@@ -102,24 +102,30 @@ class RelationTests extends APITests {
 			$this->assertEquals($object, $json['relations'][$predicate]);
 		}
 		
-		// And item 2, since related items are bidirectional
+		// It does not yet exist on item 2
 		$xml = API::getItemXML($item2JSON['itemKey']);
 		$data = API::parseDataFromAtomEntry($xml);
 		$item2JSON = json_decode($data['content'], true);
-		$this->assertCount(1, $item2JSON['relations']);
-		$this->assertEquals($item1URI, $item2JSON["relations"]["dc:relation"]);
+		$this->assertCount(0, $item2JSON['relations']);
 		
-		// Sending item 2's unmodified JSON back up shouldn't cause the item to be updated.
-		// Even though we're sending a relation that's technically not part of the item,
-		// when it loads the item it will load the reverse relations too and therefore not
-		// add a relation that it thinks already exists.
+		// Update item 2
+		$relationsTwo["dc:relation"] = $item1URI;
+		$item2JSON["relations"] = $relationsTwo;
 		$response = API::userPut(
 			self::$config['userID'],
 			"items/{$item2JSON['itemKey']}?key=" . self::$config['apiKey'],
 			json_encode($item2JSON)
 		);
 		$this->assert204($response);
-		$this->assertEquals($item2JSON['itemVersion'], $response->getHeader("Last-Modified-Version"));
+
+		// It should now exist on item 2
+		$xml = API::getItemXML($item2JSON['itemKey']);
+		$data = API::parseDataFromAtomEntry($xml);
+		$json = json_decode($data['content'], true);
+		$this->assertCount(sizeOf($relationsTwo), $json['relations']);
+		foreach ($relationsTwo as $predicate => $object) {
+			$this->assertEquals($object, $json['relations'][$predicate]);
+		}
 	}
 	
 	
@@ -141,6 +147,7 @@ class RelationTests extends APITests {
 		$item2JSON = API::getItemTemplate('book');
 		$item2JSON->itemKey = $item2Key;
 		$item2JSON->itemVersion = 0;
+		$item2JSON->relations->{'dc:relation'} = $item1URI;
 		
 		$response = API::postItems([$item1JSON, $item2JSON]);
 		$this->assert200($response);
