@@ -65,7 +65,7 @@ class Zotero_Items {
 	}
 	
 	
-	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
+	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null, $unfiled = false ) {
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
@@ -153,6 +153,10 @@ class Zotero_Items {
 			if (!$skipITLI
 					&& ($params['format'] == 'keys' || $params['format'] == 'versions' || $topLevelItemSort)) {
 				$sql .= "LEFT JOIN items ITLI ON (ITLI.itemID=$itemIDSelector) ";
+			}
+
+			if ($unfiled) {
+				$sql .= "LEFT JOIN collectionItems CI ON (CI.itemID=I.itemID) ";
 			}
 		}
 		
@@ -489,6 +493,10 @@ class Zotero_Items {
 		// If we're not using a parent-items table, limit to top-level items using itemTopLevel
 		if ($skipITLI) {
 			$sql .= "AND ITL.itemID IS NULL ";
+		}
+
+		if ($unfiled) {
+			$sql .= "AND CI.collectionID IS NULL ";
 		}
 		
 		$sql .= "ORDER BY ";
@@ -2577,7 +2585,7 @@ class Zotero_Items {
 			}
 		}
 	}
-	
+
 	
 	public static function getSortTitle($title) {
 		if (!$title) {
