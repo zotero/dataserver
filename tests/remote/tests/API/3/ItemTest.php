@@ -3313,9 +3313,6 @@ class ItemTests extends APITests {
 	
 	
 	public function test_should_not_return_empty_fields_from_newer_schema_to_old_client() {
-		// TODO: Remove once we actually update the schema
-		$this->markTestSkipped();
-		
 		API::useSchemaVersion(false);
 		
 		$json = API::createItem("book", [], $this, 'jsonData');
@@ -3331,12 +3328,12 @@ class ItemTests extends APITests {
 		$this->assert200($response);
 		$this->assertArrayHasKey('originalDate', API::getJSONFromResponse($response)['data']);
 		
-		// Property should show up in schema version 33
+		// Property should show up in known schema version that has the field
 		$response = API::userGet(
 			self::$config['userID'],
 			"items/$key",
 			[
-				'Zotero-Schema-Version: 33'
+				'Zotero-Schema-Version: 39'
 			]
 		);
 		$this->assert200($response);
