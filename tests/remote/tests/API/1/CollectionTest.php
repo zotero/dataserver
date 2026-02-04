@@ -59,7 +59,7 @@ class CollectionTests extends APITests {
 		
 		$xml = API::getXMLFromResponse($response);
 		$this->assertEquals(1, (int) array_get_first($xml->xpath('/atom:feed/zapi:totalResults')));
-		$this->assertEquals(0, (int) array_get_first($xml->xpath('/atom:feed/zapi:numCollections')));
+		$this->assertEquals(0, (int) array_get_first($xml->xpath('//atom:entry/zapi:numCollections')));
 		
 		$data = API::parseDataFromAtomEntry($xml);
 		

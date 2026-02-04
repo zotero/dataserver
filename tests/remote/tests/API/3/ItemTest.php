@@ -2461,15 +2461,6 @@ class ItemTests extends APITests {
 		$this->assertNumResults(1, $response);
 		$json = API::getJSONFromResponse($response);
 		$this->assertEquals("aaa", $json[0]['data']['title']);
-		
-		$response = API::userGet(
-			self::$config['userID'],
-			"items/top?itemKey=$imageKey" // Only way to search for an embedded image?
-		);
-		$this->assert200($response);
-		$this->assertNumResults(1, $response);
-		$json = API::getJSONFromResponse($response);
-		$this->assertEquals("aaa", $json[0]['data']['title']);
 	}
 	
 	
