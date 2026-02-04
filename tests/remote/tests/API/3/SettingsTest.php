@@ -716,13 +716,17 @@ class SettingsTests extends APITests {
 	}
 	
 	
-	public function test_should_force_massive_integer_values_to_1() {
+	public function test_preserve_massive_integer_values() {
+		$values = [
+			9223372036854775807,
+			"9223372036854776000"
+		];
 		$json = [
 			"lastPageIndex_u_ABCD2345" => [
-				"value" => 9223372036854775807
+				"value" => $values[0]
 			],
 			"lastPageIndex_u_BCDE3456" => [
-				"value" => "9223372036854776000"
+				"value" => $values[1]
 			]
 		];
 		// Greater than max signed 64-bit integer, so edit JSON to include directly
@@ -736,14 +740,14 @@ class SettingsTests extends APITests {
 		);
 		$this->assert204($response);
 		
-		foreach (["ABCD2345", "BCDE3456"] as $settingKey) {
+		foreach (["ABCD2345", "BCDE3456"] as $index => $settingKey) {
 			$response = API::userGet(
 				self::$config['userID'],
 				"settings/lastPageIndex_u_$settingKey"
 			);
 			$this->assert200($response);
 			$json = API::getJSONFromResponse($response);
-			$this->assertEquals(1, $json['value'], $settingKey);
+			$this->assertEquals($values[$index], $json['value'], $settingKey);
 		}
 	}
 	
