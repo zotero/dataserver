@@ -165,7 +165,7 @@ abstract class DataObjectUtilities {
 								throw new \Exception("No 'creatorType' property in JSON creator");
 							}
 							if (!$creatorTypes->contains($creator['creatorType'])) {
-								\Z_Core::debug("'${$creator['creatorType']}' is not a valid creator "
+								\Z_Core::debug("'{$creator['creatorType']}' is not a valid creator "
 									. "type for item type '$itemType' in the classic schema");
 								return false;
 							}

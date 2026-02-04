@@ -1116,7 +1116,7 @@ class Zotero_API {
 	//
 	// JSON processing
 	//
-	public static function createJSONResponse($entries, array $queryParams, Zotero_Permissions $permissions=null) {
+	public static function createJSONResponse($entries, array $queryParams, ?Zotero_Permissions $permissions=null) {
 		$json = [];
 		foreach ($entries as $entry) {
 			$json[] = $entry->toResponseJSON($queryParams, $permissions);

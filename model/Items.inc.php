@@ -65,7 +65,7 @@ class Zotero_Items {
 	}
 	
 	
-	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
+	public static function search($libraryID, $onlyTopLevel = false, array $params = [], ?Zotero_Permissions $permissions = null) {
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
@@ -1635,7 +1635,7 @@ class Zotero_Items {
 	
 	public static function updateFromJSON(Zotero_Item $item,
 	                                      $json,
-	                                      Zotero_Item $parentItem=null,
+	                                      ?Zotero_Item $parentItem,
 	                                      $requestParams,
 	                                      $userID,
 	                                      $requireVersion=0,
@@ -1964,7 +1964,7 @@ class Zotero_Items {
 	 * The catch here is that updates can be partial with POST/PATCH, so checks that depend on
 	 * other values have to check values on both the JSON and, if it's an update, the existing item.
 	 */
-	private static function validateJSONItem($json, $libraryID, Zotero_Item $item=null, $isChild, $requestParams, $partialUpdate=false) {
+	private static function validateJSONItem($json, $libraryID, ?Zotero_Item $item, $isChild, $requestParams, $partialUpdate=false) {
 		$isNew = !$item || !$item->version;
 		
 		if (!is_object($json)) {

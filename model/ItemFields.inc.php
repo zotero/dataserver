@@ -160,7 +160,7 @@ class Zotero_ItemFields {
 	}
 	
 	
-	public static function isValidForType(int $fieldID, int $itemTypeID, int $schemaVersion = null): bool {
+	public static function isValidForType(int $fieldID, int $itemTypeID, ?int $schemaVersion = null): bool {
 		$currentSchemaVersion = \Zotero\Schema::getVersion();
 		if (!$schemaVersion || $schemaVersion > $currentSchemaVersion) {
 			$schemaVersion = $currentSchemaVersion;
