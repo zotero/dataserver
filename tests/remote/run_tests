@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# Default values
+BAIL=""
+GREP=""
+TEST_FILES=""
+TIMEOUT="30000"
+VERSION=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -b|--bail)
+            BAIL="--bail"
+            shift
+            ;;
+        -g|--grep)
+            GREP="--grep \"$2\""
+            shift 2
+            ;;
+        -t|--timeout)
+            TIMEOUT="$2"
+            shift 2
+            ;;
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: ./run_tests [OPTIONS] [test1,test2,...]"
+            echo ""
+            echo "Options:"
+            echo "  -b, --bail          Stop on first test failure"
+            echo "  -g, --grep PATTERN  Only run tests matching pattern"
+            echo "  -t, --timeout MS    Set timeout in milliseconds (default: 30000)"
+            echo "  -v, --version VER   Run tests for specific API version (1, 2, or 3)"
+            echo "  -h, --help          Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  ./run_tests                    # Run all tests from all versions"
+            echo "  ./run_tests -b                 # Run all tests, stop on first failure"
+            echo "  ./run_tests -v 3               # Run all v3 tests"
+            echo "  ./run_tests -v 2               # Run all v2 tests"
+            echo "  ./run_tests -g \"should create\"  # Run tests matching pattern"
+            echo "  ./run_tests item               # Run item tests from v3 (latest)"
+            echo "  ./run_tests -v 2 item          # Run item tests from v2"
+            echo "  ./run_tests item,object        # Run item and object tests from v3"
+            echo "  ./run_tests -b item,object     # Run item and object tests with bail"
+            exit 0
+            ;;
+        *)
+            # Assume it's a test name or comma-separated list
+            TEST_FILES="$1"
+            shift
+            ;;
+    esac
+done
+
+# Build the mocha command
+MOCHA_CMD="npx mocha"
+
+# Add test file pattern
+if [ -z "$TEST_FILES" ]; then
+    # No specific test files specified
+    if [ -z "$VERSION" ]; then
+        # Run all tests from all versions
+        MOCHA_CMD="$MOCHA_CMD 'tests/**/*.test.js'"
+    else
+        # Run all tests from specified version
+        MOCHA_CMD="$MOCHA_CMD 'tests/${VERSION}/*.test.js'"
+    fi
+else
+    # Specific test files specified
+    # Convert comma-separated list to file paths
+    IFS=',' read -ra TESTS <<< "$TEST_FILES"
+    FILE_PATTERNS=""
+
+    # Default to v3 (latest) if no version specified
+    if [ -z "$VERSION" ]; then
+        VERSION="3"
+    fi
+
+    for test in "${TESTS[@]}"; do
+        # Trim whitespace
+        test=$(echo "$test" | xargs)
+        FILE_PATTERNS="$FILE_PATTERNS 'tests/${VERSION}/${test}.test.js'"
+    done
+    MOCHA_CMD="$MOCHA_CMD $FILE_PATTERNS"
+fi
+
+# Add options
+MOCHA_CMD="$MOCHA_CMD --timeout $TIMEOUT"
+
+if [ -n "$BAIL" ]; then
+    MOCHA_CMD="$MOCHA_CMD $BAIL"
+fi
+
+if [ -n "$GREP" ]; then
+    MOCHA_CMD="$MOCHA_CMD $GREP"
+fi
+
+# Run the command
+echo "Running: $MOCHA_CMD"
+echo ""
+eval $MOCHA_CMD

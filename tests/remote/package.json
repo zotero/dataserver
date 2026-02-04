@@ -1,0 +1,19 @@
+{
+  "name": "zotero-api-tests",
+  "version": "1.0.0",
+  "description": "Zotero API integration tests",
+  "type": "module",
+  "scripts": {
+    "test": "mocha 'tests/**/*.test.js' --timeout 30000",
+    "test:item": "mocha 'tests/3/item.test.js' --timeout 30000"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.980.0",
+    "@xmldom/xmldom": "^0.8.11",
+    "adm-zip": "^0.5.16",
+    "chai": "^5.1.0",
+    "config": "^3.3.11",
+    "mocha": "^10.4.0",
+    "xpath": "^0.0.34"
+  }
+}
