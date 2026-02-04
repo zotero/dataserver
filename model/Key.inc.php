@@ -132,6 +132,57 @@ class Zotero_Key {
 	
 	
 	/**
+	 * Set permissions from JSON access format
+	 *
+	 * Format:
+	 * {
+	 *   "user": { "library": true, "notes": true, "write": true, "files": true },
+	 *   "groups": { "all": { "library": true, "write": true } }
+	 * }
+	 *
+	 * @param int $userID
+	 * @param array $accessJSON
+	 */
+	public function setPermissionsFromAccessJSON($userID, $accessJSON) {
+		// User library permissions
+		if (!empty($accessJSON['user']) && !empty($accessJSON['user']['library'])) {
+			$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
+			$this->setPermission($libraryID, 'library', true);
+			if (!empty($accessJSON['user']['notes'])) {
+				$this->setPermission($libraryID, 'notes', true);
+			}
+			// 'files' is not stored -- it's implicitly granted when 'library' is granted
+			if (!empty($accessJSON['user']['write'])) {
+				$this->setPermission($libraryID, 'write', true);
+			}
+		}
+
+		// Group permissions
+		if (!empty($accessJSON['groups'])) {
+			foreach ($accessJSON['groups'] as $groupID => $access) {
+				if ($groupID === 'all' || $groupID === 0) {
+					// Access to all groups
+					$this->setPermission(0, 'group', true);
+					if (!empty($access['write'])) {
+						$this->setPermission(0, 'write', true);
+					}
+				}
+				else {
+					// Access to specific group
+					$group = Zotero_Groups::get((int) $groupID);
+					if ($group && $group->hasUser($userID)) {
+						$this->setPermission($group->libraryID, 'library', true);
+						if (!empty($access['write'])) {
+							$this->setPermission($group->libraryID, 'write', true);
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+	/**
 	 * Examples:
 	 *
 	 * $keyObj->setPermission(12345, 'library', true);
@@ -365,18 +416,24 @@ class Zotero_Key {
 		if (($this->id || $this->key) && !$this->loaded) {
 			$this->load();
 		}
-		
+
 		Zotero_DB::beginTransaction();
-		
+
+		// Cancel any pending login sessions for this key
+		Zotero_DB::query(
+			"UPDATE loginSessions SET status='cancelled' WHERE keyID=? AND status='pending'",
+			$this->id
+		);
+
 		// No FK constraint on keyAccessLog
 		Zotero_DB::query("DELETE FROM keyAccessLog WHERE keyID=?", $this->id);
-		
+
 		$sql = "DELETE FROM `keys` WHERE keyID=?";
 		$deleted = Zotero_DB::query($sql, $this->id);
 		if (!$deleted) {
 			throw new Exception("Key not deleted");
 		}
-		
+
 		Zotero_DB::commit();
 		
 		Z_Core::$MC->delete("keyInfoByID_" . $this->id);

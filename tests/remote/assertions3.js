@@ -32,6 +32,7 @@ let assert403 = assertStatus(403);
 let assert404 = assertStatus(404);
 let assert405 = assertStatus(405);
 let assert409 = assertStatus(409);
+let assert410 = assertStatus(410);
 let assert412 = assertStatus(412);
 let assert413 = assertStatus(413);
 let assert428 = assertStatus(428);
@@ -144,6 +145,7 @@ export {
 	assert404,
 	assert405,
 	assert409,
+	assert410,
 	assert412,
 	assert413,
 	assert428,

@@ -204,7 +204,12 @@ class KeysController extends ApiController {
 					$keyObj = new Zotero_Key;
 					$keyObj->userID = $userID;
 					foreach ($fields as $field=>$val) {
-						if ($field == 'access') {
+						if ($field == 'accessJSON') {
+							// JSON format -- use setPermissionsFromAccessJSON
+							$keyObj->setPermissionsFromAccessJSON($userID, $val);
+						}
+						else if ($field == 'access') {
+							// XML format -- use intermediate format
 							foreach ($val as $access) {
 								$this->setKeyPermissions($keyObj, $access);
 							}
@@ -221,7 +226,7 @@ class KeysController extends ApiController {
 					}
 					$this->handleException($e);
 				}
-				
+
 				if ($this->apiVersion >= 3) {
 					header('Content-Type: application/json');
 					echo Zotero_Utilities::formatJSON($keyObj->toJSON($options));
@@ -287,7 +292,12 @@ class KeysController extends ApiController {
 						$this->e404("Key '$key' does not exist");
 					}
 					foreach ($fields as $field=>$val) {
-						if ($field == 'access') {
+						if ($field == 'accessJSON') {
+							// JSON format -- use setPermissionsFromAccessJSON
+							$keyObj->setPermissionsFromAccessJSON($keyObj->userID, $val);
+						}
+						else if ($field == 'access') {
+							// XML format -- use intermediate format
 							foreach ($val as $access) {
 								$this->setKeyPermissions($keyObj, $access);
 							}
@@ -357,28 +367,12 @@ class KeysController extends ApiController {
 		if (!isset($json['name'])) {
 			throw new Exception("Key name not provided", Z_ERROR_INVALID_INPUT);
 		}
-		
+
 		$fields = [];
 		$fields['name'] = $json['name'];
-		$fields['access'] = [];
-		if (!empty($json['access']['user']) && !empty($json['access']['user']['library'])) {
-			$fields['access'][] = [
-				'library' => true,
-				'notes' => isset($json['access']['user']['notes'])
-					? (bool) $json['access']['user']['notes']
-					: false,
-				'write' => isset($json['access']['user']['write'])
-					? (bool) $json['access']['user']['write']
-					: false
-			];
-		}
-		if (!empty($json['access']['groups'])) {
-			foreach ($json['access']['groups'] as $groupID => $access) {
-				$fields['access'][] = [
-					'group' => $groupID == 'all' ? 0 : (int) $groupID,
-					'write' => isset($access['write']) ? (bool) $access['write'] : false
-				];
-			}
+		// Return original access JSON format for use with setPermissionsFromAccessJSON()
+		if (!empty($json['access'])) {
+			$fields['accessJSON'] = $json['access'];
 		}
 		return $fields;
 	}

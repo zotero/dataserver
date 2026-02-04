@@ -89,6 +89,12 @@ $router->map('/groups/i:objectGroupID/:scopeObject/:scopeObjectKey/items/top', a
 $router->map('/users/i:objectUserID/:scopeObject/:scopeObjectKey/items/:objectKey/:subset', array('controller' => 'Items'));
 $router->map('/groups/i:objectGroupID/:scopeObject/:scopeObjectKey/items/:objectKey/:subset', array('controller' => 'Items'));
 
+// Login sessions for web-based key creation/modification
+$router->map('/keys/sessions', ['controller' => 'LoginSessions', 'action' => 'sessions']);
+$router->map('/keys/sessions/complete', ['controller' => 'LoginSessions', 'action' => 'complete']);
+$router->map('/keys/sessions/:objectKey/info', ['controller' => 'LoginSessions', 'action' => 'info']);
+$router->map('/keys/sessions/:objectKey', ['controller' => 'LoginSessions', 'action' => 'sessions']);
+
 // User API keys
 $router->map('/keys/:objectName', array('controller' => 'Keys'));
 $router->map('/users/i:objectUserID/keys/:objectName', array('controller' => 'Keys'));

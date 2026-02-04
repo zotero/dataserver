@@ -191,6 +191,23 @@ CREATE TABLE `libraries` (
 
 
 
+CREATE TABLE `loginSessions` (
+  `sessionToken` char(32) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `userID` int(10) unsigned DEFAULT NULL,
+  `keyID` int(10) unsigned DEFAULT NULL,
+  `clientType` enum('mac','windows','linux','ios','android','unknown') NOT NULL,
+  `status` enum('pending','completed','expired','cancelled') NOT NULL DEFAULT 'pending',
+  `dateCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `dateExpires` timestamp NOT NULL,
+  `dateCompleted` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`sessionToken`),
+  KEY `userID` (`userID`),
+  KEY `keyID` (`keyID`),
+  KEY `dateExpires` (`dateExpires`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
 CREATE TABLE `settings` (
   `name` varchar(100) NOT NULL,
   `value` varchar(255) NOT NULL,
@@ -345,6 +362,10 @@ ALTER TABLE `keyPermissions`
 
 ALTER TABLE `libraries`
   ADD CONSTRAINT `libraries_ibfk_1` FOREIGN KEY (`shardID`) REFERENCES `shards` (`shardID`);
+
+ALTER TABLE `loginSessions`
+  ADD CONSTRAINT `loginSessions_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `loginSessions_ibfk_2` FOREIGN KEY (`keyID`) REFERENCES `keys` (`keyID`) ON DELETE SET NULL;
 
 ALTER TABLE `shardHostReplicas`
   ADD CONSTRAINT `shardHostReplicas_ibfk_1` FOREIGN KEY (`shardHostID`) REFERENCES `shardHosts` (`shardHostID`) ON DELETE CASCADE ON UPDATE CASCADE;

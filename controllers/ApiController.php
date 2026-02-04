@@ -170,7 +170,8 @@ class ApiController extends Controller {
 						'clear',
 						'laststoragesync',
 						'removestoragefiles',
-						'itemContent'))) {
+						'itemContent',
+						'sessions'))) {
 				$this->e400("$this->method data not provided");
 			}
 			
@@ -290,8 +291,8 @@ class ApiController extends Controller {
 				
 				// Explicit auth request or not a GET or HEAD request
 				//
-				// /users/<id>/keys is an exception, since the key is embedded in the URL
-				if (($this->method != "GET" && $this->method != "HEAD") && $this->action != 'keys' && empty($extra['noauth'])) {
+				// /users/<id>/keys and /keys/sessions are exceptions
+				if (($this->method != "GET" && $this->method != "HEAD") && $this->action != 'keys' && $this->action != 'sessions' && empty($extra['noauth'])) {
 					$this->e403('An API key is required for write requests.');
 				}
 				
