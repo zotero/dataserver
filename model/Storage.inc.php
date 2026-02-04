@@ -24,6 +24,8 @@
     ***** END LICENSE BLOCK *****
 */
 
+use GeoIp2\Database\Reader;
+
 class Zotero_Storage {
 	public static $defaultQuota = 300;
 	public static $uploadQueueLimit = 10;
@@ -646,7 +648,21 @@ class Zotero_Storage {
 		// Suffix
 		$suffix = "\r\n--$boundary--";
 		
-		$attachmentProxy = true;
+		$attachmentProxy = false;
+		try {
+			$db = Z_ENV_BASE_PATH . 'misc/GeoLite2-City.mmdb';
+			if (file_exists($db)) {
+				$reader = new Reader($db);
+				$ip = IPAddress::getIP();
+				$record = $reader->city($ip);
+				$country = $record->country->isoCode;
+				$proxiedCountries = ['CN'];
+				$attachmentProxy = in_array($country, $proxiedCountries);
+			}
+		}
+		catch (Exception $e) {
+			Z_Core::logError($e);
+		}
 		
 		return [
 			'url' => $attachmentProxy

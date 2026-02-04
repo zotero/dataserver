@@ -24,6 +24,8 @@
     ***** END LICENSE BLOCK *****
 */
 
+use GeoIp2\Database\Reader;
+
 require('ApiController.php');
 
 class ItemsController extends ApiController {
@@ -787,8 +789,24 @@ class ItemsController extends ApiController {
 			
 			StatsD::increment("storage.download", 1);
 			
-			$useAttachmentProxy = true;
-			if ($useAttachmentProxy) {
+			// TODO: Move to config shared with Storage.inc.php
+			$attachmentProxy = false;
+			try {
+				$db = Z_ENV_BASE_PATH . 'misc/GeoLite2-City.mmdb';
+				if (file_exists($db)) {
+					$reader = new Reader($db);
+					$ip = IPAddress::getIP();
+					$record = $reader->city($ip);
+					$country = $record->country->isoCode;
+					$proxiedCountries = ['CN'];
+					$attachmentProxy = in_array($country, $proxiedCountries);
+				}
+			}
+			catch (Exception $e) {
+				Z_Core::logError($e);
+			}
+			
+			if ($attachmentProxy) {
 				$url = Zotero_Attachments::getTemporaryURL($item, true);
 				if (!$url) {
 					$this->e500();
@@ -1004,16 +1022,43 @@ class ItemsController extends ApiController {
 				// User over queue limit
 				if (!$uploadKey) {
 					header('Retry-After: ' . Zotero_Storage::$uploadQueueTimeout);
-					$this->e429("Too many queued uploads");
+					if (rand(0, 1)) {
+						$this->e429("Too many queued uploads");
+					}
+					else if (rand(0, 1)) {
+						$this->e400("Too many queued uploads");
+					}
+					else {
+						$this->e503("Too many queued uploads");
+					}
 				}
 				
 				StatsD::increment("storage.upload.new", 1);
 				
 				if (!empty($_REQUEST['params']) && $_REQUEST['params'] == "1") {
-					$params = array(
-						"url" => Zotero_Storage::getUploadBaseURL(),
-						"params" => array()
-					);
+					// TODO: Move to config shared with Storage.inc.php
+					$attachmentProxy = false;
+					try {
+						$db = Z_ENV_BASE_PATH . 'misc/GeoLite2-City.mmdb';
+						if (file_exists($db)) {
+							$reader = new Reader($db);
+							$ip = IPAddress::getIP();
+							$record = $reader->city($ip);
+							$country = $record->country->isoCode;
+							$proxiedCountries = ['CN'];
+							$attachmentProxy = in_array($country, $proxiedCountries);
+						}
+					}
+					catch (Exception $e) {
+						Z_Core::logError($e);
+					}
+					
+					$params = [
+						"url" => $attachmentProxy
+							? Zotero_Attachments::getTemporaryUploadURL($item)
+							: Zotero_Storage::getUploadBaseURL(),
+						"params" => []
+					];
 					foreach (Zotero_Storage::generateUploadPOSTParams($item, $info) as $key=>$val) {
 						$params['params'][$key] = $val;
 					}
