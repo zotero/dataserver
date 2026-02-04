@@ -322,7 +322,7 @@ class API3 {
 	}
 	
 	
-	public static function createAnnotationItem($annotationType, $data=[], $parentKey, $context=false, $returnFormat='responseJSON') {
+	public static function createAnnotationItem($annotationType, $data, $parentKey, $context=false, $returnFormat='responseJSON') {
 		$response = self::get("items/new?itemType=annotation&annotationType=$annotationType");
 		$json = json_decode($response->getBody());
 		$json->parentItem = $parentKey;
@@ -956,7 +956,7 @@ class API3 {
 				
 				case 'write':
 					if (!isset($access['library'])) {
-						continue;
+						continue 2;
 					}
 					$current = (int) $access['write'];
 					if ($current != $value) {

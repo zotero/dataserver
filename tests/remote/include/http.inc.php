@@ -25,7 +25,9 @@
 */
 
 class HTTP {
-	private static $config;
+	private static $config = [
+		'verbose' => false
+	];
 	
 	private static function loadConfig() {
 		require 'include/config.inc.php';

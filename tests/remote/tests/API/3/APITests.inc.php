@@ -35,6 +35,7 @@ require_once 'include/api3.inc.php';
 class APITests extends \APITests {
 	protected static $config;
 	protected static $nsZAPI;
+	protected $apiVersion;
 	private $notificationHeader = 'zotero-debug-notifications';
 	
 	public static function setUpBeforeClass(): void {

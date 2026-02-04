@@ -671,7 +671,7 @@ class API2 {
 			
 			case 'libraryWrite':
 				if (!isset($access['library'])) {
-					continue;
+					continue 2;
 				}
 				$current = (int) $access['write'];
 				if ($current != $val) {

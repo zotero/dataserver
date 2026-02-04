@@ -78,7 +78,7 @@ class GroupTests extends APITests {
 			switch ($key) {
 			case 'id':
 			case 'members':
-				continue;
+				continue 2;
 			
 			case 'name':
 				$name = "My Test Group " . uniqid();
