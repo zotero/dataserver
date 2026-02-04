@@ -24,6 +24,11 @@
     ***** END LICENSE BLOCK *****
 */
 
+use Aws\Credentials\CredentialProvider;
+use Aws\PsrCacheAdapter;
+use Symfony\Component\Cache\Adapter\ApcuAdapter;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+
 define('Z_ENV_START_TIME', microtime(true));
 
 mb_language('uni');
@@ -218,13 +223,16 @@ $awsConfig = [
 if (empty(Z_CONFIG::$AWS_ACCESS_KEY)) {
 	// If APC cache is available, use that to cache temporary credentials
 	if (function_exists('apc_store')) {
-		$cache = new \Doctrine\Common\Cache\ApcCache();
+		$cache = new PsrCacheAdapter(new ApcuAdapter());
 	}
 	// Otherwise use temp dir
 	else {
-		$cache = new \Doctrine\Common\Cache\FilesystemCache(Z_ENV_BASE_PATH . 'tmp/cache');
+		$cache = new PsrCacheAdapter(new FilesystemAdapter('', 0, Z_ENV_BASE_PATH . 'tmp/cache'));
 	}
-	$awsConfig['credentials'] = new \Aws\DoctrineCacheAdapter($cache);
+
+	$provider = CredentialProvider::defaultProvider();
+	$cachedProvider = CredentialProvider::cache($provider, $cache);
+	$awsConfig['credentials'] = $cachedProvider;
 }
 // Access key and secret
 else {
