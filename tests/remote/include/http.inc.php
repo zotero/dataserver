@@ -24,8 +24,6 @@
     ***** END LICENSE BLOCK *****
 */
 
-require_once 'HTTP/Request2.php';
-
 class HTTP {
 	private static $config;
 	
