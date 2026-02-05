@@ -122,7 +122,6 @@ else {
 		}
 	}
 	
-	// Turn on output buffering
 	ob_start();
 }
 

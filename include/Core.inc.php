@@ -118,7 +118,6 @@ class Z_Core {
 	}
 	
 	public static function exitClean() {
-		include('footer.inc.php');
 		exit;
 	}
 	
