@@ -15,44 +15,42 @@ import {
 	assert412,
 	assert428,
 	assert200ForObject,
-	assert400ForObject,
 	assert404ForObject,
 	assert412ForObject,
-	assert428ForObject,
-	assertTotalResults
+	assert428ForObject
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Versioning', function() {
+describe('Versioning', function () {
 	this.timeout(60000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testSingleObjectLastModifiedVersion
-	it('should track single object last modified version', async function() {
+	it('should track single object last modified version', async function () {
 		await testSingleObjectLastModifiedVersion('collection');
 		await testSingleObjectLastModifiedVersion('item');
 		await testSingleObjectLastModifiedVersion('search');
 	});
 
 	// PHP: testMultiObjectLastModifiedVersion
-	it('should track multi object last modified version', async function() {
+	it('should track multi object last modified version', async function () {
 		await testMultiObjectLastModifiedVersion('collection');
 		await testMultiObjectLastModifiedVersion('item');
 		await testMultiObjectLastModifiedVersion('search');
 	});
 
 	// PHP: testMultiObject304NotModified
-	it('should return 304 not modified', async function() {
+	it('should return 304 not modified', async function () {
 		await testMultiObject304NotModified('collection');
 		await testMultiObject304NotModified('item');
 		await testMultiObject304NotModified('search');
@@ -61,7 +59,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testSinceAndVersionsFormat
-	it('should handle since and versions format', async function() {
+	it('should handle since and versions format', async function () {
 		await testSinceAndVersionsFormat('collection', 'since');
 		await testSinceAndVersionsFormat('item', 'since');
 		await testSinceAndVersionsFormat('search', 'since');
@@ -72,21 +70,21 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testUploadUnmodified
-	it('should reject upload without version', async function() {
+	it('should reject upload without version', async function () {
 		await testUploadUnmodified('collection');
 		await testUploadUnmodified('item');
 		await testUploadUnmodified('search');
 	});
 
 	// PHP: testTagsSince
-	it('should handle tags since parameter', async function() {
+	it('should handle tags since parameter', async function () {
 		await testTagsSince('since');
 		await API.userClear(config.get('userID'));
 		await testTagsSince('newer');
 	});
 
 	// PHP: test_should_not_include_library_version_for_400
-	it('should not include library version for 400', async function() {
+	it('should not include library version for 400', async function () {
 		let json = await API.createItem('book', {}, 'json');
 		let response = await API.userPut(
 			config.get('userID'),
@@ -102,7 +100,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: test_should_include_library_version_for_412
-	it('should include library version for 412', async function() {
+	it('should include library version for 412', async function () {
 		let json = await API.createItem('book', {}, 'json');
 		let libraryVersion = json.version;
 		json.data.version--;
@@ -120,7 +118,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchMissingObjectWithoutVersion
-	it('should require version for patching missing object', async function() {
+	it('should require version for patching missing object', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			'items',
@@ -136,7 +134,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectWithoutVersion
-	it('should require version for patching existing object', async function() {
+	it('should require version for patching existing object', async function () {
 		let json = await API.createItem('book', {}, 'jsonData');
 		delete json.version;
 		let response = await API.userPost(
@@ -149,14 +147,14 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchMissingObjectWithVersionHeader
-	it('should reject patch missing object with version header', async function() {
+	it('should reject patch missing object with version header', async function () {
 		await _testPatchMissingObjectWithVersionHeader('collection');
 		await _testPatchMissingObjectWithVersionHeader('item');
 		await _testPatchMissingObjectWithVersionHeader('search');
 	});
 
 	// PHP: testPatchMissingObjectWithVersionProperty
-	it('should reject patch missing object with version property', async function() {
+	it('should reject patch missing object with version property', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			'items',
@@ -173,14 +171,14 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchMissingObjectWithVersion0Header
-	it('should allow patch missing object with version 0 header', async function() {
+	it('should allow patch missing object with version 0 header', async function () {
 		await _testPatchMissingObjectWithVersion0Header('collection');
 		await _testPatchMissingObjectWithVersion0Header('item');
 		await _testPatchMissingObjectWithVersion0Header('search');
 	});
 
 	// PHP: testPatchMissingObjectWithVersion0Property
-	it('should allow patch missing object with version 0 property', async function() {
+	it('should allow patch missing object with version 0 property', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			'items',
@@ -197,14 +195,14 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectWithVersion0Header
-	it('should reject patch existing object with version 0 header', async function() {
+	it('should reject patch existing object with version 0 header', async function () {
 		await _testPatchExistingObjectWithVersion0Header('collection');
 		await _testPatchExistingObjectWithVersion0Header('item');
 		await _testPatchExistingObjectWithVersion0Header('search');
 	});
 
 	// PHP: testPatchExistingObjectWithVersion0Property
-	it('should reject patch existing object with version 0 property', async function() {
+	it('should reject patch existing object with version 0 property', async function () {
 		let json = await API.createItem('book', {}, 'jsonData');
 		json.title = 'Test';
 		json.version = 0;
@@ -218,14 +216,14 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectWithOldVersionHeader
-	it('should reject patch existing object with old version header', async function() {
+	it('should reject patch existing object with old version header', async function () {
 		await _testPatchExistingObjectWithOldVersionHeader('collection');
 		await _testPatchExistingObjectWithOldVersionHeader('item');
 		await _testPatchExistingObjectWithOldVersionHeader('search');
 	});
 
 	// PHP: testPatchExistingObjectWithOldVersionProperty
-	it('should reject patch existing object with old version property', async function() {
+	it('should reject patch existing object with old version property', async function () {
 		let json = await API.createItem('book', {}, 'jsonData');
 		let oldVersion = json.version;
 		json.title = 'Test';
@@ -240,7 +238,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPostExistingLibraryWithVersion0Header
-	it('should reject post to existing library with version 0 header', async function() {
+	it('should reject post to existing library with version 0 header', async function () {
 		await API.createItem('book', {});
 		let response = await API.userPost(
 			config.get('userID'),
@@ -259,7 +257,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchMissingObjectsWithVersion0Property
-	it('should allow patch multiple missing objects with version 0', async function() {
+	it('should allow patch multiple missing objects with version 0', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			'items',
@@ -273,7 +271,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchMissingObjectsWithVersion
-	it('should handle patch missing objects with different versions', async function() {
+	it('should handle patch missing objects with different versions', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			'items',
@@ -291,7 +289,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectsWithVersion0Property
-	it('should reject patch existing objects with version 0', async function() {
+	it('should reject patch existing objects with version 0', async function () {
 		let json1 = await API.createItem('book', {}, 'jsonData');
 		let json2 = await API.createItem('book', {}, 'jsonData');
 		json1.version = 0;
@@ -309,7 +307,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectsWithoutVersionWithHeader
-	it('should allow patch existing objects without version with header', async function() {
+	it('should allow patch existing objects without version with header', async function () {
 		let json1 = await API.createItem('book', {}, 'jsonData');
 		let json2 = await API.createItem('book', {}, 'jsonData');
 		let libraryVersion = Math.max(json1.version, json2.version);
@@ -330,7 +328,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectsWithoutVersionWithoutHeader
-	it('should require header for patch existing objects without version', async function() {
+	it('should require header for patch existing objects without version', async function () {
 		let json1 = await API.createItem('book', {}, 'jsonData');
 		let json2 = await API.createItem('book', {}, 'jsonData');
 		delete json1.version;
@@ -345,7 +343,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPostToSettingsWithOutdatedVersionHeader
-	it('should reject post to settings with outdated version', async function() {
+	it('should reject post to settings with outdated version', async function () {
 		await API.userPost(
 			config.get('userID'),
 			'settings',
@@ -373,7 +371,7 @@ describe('Versioning', function() {
 	});
 
 	// PHP: testPatchExistingObjectsWithOldVersion0Property
-	it('should reject patch existing objects with old version 0', async function() {
+	it('should reject patch existing objects with old version 0', async function () {
 		let json1 = await API.createItem('book', {}, 'jsonData');
 		let json2 = await API.createItem('book', {}, 'jsonData');
 		json1.version = 0;
@@ -551,9 +549,11 @@ describe('Versioning', function() {
 				}),
 				['Content-Type: application/json']
 			);
-		} else if (objectType === 'tag') {
+		}
+		else if (objectType === 'tag') {
 			await API.createItem('book', { tags: [{ tag: 'test' }] });
-		} else {
+		}
+		else {
 			switch (objectType) {
 				case 'collection':
 					await API.createCollection('Name', {}, 'key');

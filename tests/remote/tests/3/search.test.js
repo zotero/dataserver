@@ -15,24 +15,24 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Searches', function() {
+describe('Searches', function () {
 	this.timeout(30000);
 
 	let testSearchData = null;
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewSearch
-	it('should create new search', async function() {
+	it('should create new search', async function () {
 		let name = 'Test Search';
 		let conditions = [
 			{
@@ -101,7 +101,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: testModifySearch
-	it('should modify search', async function() {
+	it('should modify search', async function () {
 		// Depends on testNewSearch
 		assert.isNotNull(testSearchData, 'testNewSearch must run first');
 
@@ -139,7 +139,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: testEditMultipleSearches
-	it('should edit multiple searches', async function() {
+	it('should edit multiple searches', async function () {
 		let search1Name = 'Test 1';
 		let search1Conditions = [
 			{
@@ -217,7 +217,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: testNewSearchNoName
-	it('should reject new search with no name', async function() {
+	it('should reject new search with no name', async function () {
 		let response = await API.createSearch(
 			'',
 			[
@@ -233,7 +233,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: test_should_allow_a_search_with_emoji_values
-	it('should allow a search with emoji values', async function() {
+	it('should allow a search with emoji values', async function () {
 		let response = await API.createSearch(
 			'\uD83D\uDC36', // Dog emoji (4-byte character)
 			[
@@ -249,7 +249,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: testNewSearchNoConditions
-	it('should reject new search with no conditions', async function() {
+	it('should reject new search with no conditions', async function () {
 		let json = {
 			name: 'Test',
 			conditions: []
@@ -259,7 +259,7 @@ describe('Searches', function() {
 	});
 
 	// PHP: testNewSearchConditionErrors
-	it('should handle new search condition errors', async function() {
+	it('should handle new search condition errors', async function () {
 		// Missing condition
 		let response = await API.createSearch(
 			'Test',

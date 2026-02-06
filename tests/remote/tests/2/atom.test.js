@@ -12,12 +12,12 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Atom (API v2)', function() {
+describe('Atom (API v2)', function () {
 	this.timeout(30000);
 
 	let itemKeys = [];
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
@@ -54,12 +54,12 @@ describe('Atom (API v2)', function() {
 		itemKeys.push(key);
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testFeedURIs
-	it('should return correct feed URIs', async function() {
+	it('should return correct feed URIs', async function () {
 		let userID = config.get('userID');
 
 		let response = await API.userGet(
@@ -83,7 +83,7 @@ describe('Atom (API v2)', function() {
 	});
 
 	// PHP: testMultiContent
-	it('should return multi-content', async function() {
+	it('should return multi-content', async function () {
 		let keyStr = itemKeys.join(',');
 
 		let response = await API.userGet(
@@ -113,7 +113,7 @@ describe('Atom (API v2)', function() {
 	});
 
 	// PHP: testMultiContentCached
-	it('should return cached multi-content', async function() {
+	it('should return cached multi-content', async function () {
 		// Re-run the multi-content test to verify caching
 		let keyStr = itemKeys.join(',');
 

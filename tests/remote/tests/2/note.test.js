@@ -3,7 +3,6 @@
  * Port of tests/remote/tests/API/2/NoteTest.php
  */
 
-import { assert } from 'chai';
 import config from 'config';
 import { API } from '../../api2.js';
 import {
@@ -11,24 +10,24 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Notes (API v2)', function() {
+describe('Notes (API v2)', function () {
 	this.timeout(30000);
 
 	let content;
 	let json;
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		// Create too-long note content
 		content = '1234567890'.repeat(50001);
 
@@ -38,7 +37,7 @@ describe('Notes (API v2)', function() {
 	});
 
 	// PHP: testNoteTooLong
-	it('should reject note that is too long', async function() {
+	it('should reject note that is too long', async function () {
 		let response = await API.userPost(
 			config.get('userID'),
 			`items?key=${config.get('apiKey')}`,
@@ -54,7 +53,7 @@ describe('Notes (API v2)', function() {
 	});
 
 	// PHP: testNoteTooLongBlankFirstLines
-	it('should reject note too long with blank first lines', async function() {
+	it('should reject note too long with blank first lines', async function () {
 		json.note = ' \n \n' + content;
 
 		let response = await API.userPost(
@@ -72,7 +71,7 @@ describe('Notes (API v2)', function() {
 	});
 
 	// PHP: testNoteTooLongBlankFirstLinesHTML
-	it('should reject note too long with blank first lines HTML', async function() {
+	it('should reject note too long with blank first lines HTML', async function () {
 		json.note = '\n<p>&nbsp;</p>\n<p>&nbsp;</p>\n' + content;
 
 		let response = await API.userPost(
@@ -90,7 +89,7 @@ describe('Notes (API v2)', function() {
 	});
 
 	// PHP: testNoteTooLongTitlePlusNewlines
-	it('should reject note too long with title plus newlines', async function() {
+	it('should reject note too long with title plus newlines', async function () {
 		json.note = 'Full Text:\n\n' + content;
 
 		let response = await API.userPost(
@@ -108,7 +107,7 @@ describe('Notes (API v2)', function() {
 	});
 
 	// PHP: testNoteTooLongWithinHTMLTags
-	it('should reject note too long with all content within HTML tags', async function() {
+	it('should reject note too long with all content within HTML tags', async function () {
 		json.note = '&nbsp;\n<p><!-- ' + content + ' --></p>';
 
 		let response = await API.userPost(

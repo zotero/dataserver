@@ -64,7 +64,8 @@ function assertNumResults(response, expected) {
 		count = Array.isArray(json) ? json.length : Object.keys(json).length;
 	}
 	else if (contentType && contentType.startsWith('text/plain')) {
-		let rows = response.getBody().trim().split('\n').filter(line => line);
+		let rows = response.getBody().trim().split('\n')
+.filter(line => line);
 		count = rows.length;
 	}
 	else if (contentType === 'application/atom+xml') {

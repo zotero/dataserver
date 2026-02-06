@@ -13,15 +13,14 @@ import {
 	assert404,
 	assert412,
 	assert428,
-	assertContentType,
-	assertNumResults
+	assertContentType
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Settings', function() {
+describe('Settings', function () {
 	this.timeout(30000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -31,7 +30,7 @@ describe('Settings', function() {
 		}
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.userClear(config.get('userID'));
 		if (config.get('ownedPrivateGroupID')) {
 			await API.groupClear(config.get('ownedPrivateGroupID'));
@@ -39,7 +38,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testAddUserSetting
-	it('should add user setting', async function() {
+	it('should add user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -114,7 +113,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testAddUserSettingMultiple
-	it('should add user setting multiple', async function() {
+	it('should add user setting multiple', async function () {
 		let json = {
 			tagColors: {
 				value: [
@@ -134,12 +133,15 @@ describe('Settings', function() {
 					}
 				}
 			},
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: 123
 			},
+			// eslint-disable-next-line camelcase
 			lastPageIndex_g1234567890_ABCD2345: {
 				value: 123
 			},
+			// eslint-disable-next-line camelcase
 			lastRead_g1234567890_ABCD2345: {
 				value: 1674251397
 			}
@@ -188,7 +190,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testAddGroupSettingMultiple
-	it('should add group setting multiple', async function() {
+	it('should add group setting multiple', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -241,7 +243,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testUpdateUserSetting
-	it('should update user setting', async function() {
+	it('should update user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -330,7 +332,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_should_add_zero_integer_value_for_lastPageIndex
-	it('should add zero integer value for lastPageIndex', async function() {
+	it('should add zero integer value for lastPageIndex', async function () {
 		let settingKey = 'lastPageIndex_u_NJP24DAM';
 		let value = 0;
 
@@ -365,7 +367,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testUpdateUserSettings
-	it('should update user settings', async function() {
+	it('should update user settings', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -474,7 +476,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testDeleteUserSetting
-	it('should delete user setting', async function() {
+	it('should delete user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -518,7 +520,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testDeleteNonexistentSetting
-	it('should return 404 for nonexistent setting deletion', async function() {
+	it('should return 404 for nonexistent setting deletion', async function () {
 		let response = await API.userDelete(
 			config.get('userID'),
 			'settings/nonexistentSetting',
@@ -528,7 +530,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testSettingsSince
-	it('should filter settings by since parameter', async function() {
+	it('should filter settings by since parameter', async function () {
 		let libraryVersion1 = await API.getLibraryVersion();
 		let response = await API.userPost(
 			config.get('userID'),
@@ -589,7 +591,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testUnsupportedSetting
-	it('should reject unsupported setting', async function() {
+	it('should reject unsupported setting', async function () {
 		let settingKey = 'unsupportedSetting';
 		let value = true;
 
@@ -609,7 +611,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testUnsupportedSettingMultiple
-	it('should reject unsupported setting in multiple', async function() {
+	it('should reject unsupported setting in multiple', async function () {
 		let settingKey = 'unsupportedSetting';
 		let json = {
 			tagColors: {
@@ -646,7 +648,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: testOverlongSetting
-	it('should reject overlong setting', async function() {
+	it('should reject overlong setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -671,8 +673,9 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_lastPageIndex_should_accept_percentages_with_one_decimal_place
-	it('should accept percentages with one decimal place for lastPageIndex', async function() {
+	it('should accept percentages with one decimal place for lastPageIndex', async function () {
 		let json = {
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: 12.2
 			}
@@ -687,8 +690,9 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_lastPageIndex_should_accept_integers
-	it('should accept integers for lastPageIndex', async function() {
+	it('should accept integers for lastPageIndex', async function () {
 		let json = {
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: 12
 			}
@@ -703,7 +707,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_preserve_massive_integer_values
-	it('should preserve massive integer values', async function() {
+	it('should preserve massive integer values', async function () {
 		// Use raw JSON string to avoid JavaScript precision issues with large integers
 		// Values are preserved as-is by the server using JSON_BIGINT_AS_STRING
 		// - Values <= PHP_INT_MAX (9223372036854775807) come back as integers
@@ -711,7 +715,7 @@ describe('Settings', function() {
 		// https://forums.zotero.org/discussion/121223/sync-problem-settings-failed-with-status-code-400
 		let values = [
 			'9223372036854775807', // PHP_INT_MAX - will be returned as integer
-			'9223372036854776000'  // > PHP_INT_MAX - will be returned as string
+			'9223372036854776000' // > PHP_INT_MAX - will be returned as string
 		];
 		let jsonString = `{"lastPageIndex_u_ABCD2345":{"value":${values[0]}},"lastPageIndex_u_BCDE3456":{"value":${values[1]}}}`;
 		let response = await API.userPost(
@@ -737,8 +741,9 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_lastPageIndex_should_reject_percentages_below_0_or_above_100
-	it('should reject percentages below 0 or above 100 for lastPageIndex', async function() {
+	it('should reject percentages below 0 or above 100 for lastPageIndex', async function () {
 		let json = {
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: -1.2
 			}
@@ -752,6 +757,7 @@ describe('Settings', function() {
 		assert400(response);
 
 		json = {
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: 100.1
 			}
@@ -766,8 +772,9 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_lastPageIndex_should_reject_percentages_with_two_decimal_places
-	it('should reject percentages with two decimal places for lastPageIndex', async function() {
+	it('should reject percentages with two decimal places for lastPageIndex', async function () {
 		let json = {
+			// eslint-disable-next-line camelcase
 			lastPageIndex_u_ABCD2345: {
 				value: 12.23
 			}
@@ -782,7 +789,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_should_reject_lastPageIndex_in_group_library
-	it('should reject lastPageIndex in group library', async function() {
+	it('should reject lastPageIndex in group library', async function () {
 		let settingKey = `lastPageIndex_g${config.get('ownedPrivateGroupID')}_ABCD2345`;
 		let value = 1234;
 
@@ -802,7 +809,7 @@ describe('Settings', function() {
 	});
 
 	// PHP: test_should_allow_emoji_character
-	it('should allow emoji character', async function() {
+	it('should allow emoji character', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{

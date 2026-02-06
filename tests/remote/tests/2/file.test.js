@@ -44,12 +44,12 @@ function getRandomUnicodeString() {
 	return "Âéìøü 这是一个测试。 " + crypto.randomUUID().substring(0, 8);
 }
 
-describe('Files (API v2)', function() {
+describe('Files (API v2)', function () {
 	this.timeout(120000);
 
 	let workDir = path.join(process.cwd(), 'work');
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
@@ -62,7 +62,7 @@ describe('Files (API v2)', function() {
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(function() {
+	beforeEach(function () {
 		// Delete work files
 		let deleteFiles = ['file', 'old', 'new', 'patch'];
 		for (let file of deleteFiles) {
@@ -73,7 +73,7 @@ describe('Files (API v2)', function() {
 		}
 	});
 
-	after(async function() {
+	after(async function () {
 		let s3Client = getS3Client();
 
 		if (!s3Client || !config.has('s3Bucket') || toDelete.length === 0) {
@@ -103,7 +103,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testNewEmptyImportedFileAttachmentItem
-	it('should create new empty imported file attachment', async function() {
+	it('should create new empty imported file attachment', async function () {
 		let xml = await API.createAttachmentItem('imported_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		assert.ok(data.key);
@@ -111,7 +111,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFileAuthorizationErrors
-	it('should return errors for invalid file authorization requests', async function() {
+	it('should return errors for invalid file authorization requests', async function () {
 		let xml = await API.createAttachmentItem('imported_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let attachmentKey = data.key;
@@ -182,7 +182,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFileFull
-	it('should add file with full S3 upload flow', async function() {
+	it('should add file with full S3 upload flow', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let parentKey = data.key;
@@ -190,7 +190,7 @@ describe('Files (API v2)', function() {
 		xml = await API.createAttachmentItem('imported_file', {}, parentKey, 'atom');
 		data = API.parseDataFromAtomEntry(xml);
 		let attachmentKey = data.key;
-		let originalVersion = data.version;
+		let _originalVersion = data.version;
 
 		let file = path.join(workDir, 'file');
 		let fileContents = getRandomUnicodeString();
@@ -288,7 +288,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFileFullParams
-	it('should add file with full S3 upload flow using params=1', async function() {
+	it('should add file with full S3 upload flow using params=1', async function () {
 		let xml = await API.createAttachmentItem('imported_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let attachmentKey = data.key;
@@ -383,7 +383,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFileExisting
-	it('should return exists for existing file', async function() {
+	it('should return exists for existing file', async function () {
 		// First create and upload a file
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -492,7 +492,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testGetFile
-	it('should get file in view and download mode', async function() {
+	it('should get file in view and download mode', async function () {
 		// First create and upload a file
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -606,7 +606,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFilePartial
-	it('should add file with partial update (binary diff)', async function() {
+	it('should add file with partial update (binary diff)', async function () {
 		let { execSync } = await import('child_process');
 
 		// First create and upload a file
@@ -681,7 +681,7 @@ describe('Files (API v2)', function() {
 		);
 		xml = API.getXMLFromResponse(response);
 		let updatedNode = xpathSelect(xml, '//atom:entry/atom:updated/text()', true);
-		let serverDateModified = updatedNode ? updatedNode.nodeValue : null;
+		let _serverDateModified = updatedNode ? updatedNode.nodeValue : null;
 		data = API.parseDataFromAtomEntry(xml);
 		let originalVersion = data.version;
 
@@ -732,7 +732,7 @@ describe('Files (API v2)', function() {
 			try {
 				execSync(cmd);
 			}
-			catch (e) {
+			catch {
 				console.log(`Warning: Error running ${algo} -- skipping file upload test`);
 				continue;
 			}
@@ -787,7 +787,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testExistingFileWithOldStyleFilename
-	it('should handle existing file with old-style filename', async function() {
+	it('should handle existing file with old-style filename', async function () {
 		let s3Client = getS3Client();
 
 		if (!s3Client || !config.has('s3Bucket')) {
@@ -804,7 +804,7 @@ describe('Files (API v2)', function() {
 		let xml = await API.createAttachmentItem('imported_file', {}, parentKey, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let attachmentKey = data.key;
-		let originalVersion = data.version;
+		let _originalVersion = data.version;
 		let mtime = Date.now();
 		let contentType = 'text/plain';
 		let charset = 'utf-8';
@@ -960,7 +960,7 @@ describe('Files (API v2)', function() {
 	});
 
 	// PHP: testAddFileLinkedAttachment
-	it('should reject file upload on linked attachment', async function() {
+	it('should reject file upload on linked attachment', async function () {
 		let xml = await API.createAttachmentItem('linked_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let attachmentKey = data.key;

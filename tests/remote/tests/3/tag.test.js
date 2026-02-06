@@ -18,26 +18,26 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Tags', function() {
+describe('Tags', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: test_empty_tag_should_be_ignored
-	it('should ignore empty tag', async function() {
+	it('should ignore empty tag', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags = [
 			{ tag: 'A' },
@@ -51,7 +51,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_empty_tag_with_whitespace_should_be_ignored
-	it('should ignore empty tag with whitespace', async function() {
+	it('should ignore empty tag with whitespace', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags = [
 			{ tag: 'A' },
@@ -65,7 +65,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testInvalidTagObject
-	it('should reject invalid tag object', async function() {
+	it('should reject invalid tag object', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags = [['invalid']];
 
@@ -74,7 +74,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_should_add_tag_to_item
-	it('should add tag to item', async function() {
+	it('should add tag to item', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags = [{ tag: 'A' }];
 		let response = await API.postItem(json);
@@ -101,7 +101,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_utf8mb4_tag
-	it('should handle utf8mb4 tag', async function() {
+	it('should handle utf8mb4 tag', async function () {
 		let json = await API.getItemTemplate('book');
 		let tag = '\uD83D\uDC3B'; // Bear emoji (4-byte character)
 		json.tags = [{ tag: tag, type: 0 }];
@@ -115,7 +115,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagTooLong
-	it('should reject tag too long', async function() {
+	it('should reject tag too long', async function () {
 		let tag = 'x'.repeat(300);
 		let json = await API.getItemTemplate('book');
 		json.tags = [{ tag: tag, type: 1 }];
@@ -127,7 +127,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testItemTagSearch
-	it('should handle item tag search', async function() {
+	it('should handle item tag search', async function () {
 		// Create items with tags
 		let key1 = await API.createItem('book', {
 			tags: [
@@ -246,7 +246,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_should_handle_negation_in_top_requests
-	it('should handle negation in top requests', async function() {
+	it('should handle negation in top requests', async function () {
 		// Create items with tags
 		let key1 = await API.createItem('book', {
 			tags: [
@@ -276,7 +276,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testKeyedItemWithTags
-	it('should handle keyed item with tags', async function() {
+	it('should handle keyed item with tags', async function () {
 		let itemKey = API.generateKey();
 		await API.createItem('book', {
 			key: itemKey,
@@ -294,7 +294,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_tags_within_items
-	it('should handle tags within items', async function() {
+	it('should handle tags within items', async function () {
 		let collectionKey = await API.createCollection('Collection', false, 'key');
 		let item1Key = await API.createItem(
 			'book',
@@ -499,7 +499,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_tags_within_items_within_empty_collection
-	it('should handle tags within items within empty collection', async function() {
+	it('should handle tags within items within empty collection', async function () {
 		let collectionKey = await API.createCollection('Empty collection', false, 'key');
 		await API.createItem(
 			'book',
@@ -522,7 +522,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagSearch
-	it('should handle tag search', async function() {
+	it('should handle tag search', async function () {
 		let tags1 = ['a', 'aa', 'b'];
 		let tags2 = ['b', 'c', 'cc'];
 
@@ -543,7 +543,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagQuery
-	it('should handle tag query', async function() {
+	it('should handle tag query', async function () {
 		let tags = ['a', 'abc', 'bab'];
 
 		await API.createItem('book', {
@@ -566,7 +566,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testOrphanedTag
-	it('should handle orphaned tag', async function() {
+	it('should handle orphaned tag', async function () {
 		let json = await API.createItem('book', {
 			tags: [{ tag: 'a' }]
 		}, 'jsonData');
@@ -599,7 +599,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagNewer
-	it('should handle tag newer', async function() {
+	it('should handle tag newer', async function () {
 		// Create items with tags
 		await API.createItem('book', {
 			tags: [
@@ -640,7 +640,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testMultiTagDelete
-	it('should handle multi tag delete', async function() {
+	it('should handle multi tag delete', async function () {
 		let tags1 = ['a', 'aa', 'b'];
 		let tags2 = ['b', 'c', 'cc'];
 		let tags3 = ['Foo'];
@@ -692,7 +692,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_deleting_a_tag_should_update_a_linked_item
-	it('should update linked item when deleting a tag', async function() {
+	it('should update linked item when deleting a tag', async function () {
 		let tags = ['a', 'aa', 'b'];
 
 		let itemKey = await API.createItem('book', {
@@ -731,14 +731,14 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagAddItemVersionChange
-	it('should handle tag add item version change', async function() {
+	it('should handle tag add item version change', async function () {
 		let data1 = await API.createItem('book', {
 			tags: [
 				{ tag: 'a' },
 				{ tag: 'b' }
 			]
 		}, 'jsonData');
-		let version1 = data1.version;
+		let _version1 = data1.version;
 
 		let data2 = await API.createItem('book', {
 			tags: [
@@ -767,7 +767,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_should_change_case_of_existing_tag
-	it('should change case of existing tag', async function() {
+	it('should change case of existing tag', async function () {
 		let data1 = await API.createItem('book', {
 			tags: [{ tag: 'a' }]
 		}, 'jsonData');
@@ -793,7 +793,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: testTagDiacritics
-	it('should handle tag diacritics', async function() {
+	it('should handle tag diacritics', async function () {
 		let data = await API.createItem('book', {
 			tags: [{ tag: '\u00EBtest' }] // ëtest
 		}, 'jsonData');
@@ -818,7 +818,7 @@ describe('Tags', function() {
 	});
 
 	// PHP: test_should_create_a_0_tag
-	it('should create a 0 tag', async function() {
+	it('should create a 0 tag', async function () {
 		let data = await API.createItem('book', {
 			tags: [{ tag: '0' }]
 		}, 'jsonData');

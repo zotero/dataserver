@@ -9,10 +9,13 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.980.0",
+    "@eslint/eslintrc": "^3.3.3",
     "@xmldom/xmldom": "^0.8.11",
+    "@zotero/eslint-config": "^1.0.9",
     "adm-zip": "^0.5.16",
     "chai": "^5.1.0",
     "config": "^3.3.11",
+    "eslint": "^9.39.2",
     "mocha": "^10.4.0",
     "xpath": "^0.0.34"
   }

@@ -36,7 +36,7 @@ let assert412 = assertStatus(412);
 let assert413 = assertStatus(413);
 let assert428 = assertStatus(428);
 
-function assert200ForObject(response, expectedMessage = false, index = 0) {
+function assert200ForObject(response, _expectedMessage = false, index = 0) {
 	assert200(response);
 	let json = JSON.parse(response.getBody());
 	assert.isNotNull(json);

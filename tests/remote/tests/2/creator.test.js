@@ -12,22 +12,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Creators (API v2)', function() {
+describe('Creators (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testCreatorSummary
-	it('should generate creator summary', async function() {
+	it('should generate creator summary', async function () {
 		let xml = await API.createItem('book', {
 			creators: [
 				{

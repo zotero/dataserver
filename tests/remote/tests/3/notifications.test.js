@@ -19,11 +19,11 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Notifications', function() {
+describe('Notifications', function () {
 	this.timeout(60000);
 
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 	});
@@ -56,8 +56,8 @@ describe('Notifications', function() {
 		let decodedNotifications = notifications.map(n => JSON.parse(n));
 
 		// Check if expected notification is in the array
-		let found = decodedNotifications.some(notification => {
-			return Object.keys(expectedNotification).every(key => {
+		let found = decodedNotifications.some((notification) => {
+			return Object.keys(expectedNotification).every((key) => {
 				// Use loose equality (==) to handle string/number conversions
 				return notification[key] == expectedNotification[key];
 			});
@@ -68,7 +68,7 @@ describe('Notifications', function() {
 	}
 
 	// PHP: testNewItemNotification
-	it('should send notification for new item', async function() {
+	it('should send notification for new item', async function () {
 		let response = await API.createItem('book', {}, 'response');
 		let version = API.getJSONFromResponse(response).successful[0].version;
 		assertCountNotifications(1, response);
@@ -80,7 +80,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testModifyItemNotification
-	it('should send notification for modified item', async function() {
+	it('should send notification for modified item', async function () {
 		let json = await API.createItem('book', {}, 'jsonData');
 		json.title = 'test';
 		let response = await API.userPut(
@@ -98,7 +98,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testDeleteItemNotification
-	it('should send notification for deleted item', async function() {
+	it('should send notification for deleted item', async function () {
 		let json = await API.createItem('book', {}, 'json');
 		let response = await API.userDelete(
 			config.get('userID'),
@@ -115,7 +115,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyCreateNotification
-	it('should not send notification when creating key', async function() {
+	it('should not send notification when creating key', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -147,7 +147,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyAddLibraryNotification
-	it('should send notification when adding library to key', async function() {
+	it('should send notification when adding library to key', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -198,7 +198,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyRemoveLibraryNotification
-	it('should send notification when removing library from key', async function() {
+	it('should send notification when removing library from key', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -238,7 +238,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyAddAllGroupsToNoneNotification
-	it('should send notification when adding all groups to key with none', async function() {
+	it('should send notification when adding all groups to key with none', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -257,7 +257,7 @@ describe('Notifications', function() {
 
 			// Add all groups to the key, which should trigger topicAdded for each group
 			json.access.groups = {
-				'all': {
+				all: {
 					library: true
 				}
 			};
@@ -283,7 +283,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyAddAllGroupsToOneNotification
-	it('should send notification when adding all groups to key with one', async function() {
+	it('should send notification when adding all groups to key with one', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -309,7 +309,7 @@ describe('Notifications', function() {
 
 			// Add all groups to the key
 			delete json.access.groups[config.get('ownedPrivateGroupID')];
-			json.access.groups['all'] = {
+			json.access.groups.all = {
 				library: true
 			};
 			response = await API.superPut(
@@ -334,7 +334,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testKeyRemoveLibraryFromAllGroupsNotification
-	it('should send notification when removing library from key with all groups', async function() {
+	it('should send notification when removing library from key with all groups', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -355,7 +355,7 @@ describe('Notifications', function() {
 
 			// Remove one group, and replace access array with new set
 			groupIDs = groupIDs.filter(id => id !== removedGroup);
-			delete json.access.groups['all'];
+			delete json.access.groups.all;
 			for (let groupID of groupIDs) {
 				json.access.groups[groupID] = { library: true };
 			}
@@ -382,7 +382,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testAddDeleteOwnedGroupNotification
-	it('should send notification when adding and deleting owned group', async function() {
+	it('should send notification when adding and deleting owned group', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -427,7 +427,7 @@ describe('Notifications', function() {
 	});
 
 	// PHP: testAddRemoveGroupMemberNotification
-	it('should send notification when adding and removing group member', async function() {
+	it('should send notification when adding and removing group member', async function () {
 		let originalKey = config.get('apiKey');
 		API.useAPIKey('');
 
@@ -510,12 +510,12 @@ describe('Notifications', function() {
 	}
 
 	async function createKeyWithAllGroupAccess(userID) {
-		return await createKey(userID, {
+		return createKey(userID, {
 			user: {
 				library: true
 			},
 			groups: {
-				'all': {
+				all: {
 					library: true
 				}
 			}

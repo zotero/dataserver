@@ -14,15 +14,15 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Groups', function() {
+describe('Groups', function () {
 	this.timeout(60000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
@@ -30,7 +30,7 @@ describe('Groups', function() {
 	 * Changing a group's metadata should change its version
 	 */
 	// PHP: testUpdateMetadataJSON
-	it('should update metadata in JSON format', async function() {
+	it('should update metadata in JSON format', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			'groups?fq=GroupType:PublicOpen'
@@ -81,7 +81,8 @@ describe('Groups', function() {
 				default:
 					if (typeof json.data[key] === 'string') {
 						xml += ` ${key}="${json.data[key]}"`;
-					} else {
+					}
+					else {
 						xml += ` ${key}="${json.data[key]}"`;
 					}
 			}
@@ -125,7 +126,7 @@ describe('Groups', function() {
 	 * Changing a group's metadata should change its version
 	 */
 	// PHP: testUpdateMetadataAtom
-	it('should update metadata in Atom format', async function() {
+	it('should update metadata in Atom format', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			`groups?fq=GroupType:PublicOpen&content=json&key=${config.get('apiKey')}`
@@ -177,7 +178,8 @@ describe('Groups', function() {
 				default:
 					if (typeof contentJSON[key] === 'string') {
 						groupXml += ` ${key}="${contentJSON[key]}"`;
-					} else {
+					}
+					else {
 						groupXml += ` ${key}="${contentJSON[key]}"`;
 					}
 			}
@@ -221,7 +223,7 @@ describe('Groups', function() {
 	});
 
 	// PHP: testUpdateMemberJSON
-	it('should update group version when member is added', async function() {
+	it('should update group version when member is added', async function () {
 		let groupID = await API.createGroup({
 			owner: config.get('userID'),
 			type: 'Private',
@@ -263,7 +265,7 @@ describe('Groups', function() {
 	});
 
 	// PHP: test_group_should_not_appear_in_search_until_first_populated
-	it("shouldn't appear in search until first populated", async function() {
+	it("shouldn't appear in search until first populated", async function () {
 		let name = 'TestGroup' + Date.now() + Math.random().toString(36).substr(2, 9);
 		let groupID = await API.createGroup({
 			owner: config.get('userID'),
@@ -285,7 +287,7 @@ describe('Groups', function() {
 	});
 
 	// PHP: testDeleteGroup
-	it('should delete group with items', async function() {
+	it('should delete group with items', async function () {
 		let groupID = await API.createGroup({
 			owner: config.get('userID'),
 			type: 'Private',

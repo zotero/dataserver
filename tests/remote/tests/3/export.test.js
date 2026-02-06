@@ -12,14 +12,14 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Export', function() {
+describe('Export', function () {
 	this.timeout(30000);
 
 	let items = {};
 	let formats = ['bibtex', 'ris', 'csljson'];
 	let multiResponses = {};
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -132,12 +132,12 @@ describe('Export', function() {
 		};
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testExportInclude
-	it('should export with include parameter', async function() {
+	it('should export with include parameter', async function () {
 		for (let format of formats) {
 			let response = await API.userGet(
 				config.get('userID'),
@@ -152,7 +152,7 @@ describe('Export', function() {
 	});
 
 	// PHP: testExportFormatSingle
-	it('should export single item with format parameter', async function() {
+	it('should export single item with format parameter', async function () {
 		for (let format of formats) {
 			for (let key in items) {
 				let expected = items[key];
@@ -175,7 +175,7 @@ describe('Export', function() {
 	});
 
 	// PHP: testExportFormatMultiple
-	it('should export multiple items with format parameter', async function() {
+	it('should export multiple items with format parameter', async function () {
 		for (let format of formats) {
 			let response = await API.userGet(
 				config.get('userID'),

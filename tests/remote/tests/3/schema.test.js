@@ -14,26 +14,26 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Schema', function() {
+describe('Schema', function () {
 	this.timeout(30000);
 
-	const legacySchemaErrorMessage =
-		"Some data in \"My Library\" was created in a newer version of Zotero and could not be downloaded. "
+	const legacySchemaErrorMessage
+		= "Some data in \"My Library\" was created in a newer version of Zotero and could not be downloaded. "
 		+ "Upgrade Zotero to continue syncing this library.";
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.resetSchemaVersion(false);
 	});
 
 	// PHP: test_should_reject_download_from_old_client_for_item_using_newer_schema
 	// All tests are skipped in PHP
-	it.skip('should reject download from old client for item using newer schema', async function() {
+	it.skip('should reject download from old client for item using newer schema', async function () {
 		let key = await API.createItem(
 			'book',
 			{
@@ -84,7 +84,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_collection_using_legacy_schema
-	it.skip('should not reject download from old client for collection using legacy schema', async function() {
+	it.skip('should not reject download from old client for collection using legacy schema', async function () {
 		let key = await API.createCollection('Foo', {}, 'key');
 
 		await API.useSchemaVersion(false);
@@ -107,7 +107,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_search_using_legacy_schema
-	it.skip('should not reject download from old client for search using legacy schema', async function() {
+	it.skip('should not reject download from old client for search using legacy schema', async function () {
 		let key = await API.createSearch(
 			'Foo',
 			[
@@ -140,7 +140,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_item_using_legacy_schema
-	it.skip('should not reject download from old client for item using legacy schema', async function() {
+	it.skip('should not reject download from old client for item using legacy schema', async function () {
 		let key = await API.createItem(
 			'book',
 			{
@@ -174,7 +174,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_attachment_using_legacy_schema
-	it.skip('should not reject download from old client for attachment using legacy schema', async function() {
+	it.skip('should not reject download from old client for attachment using legacy schema', async function () {
 		let key = await API.createAttachmentItem('imported_file', [], false, 'key');
 
 		await API.useSchemaVersion(false);
@@ -197,7 +197,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_linked_file_attachment_using_legacy_schema
-	it.skip('should not reject download from old client for linked file attachment using legacy schema', async function() {
+	it.skip('should not reject download from old client for linked file attachment using legacy schema', async function () {
 		let key = await API.createAttachmentItem('linked_file', { path: '/home/user/foo.pdf' }, false, 'key');
 
 		await API.useSchemaVersion(false);
@@ -220,7 +220,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_note_using_legacy_schema
-	it.skip('should not reject download from old client for note using legacy schema', async function() {
+	it.skip('should not reject download from old client for note using legacy schema', async function () {
 		let key = await API.createNoteItem('Test', null, 'key');
 
 		await API.useSchemaVersion(false);
@@ -243,7 +243,7 @@ describe('Schema', function() {
 	});
 
 	// PHP: test_should_not_reject_download_from_old_client_for_child_note_using_legacy_schema
-	it.skip('should not reject download from old client for child note using legacy schema', async function() {
+	it.skip('should not reject download from old client for child note using legacy schema', async function () {
 		let parentKey = await API.createItem('book', null, 'key');
 		let key = await API.createNoteItem('Test', parentKey, 'key');
 

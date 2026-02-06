@@ -8,29 +8,28 @@ import config from 'config';
 import { API } from '../../api2.js';
 import {
 	assert200,
-	assert200ForObject,
 	assert204,
 	assert400
 } from '../../assertions3.js';
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Collections (API v2)', function() {
+describe('Collections (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewCollection
-	it('should create new collection', async function() {
+	it('should create new collection', async function () {
 		let name = 'Test Collection';
 		let xml = await API.createCollection(name, false, 'atom');
 		let totalResults = xpathSelect(xml, '/atom:feed/zapi:totalResults/text()', true);
@@ -42,7 +41,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testNewSubcollection
-	it('should create new subcollection', async function() {
+	it('should create new subcollection', async function () {
 		let parentXml = await API.createCollection('Parent', false, 'atom');
 		let parentData = API.parseDataFromAtomEntry(parentXml);
 		let parent = parentData.key;
@@ -68,7 +67,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testNewMultipleCollections
-	it('should create new multiple collections', async function() {
+	it('should create new multiple collections', async function () {
 		let xml = await API.createCollection('Test Collection 1', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 
@@ -107,7 +106,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testEditMultipleCollections
-	it('should edit multiple collections', async function() {
+	it('should edit multiple collections', async function () {
 		let xml1 = await API.createCollection('Test 1', false, 'atom');
 		let data1 = API.parseDataFromAtomEntry(xml1);
 		let key1 = data1.key;
@@ -151,7 +150,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testCollectionItemChange
-	it('should handle collection item change', async function() {
+	it('should handle collection item change', async function () {
 		let collectionKey1 = await API.createCollection('Test', false, 'key');
 		let collectionKey2 = await API.createCollection('Test', false, 'key');
 
@@ -262,7 +261,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testCollectionChildItemError
-	it('should handle collection child item error', async function() {
+	it('should handle collection child item error', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let key = await API.createItem('book', {}, 'key');
@@ -283,7 +282,7 @@ describe('Collections (API v2)', function() {
 	});
 
 	// PHP: testCollectionItems
-	it('should get collection items', async function() {
+	it('should get collection items', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let xml = await API.createItem('book', { collections: [collectionKey] }, 'atom');

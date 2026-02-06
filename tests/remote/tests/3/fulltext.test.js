@@ -19,22 +19,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Full Text', function() {
+describe('Full Text', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testVersionsAnonymous
-	it('should deny anonymous access to versions', async function() {
+	it('should deny anonymous access to versions', async function () {
 		API.useAPIKey(false);
 		let response = await API.userGet(
 			config.get('userID'),
@@ -45,7 +45,7 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testContentAnonymous
-	it('should deny anonymous access to content', async function() {
+	it('should deny anonymous access to content', async function () {
 		API.useAPIKey(false);
 		let response = await API.userGet(
 			config.get('userID'),
@@ -56,7 +56,7 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testSetItemContent
-	it('should set item content', async function() {
+	it('should set item content', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let attachmentKey = await API.createAttachmentItem('imported_url', [], key, 'key');
 
@@ -116,7 +116,7 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testSetItemContentMultiple
-	it('should set item content for multiple items', async function() {
+	it('should set item content for multiple items', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let attachmentKey1 = await API.createAttachmentItem('imported_url', [], key, 'key');
 		let attachmentKey2 = await API.createAttachmentItem('imported_url', [], key, 'key');
@@ -218,7 +218,7 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testModifyAttachmentWithFulltext
-	it('should modify attachment with fulltext', async function() {
+	it('should modify attachment with fulltext', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let json = await API.createAttachmentItem('imported_url', [], key, 'jsonData');
 		let attachmentKey = json.key;
@@ -252,18 +252,18 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testSinceContent
-	it('should filter by since parameter', async function() {
+	it('should filter by since parameter', async function () {
 		await testSinceContent('since');
 	});
 
 	// PHP: testSinceContent
-	it('should filter by newer parameter', async function() {
+	it('should filter by newer parameter', async function () {
 		await testSinceContent('newer');
 	});
 
 	// PHP: testSearchItemContent
-	it('should search item content', async function() {
-		this.timeout(60000);  // Increase timeout for this test due to sleep
+	it('should search item content', async function () {
+		this.timeout(60000); // Increase timeout for this test due to sleep
 
 		let collectionKey = await API.createCollection('Test', {}, 'key');
 		let parentKey = await API.createItem(
@@ -352,7 +352,7 @@ describe('Full Text', function() {
 	});
 
 	// PHP: testDeleteItemContent
-	it('should delete item content', async function() {
+	it('should delete item content', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let attachmentKey = await API.createAttachmentItem('imported_file', [], key, 'key');
 

@@ -13,26 +13,26 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Parameters', function() {
+describe('Parameters', function () {
 	this.timeout(60000);
 
 	let collectionKeys = [];
 	let itemKeys = [];
 	let searchKeys = [];
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testFormatKeys
-	it('should return keys format', async function() {
+	it('should return keys format', async function () {
 		collectionKeys = [];
 		itemKeys = [];
 		searchKeys = [];
@@ -69,14 +69,14 @@ describe('Parameters', function() {
 	});
 
 	// PHP: testObjectKeyParameter
-	it('should handle object key parameter', async function() {
+	it('should handle object key parameter', async function () {
 		await testObjectKeyParameter('collection');
 		await testObjectKeyParameter('item');
 		await testObjectKeyParameter('search');
 	});
 
 	// PHP: testPagination
-	it('should handle pagination', async function() {
+	it('should handle pagination', async function () {
 		await testPagination('collection');
 		// await testPagination('group');
 		await testPagination('item');
@@ -85,7 +85,7 @@ describe('Parameters', function() {
 	});
 
 	// PHP: test_should_include_since_parameter_in_next_link
-	it('should include since parameter in next link', async function() {
+	it('should include since parameter in next link', async function () {
 		let totalResults = 6;
 
 		let since = (await API.createItem('book', {}, 'json')).version;
@@ -110,7 +110,7 @@ describe('Parameters', function() {
 	});
 
 	// PHP: testCollectionQuickSearch
-	it('should search collections', async function() {
+	it('should search collections', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 
@@ -138,7 +138,7 @@ describe('Parameters', function() {
 	});
 
 	// PHP: testItemQuickSearch
-	it('should search items', async function() {
+	it('should search items', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 		let year2 = '2013';
@@ -182,7 +182,7 @@ describe('Parameters', function() {
 	});
 
 	// PHP: test_should_perform_quicksearch_with_multiple_words
-	it('should perform quicksearch with multiple words', async function() {
+	it('should perform quicksearch with multiple words', async function () {
 		let title1 = 'This Is a Great Title';
 		let title2 = 'Great, But Is It Better Than This Title?';
 
@@ -227,7 +227,7 @@ describe('Parameters', function() {
 	});
 
 	// PHP: testItemQuickSearchOrderByDate
-	it('should order quicksearch by date', async function() {
+	it('should order quicksearch by date', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 

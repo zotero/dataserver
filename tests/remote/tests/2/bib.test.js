@@ -17,13 +17,13 @@ function stripAtomNamespace(content) {
 	return content.replace(/ xmlns="http:\/\/www\.w3\.org\/2005\/Atom"/g, '');
 }
 
-describe('Bibliography (API v2)', function() {
+describe('Bibliography (API v2)', function () {
 	this.timeout(30000);
 
 	const styles = ['default', 'apa'];
 	let items = {};
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
@@ -78,12 +78,12 @@ describe('Bibliography (API v2)', function() {
 		};
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testContentCitationSingle
-	it('should return citation content for single item', async function() {
+	it('should return citation content for single item', async function () {
 		for (let style of styles) {
 			for (let key of Object.keys(items)) {
 				let url = `items/${key}?key=${config.get('apiKey')}&content=citation`;
@@ -102,7 +102,7 @@ describe('Bibliography (API v2)', function() {
 	});
 
 	// PHP: testContentCitationMulti
-	it('should return citation content for multiple items', async function() {
+	it('should return citation content for multiple items', async function () {
 		let keys = Object.keys(items);
 		let keyStr = keys.join(',');
 
@@ -132,7 +132,7 @@ describe('Bibliography (API v2)', function() {
 	});
 
 	// PHP: testContentBibSingle
-	it('should return bib content for single item', async function() {
+	it('should return bib content for single item', async function () {
 		for (let style of styles) {
 			for (let key of Object.keys(items)) {
 				let url = `items/${key}?key=${config.get('apiKey')}&content=bib`;
@@ -151,7 +151,7 @@ describe('Bibliography (API v2)', function() {
 	});
 
 	// PHP: testContentBibMulti
-	it('should return bib content for multiple items', async function() {
+	it('should return bib content for multiple items', async function () {
 		let keys = Object.keys(items);
 		let keyStr = keys.join(',');
 

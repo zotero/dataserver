@@ -14,22 +14,22 @@ import {
 import { setup } from '../../setup.js';
 import crypto from 'crypto';
 
-describe('General', function() {
+describe('General', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: test_should_return_400_if_string_passed_as_userID
-	it('should return 400 if string passed as userID', async function() {
+	it('should return 400 if string passed as userID', async function () {
 		let response = await API.userGet(
 			'foo',
 			'items'
@@ -38,7 +38,7 @@ describe('General', function() {
 	});
 
 	// PHP: testZoteroWriteToken
-	it('should handle Zotero Write Token', async function() {
+	it('should handle Zotero Write Token', async function () {
 		let json = await API.getItemTemplate('book');
 
 		let token = crypto.createHash('md5').update(Date.now().toString()).digest('hex');
@@ -67,7 +67,7 @@ describe('General', function() {
 	});
 
 	// PHP: testInvalidCharacters
-	it('should filter invalid characters', async function() {
+	it('should filter invalid characters', async function () {
 		let data = {
 			title: 'A\x00A',
 			creators: [

@@ -14,14 +14,14 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Annotations', function() {
+describe('Annotations', function () {
 	this.timeout(30000);
 
 	let pdfAttachmentKey = null;
 	let epubAttachmentKey = null;
-	let snapshotAttachmentKey = null;
+	let _snapshotAttachmentKey = null;
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -52,16 +52,16 @@ describe('Annotations', function() {
 			key,
 			'jsonData'
 		);
-		snapshotAttachmentKey = json.key;
+		_snapshotAttachmentKey = json.key;
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
 	// PHP: test_should_save_a_highlight_annotation
-	it('should save a highlight annotation', async function() {
+	it('should save a highlight annotation', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -101,7 +101,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_save_a_highlight_annotation_with_parentItem_specified_last
-	it('should save a highlight annotation with parent item specified last', async function() {
+	it('should save a highlight annotation with parent item specified last', async function () {
 		let json = {
 			itemType: 'annotation',
 			annotationType: 'highlight',
@@ -129,7 +129,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_save_a_note_annotation
-	it('should save a note annotation', async function() {
+	it('should save a note annotation', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -164,7 +164,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_empty_annotationText_for_image_annotation
-	it('should reject empty annotation text for image annotation', async function() {
+	it('should reject empty annotation text for image annotation', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -188,7 +188,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_non_empty_annotationText_for_image_annotation
-	it('should reject non empty annotation text for image annotation', async function() {
+	it('should reject non empty annotation text for image annotation', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -212,7 +212,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_save_an_image_annotation
-	it('should save an image annotation', async function() {
+	it('should save an image annotation', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -235,7 +235,7 @@ describe('Annotations', function() {
 		let responseJSON = API.getJSONFromResponse(response);
 		let responseItem = responseJSON.successful[0];
 		let jsonData = responseItem.data;
-		let annotationKey = responseItem.key;
+		let _annotationKey = responseItem.key;
 		assert.equal(jsonData.itemType, 'annotation');
 		assert.equal(jsonData.annotationType, 'image');
 		assert.equal(jsonData.annotationSortIndex, '00015|002431|00000');
@@ -246,7 +246,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_save_an_ink_annotation
-	it('should save an ink annotation', async function() {
+	it('should save an ink annotation', async function () {
 		let paths = [
 			[173.54, 647.25, 175.88, 647.25, 181.32, 647.25, 184.44, 647.25, 191.44, 647.25, 197.67, 647.25, 203.89, 645.7, 206.23, 645.7, 210.12, 644.92, 216.34, 643.36, 218.68],
 			[92.4075, 245.284, 92.4075, 245.284, 92.4075, 246.034, 91.6575, 248.284, 91.6575, 253.534, 91.6575, 255.034, 91.6575, 261.034, 91.6575, 263.284, 95.4076, 271.535, 99.9077]
@@ -284,7 +284,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_not_include_authorName_if_empty
-	it('should not include author name if empty', async function() {
+	it('should not include author name if empty', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -313,7 +313,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_not_allow_changing_annotation_type
-	it('should not allow changing annotation type', async function() {
+	it('should not allow changing annotation type', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -353,7 +353,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_update_annotation_comment
-	it('should update annotation comment', async function() {
+	it('should update annotation comment', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -396,7 +396,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_update_annotation_text
-	it('should update annotation text', async function() {
+	it('should update annotation text', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -439,7 +439,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_preserve_0_for_annotation_fields
-	it('should preserve 0 for annotation fields', async function() {
+	it('should preserve 0 for annotation fields', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -468,7 +468,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_clear_annotation_fields
-	it('should clear annotation fields', async function() {
+	it('should clear annotation fields', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -514,7 +514,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_long_page_label
-	it('should reject long page label', async function() {
+	it('should reject long page label', async function () {
 		let label = 'x'.repeat(51);
 		let json = {
 			itemType: 'annotation',
@@ -541,7 +541,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_long_position
-	it('should reject long position', async function() {
+	it('should reject long position', async function () {
 		let positionJSON = JSON.stringify({
 			pageIndex: 123,
 			rects: [
@@ -570,7 +570,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_truncate_long_text
-	it('should truncate long text', async function() {
+	it('should truncate long text', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -599,7 +599,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_invalid_sortIndex
-	it('should reject invalid sort index', async function() {
+	it('should reject invalid sort index', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -624,7 +624,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_use_default_yellow_if_color_not_specified
-	it('should use default yellow if color not specified', async function() {
+	it('should use default yellow if color not specified', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -651,7 +651,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_reject_invalid_color_value
-	it('should reject invalid color value', async function() {
+	it('should reject invalid color value', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
@@ -680,7 +680,7 @@ describe('Annotations', function() {
 	});
 
 	// PHP: test_should_trigger_upgrade_error_for_epub_annotation_on_old_clients
-	it('should trigger upgrade error for epub annotation on old clients', async function() {
+	it('should trigger upgrade error for epub annotation on old clients', async function () {
 		let json = {
 			itemType: 'annotation',
 			parentItem: epubAttachmentKey,

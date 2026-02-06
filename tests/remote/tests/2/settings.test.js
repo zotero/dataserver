@@ -17,27 +17,27 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Settings (API v2)', function() {
+describe('Settings (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
 	// PHP: testAddUserSetting
-	it('should add user setting', async function() {
+	it('should add user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -110,7 +110,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testAddUserSettingMultiple
-	it('should add user setting via POST', async function() {
+	it('should add user setting via POST', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -161,7 +161,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testAddGroupSettingMultiple
-	it('should add group setting via POST', async function() {
+	it('should add group setting via POST', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -213,7 +213,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testUpdateUserSetting
-	it('should update user setting', async function() {
+	it('should update user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -299,7 +299,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testDeleteUserSetting
-	it('should delete user setting', async function() {
+	it('should delete user setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{
@@ -340,7 +340,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testDeleteNonexistentSetting
-	it('should return 404 when deleting nonexistent setting', async function() {
+	it('should return 404 when deleting nonexistent setting', async function () {
 		let response = await API.userDelete(
 			config.get('userID'),
 			`settings/nonexistentSetting?key=${config.get('apiKey')}`,
@@ -350,7 +350,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testUnsupportedSetting
-	it('should reject unsupported setting', async function() {
+	it('should reject unsupported setting', async function () {
 		let settingKey = 'unsupportedSetting';
 		let value = true;
 
@@ -366,7 +366,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testUnsupportedSettingMultiple
-	it('should reject unsupported setting in multiple mode', async function() {
+	it('should reject unsupported setting in multiple mode', async function () {
 		let settingKey = 'unsupportedSetting';
 		let json = {
 			tagColors: {
@@ -402,7 +402,7 @@ describe('Settings (API v2)', function() {
 	});
 
 	// PHP: testOverlongSetting
-	it('should reject overlong setting', async function() {
+	it('should reject overlong setting', async function () {
 		let settingKey = 'tagColors';
 		let value = [
 			{

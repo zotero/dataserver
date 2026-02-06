@@ -591,7 +591,7 @@ class API2 {
 	}
 
 	// Response parsing
-	static getJSONFromResponse(response, asObject = false) {
+	static getJSONFromResponse(response, _asObject = false) {
 		let json = JSON.parse(response.getBody());
 		if (json === null) {
 			console.log(response.getBody());
@@ -835,12 +835,15 @@ class API2 {
 		if (objectType === 'item') {
 			if (groupID) {
 				xml = await this.groupGetItemXML(groupID, key);
-			} else {
+			}
+			else {
 				xml = await this.getItemXML(key);
 			}
-		} else if (objectType === 'collection') {
+		}
+		else if (objectType === 'collection') {
 			xml = await this.getCollectionXML(key);
-		} else if (objectType === 'search') {
+		}
+		else if (objectType === 'search') {
 			xml = await this.getSearchXML(key);
 		}
 

@@ -8,22 +8,22 @@ import config from 'config';
 import { API } from '../../api3.js';
 import { setup } from '../../setup.js';
 
-describe('Caching', function() {
+describe('Caching', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testCacheCreatorPrimaryData
-	it('should cache creator primary data', async function() {
+	it('should cache creator primary data', async function () {
 		let data = {
 			title: 'Title',
 			creators: [

@@ -13,22 +13,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('General (API v2)', function() {
+describe('General (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testZoteroWriteToken
-	it('should handle Zotero-Write-Token', async function() {
+	it('should handle Zotero-Write-Token', async function () {
 		let json = await API.getItemTemplate('book');
 
 		let token = crypto.randomUUID().replace(/-/g, '');
@@ -61,7 +61,7 @@ describe('General (API v2)', function() {
 	});
 
 	// PHP: testInvalidCharacters
-	it('should strip invalid characters', async function() {
+	it('should strip invalid characters', async function () {
 		let data = {
 			title: 'A\0A',
 			creators: [

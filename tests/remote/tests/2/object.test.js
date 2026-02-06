@@ -19,17 +19,17 @@ import {
 } from '../../assertions2.js';
 import { setup } from '../../setup.js';
 
-describe('Object (API v2)', function() {
+describe('Object (API v2)', function () {
 	this.timeout(30000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
@@ -198,7 +198,7 @@ describe('Object (API v2)', function() {
 				json3 = Object.assign({}, json1);
 				json2.title = '1234567890'.repeat(6554);
 				break;
-			case 'search':
+			case 'search': {
 				let conditions = [
 					{ condition: 'title', operator: 'contains', value: 'value' }
 				];
@@ -206,6 +206,7 @@ describe('Object (API v2)', function() {
 				json2 = { name: '1234567890'.repeat(6554), conditions };
 				json3 = { name: 'Test', conditions };
 				break;
+			}
 		}
 
 		let response = await API.userPost(
@@ -240,20 +241,22 @@ describe('Object (API v2)', function() {
 
 		let json1, json2, json3;
 		switch (objectType) {
-			case 'collection':
+			case 'collection': {
 				let collData = await API.createCollection('Test', false, 'data');
 				json1 = JSON.parse(collData.content);
 				json2 = { name: '1234567890'.repeat(6554) };
 				json3 = { name: 'Test' };
 				break;
-			case 'item':
+			}
+			case 'item': {
 				let itemData = await API.createItem('book', { title: 'Title' }, 'data');
 				json1 = JSON.parse(itemData.content);
 				json2 = await API.getItemTemplate('book');
 				json3 = Object.assign({}, json2);
 				json2.title = '1234567890'.repeat(6554);
 				break;
-			case 'search':
+			}
+			case 'search': {
 				let conditions = [
 					{ condition: 'title', operator: 'contains', value: 'value' }
 				];
@@ -262,6 +265,7 @@ describe('Object (API v2)', function() {
 				json2 = { name: '1234567890'.repeat(6554), conditions };
 				json3 = { name: 'Test', conditions };
 				break;
+			}
 		}
 
 		let response = await API.userPost(
@@ -310,7 +314,7 @@ describe('Object (API v2)', function() {
 	}
 
 	// PHP: testMultiObjectGet
-	it('should get multiple objects', async function() {
+	it('should get multiple objects', async function () {
 		await testMultiObjectGet('collection');
 		await API.userClear(config.get('userID'));
 		await testMultiObjectGet('item');
@@ -319,7 +323,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testSingleObjectDelete
-	it('should delete single object', async function() {
+	it('should delete single object', async function () {
 		await testSingleObjectDelete('collection');
 		await API.userClear(config.get('userID'));
 		await testSingleObjectDelete('item');
@@ -328,7 +332,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testMultiObjectDelete
-	it('should delete multiple objects', async function() {
+	it('should delete multiple objects', async function () {
 		await testMultiObjectDelete('collection');
 		await API.userClear(config.get('userID'));
 		await testMultiObjectDelete('item');
@@ -337,7 +341,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testDeleted
-	it('should handle deleted endpoint', async function() {
+	it('should handle deleted endpoint', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Create objects
@@ -469,7 +473,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testPartialWriteFailure
-	it('should handle partial write failure', async function() {
+	it('should handle partial write failure', async function () {
 		await testPartialWriteFailure('collection');
 		await API.userClear(config.get('userID'));
 		await testPartialWriteFailure('item');
@@ -478,7 +482,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testPartialWriteFailureWithUnchanged
-	it('should handle partial write failure with unchanged', async function() {
+	it('should handle partial write failure with unchanged', async function () {
 		await testPartialWriteFailureWithUnchanged('collection');
 		await API.userClear(config.get('userID'));
 		await testPartialWriteFailureWithUnchanged('item');
@@ -487,7 +491,7 @@ describe('Object (API v2)', function() {
 	});
 
 	// PHP: testMultiObjectWriteInvalidObject
-	it('should reject invalid object in multi-object write', async function() {
+	it('should reject invalid object in multi-object write', async function () {
 		await testMultiObjectWriteInvalidObject('collection');
 		await testMultiObjectWriteInvalidObject('item');
 		await testMultiObjectWriteInvalidObject('search');

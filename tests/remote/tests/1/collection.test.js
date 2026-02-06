@@ -12,24 +12,24 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Collections (API v1)', function() {
+describe('Collections (API v1)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(1);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	let savedData = null;
 
 	// PHP: testNewSingleCollection
-	it('should create new single collection', async function() {
+	it('should create new single collection', async function () {
 		let name = 'Test Collection';
 
 		let json = {
@@ -63,7 +63,7 @@ describe('Collections (API v1)', function() {
 
 	// PHP: testNewSingleSubcollection
 	// @depends testNewSingleCollection
-	it('should create new single subcollection', async function() {
+	it('should create new single subcollection', async function () {
 		// Depends on testNewSingleCollection
 		if (!savedData) {
 			this.skip();
@@ -110,7 +110,7 @@ describe('Collections (API v1)', function() {
 	});
 
 	// PHP: testNewSingleCollectionWithoutParentProperty
-	it('should create new single collection without parent property', async function() {
+	it('should create new single collection without parent property', async function () {
 		let name = 'Test Collection';
 
 		let json = {
@@ -136,7 +136,7 @@ describe('Collections (API v1)', function() {
 	});
 
 	// PHP: testEditSingleCollection
-	it('should edit single collection', async function() {
+	it('should edit single collection', async function () {
 		// PHP: API::useAPIVersion(2)
 		// PHP: $xml = API::createCollection("Test", false, $this)
 		API.useAPIVersion(2);

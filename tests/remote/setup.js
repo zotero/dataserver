@@ -23,7 +23,7 @@ async function setup() {
 			{
 				method: 'POST',
 				headers: {
-					'Authorization': `Basic ${credentials}`
+					Authorization: `Basic ${credentials}`
 				},
 				body: ' '
 			}
@@ -34,7 +34,7 @@ async function setup() {
 		try {
 			json = JSON.parse(body);
 		}
-		catch (e) {
+		catch {
 			console.error(`Status: ${response.status}`);
 			console.error(body);
 			throw new Error('Invalid test setup response');

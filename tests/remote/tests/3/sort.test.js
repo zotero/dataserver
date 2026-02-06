@@ -12,27 +12,27 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Sorting', function() {
+describe('Sorting', function () {
 	this.timeout(30000);
 
-	let collectionKeys = [];
+	let _collectionKeys = [];
 	let itemKeys = [];
 	let childAttachmentKeys = [];
 	let childNoteKeys = [];
-	let searchKeys = [];
+	let _searchKeys = [];
 
 	let titles = ['q', 'c', 'a', 'j', 'e', 'h', 'i'];
 	let names = ['m', 's', 'a', 'bb', 'ba', '', ''];
 	let attachmentTitles = ['v', 'x', null, 'a', null];
 	let notes = [null, 'aaa', null, null, 'taf'];
 
-	before(async function() {
+	before(async function () {
 		// Reset module-level arrays
-		collectionKeys = [];
+		_collectionKeys = [];
 		itemKeys = [];
 		childAttachmentKeys = [];
 		childNoteKeys = [];
-		searchKeys = [];
+		_searchKeys = [];
 
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
@@ -74,12 +74,12 @@ describe('Sorting', function() {
 		itemKeys.push(await API.createNoteItem(titlesCopy.shift(), false, 'key'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testSortTopItemsTitle
-	it('should sort top items by title', async function() {
+	it('should sort top items by title', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			'items/top?format=keys&sort=title'
@@ -95,7 +95,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortTopItemsTitleOrder
-	it('should sort top items by title using order parameter', async function() {
+	it('should sort top items by title using order parameter', async function () {
 		// Same thing, but with order parameter for backwards compatibility
 		let response = await API.userGet(
 			config.get('userID'),
@@ -112,7 +112,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortTopItemsCreator
-	it('should sort top items by creator', async function() {
+	it('should sort top items by creator', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			'items/top?format=keys&sort=creator'
@@ -137,7 +137,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortTopItemsCreatorOrder
-	it('should sort top items by creator using order parameter', async function() {
+	it('should sort top items by creator using order parameter', async function () {
 		// Same thing, but with 'order' for backwards compatibility
 		let response = await API.userGet(
 			config.get('userID'),
@@ -163,7 +163,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortSortParamAsDirectionWithoutOrder
-	it('should handle sort parameter as direction without order', async function() {
+	it('should handle sort parameter as direction without order', async function () {
 		// Old sort=asc, with no 'order' param
 		let response = await API.userGet(
 			config.get('userID'),
@@ -175,7 +175,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: test_sort_top_level_items_by_item_type
-	it('should sort top level items by item type', async function() {
+	it('should sort top level items by item type', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			'items/top?sort=itemType'
@@ -189,7 +189,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortDefault
-	it('should use default sort', async function() {
+	it('should use default sort', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Setup
@@ -280,7 +280,7 @@ describe('Sorting', function() {
 	});
 
 	// PHP: testSortDirection
-	it('should handle sort direction', async function() {
+	it('should handle sort direction', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Setup

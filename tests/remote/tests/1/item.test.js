@@ -13,10 +13,10 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Items (API v1)', function() {
+describe('Items (API v1)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(1);
@@ -24,13 +24,13 @@ describe('Items (API v1)', function() {
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
 	// PHP: testCreateItemWithChildren
-	it('should create item with children', async function() {
+	it('should create item with children', async function () {
 		// PHP: $json = API::getItemTemplate("newspaperArticle")
 		let json = await API.getItemTemplate('newspaperArticle');
 

@@ -8,7 +8,6 @@ import config from 'config';
 import { API } from '../../api2.js';
 import {
 	assert200,
-	assert200ForObject,
 	assert204,
 	assert304,
 	assert412,
@@ -20,94 +19,94 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Versioning (API v2)', function() {
+describe('Versioning (API v2)', function () {
 	this.timeout(60000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testSingleObjectLastModifiedVersion
-	it('should track single object last modified version for collection', async function() {
+	it('should track single object last modified version for collection', async function () {
 		await testSingleObjectLastModifiedVersion('collection');
 	});
 
-	it('should track single object last modified version for item', async function() {
+	it('should track single object last modified version for item', async function () {
 		await testSingleObjectLastModifiedVersion('item');
 	});
 
-	it('should track single object last modified version for search', async function() {
+	it('should track single object last modified version for search', async function () {
 		await testSingleObjectLastModifiedVersion('search');
 	});
 
 	// PHP: testMultiObjectLastModifiedVersion
-	it('should track multi object last modified version for collection', async function() {
+	it('should track multi object last modified version for collection', async function () {
 		await testMultiObjectLastModifiedVersion('collection');
 	});
 
-	it('should track multi object last modified version for item', async function() {
+	it('should track multi object last modified version for item', async function () {
 		await testMultiObjectLastModifiedVersion('item');
 	});
 
-	it('should track multi object last modified version for search', async function() {
+	it('should track multi object last modified version for search', async function () {
 		await testMultiObjectLastModifiedVersion('search');
 	});
 
 	// PHP: testMultiObject304NotModified
-	it('should return 304 not modified for collection', async function() {
+	it('should return 304 not modified for collection', async function () {
 		await testMultiObject304NotModified('collection');
 	});
 
-	it('should return 304 not modified for item', async function() {
+	it('should return 304 not modified for item', async function () {
 		await testMultiObject304NotModified('item');
 	});
 
-	it('should return 304 not modified for search', async function() {
+	it('should return 304 not modified for search', async function () {
 		await testMultiObject304NotModified('search');
 	});
 
-	it('should return 304 not modified for tag', async function() {
+	it('should return 304 not modified for tag', async function () {
 		await testMultiObject304NotModified('tag');
 	});
 
 	// PHP: testNewerAndVersionsFormat
-	it('should handle newer and versions format for collection', async function() {
+	it('should handle newer and versions format for collection', async function () {
 		await testNewerAndVersionsFormat('collection');
 	});
 
-	it('should handle newer and versions format for item', async function() {
+	it('should handle newer and versions format for item', async function () {
 		await testNewerAndVersionsFormat('item');
 	});
 
-	it('should handle newer and versions format for search', async function() {
+	it('should handle newer and versions format for search', async function () {
 		await testNewerAndVersionsFormat('search');
 	});
 
 	// PHP: testUploadUnmodified
-	it('should upload unmodified collection', async function() {
+	it('should upload unmodified collection', async function () {
 		await testUploadUnmodified('collection');
 	});
 
-	it('should upload unmodified item', async function() {
+	it('should upload unmodified item', async function () {
 		await testUploadUnmodified('item');
 	});
 
-	it('should upload unmodified search', async function() {
+	it('should upload unmodified search', async function () {
 		await testUploadUnmodified('search');
 	});
 
 	// PHP: testNewerTags
-	it('should handle newer tags', async function() {
+	it('should handle newer tags', async function () {
 		let tags1 = ['a', 'aa', 'b'];
 		let tags2 = ['b', 'c', 'cc'];
 
@@ -119,7 +118,7 @@ describe('Versioning (API v2)', function() {
 		let xml2 = await API.createItem('book', {
 			tags: tags2.map(tag => ({ tag }))
 		}, 'atom');
-		let data2 = API.parseDataFromAtomEntry(xml2);
+		let _data2 = API.parseDataFromAtomEntry(xml2);
 
 		// Only newly added tags should be included in newer,
 		// not previously added tags or tags added to items
@@ -154,7 +153,7 @@ describe('Versioning (API v2)', function() {
 
 async function testSingleObjectLastModifiedVersion(objectType) {
 	let objectTypePlural = API.getPluralObjectType(objectType);
-	let keyProp = objectType + 'Key';
+	let _keyProp = objectType + 'Key';
 	let versionProp = objectType + 'Version';
 
 	let objectKey;

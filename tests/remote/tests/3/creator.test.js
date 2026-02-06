@@ -12,22 +12,22 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Creators', function() {
+describe('Creators', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: test_should_add_creator_with_correct_case
-	it('should add creator with correct case', async function() {
+	it('should add creator with correct case', async function () {
 		// Create two items with lowercase
 		let data = {
 			creators: [
@@ -49,13 +49,13 @@ describe('Creators', function() {
 				}
 			]
 		}, 'json');
-		let itemKey = json.key;
+		let _itemKey = json.key;
 
 		assert.equal(json.data.creators[0].name, 'Test');
 	});
 
 	// PHP: testCreatorSummaryJSON
-	it('should create correct creator summary in JSON', async function() {
+	it('should create correct creator summary in JSON', async function () {
 		let json = await API.createItem('book', {
 			creators: [
 				{
@@ -104,7 +104,7 @@ describe('Creators', function() {
 	});
 
 	// PHP: testCreatorSummaryAtom
-	it('should create correct creator summary in Atom', async function() {
+	it('should create correct creator summary in Atom', async function () {
 		let xml = await API.createItem('book', {
 			creators: [
 				{
@@ -162,7 +162,7 @@ describe('Creators', function() {
 	});
 
 	// PHP: testEmptyCreator
-	it('should handle empty creator', async function() {
+	it('should handle empty creator', async function () {
 		// UTF-8 BOM character
 		let json = await API.createItem('book', {
 			creators: [
@@ -176,7 +176,7 @@ describe('Creators', function() {
 	});
 
 	// PHP: testCreatorCaseSensitivity
-	it('should handle creator case sensitivity', async function() {
+	it('should handle creator case sensitivity', async function () {
 		await API.createItem('book', {
 			creators: [
 				{
@@ -197,7 +197,7 @@ describe('Creators', function() {
 	});
 
 	// PHP: test_should_allow_emoji_in_creator_name
-	it('should allow emoji in creator name', async function() {
+	it('should allow emoji in creator name', async function () {
 		let char = '🐻'; // 4-byte character
 		let json = await API.createItem('book', {
 			creators: [

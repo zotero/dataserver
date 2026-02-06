@@ -14,22 +14,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Full-text (API v2)', function() {
+describe('Full-text (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testSetItemContent
-	it('should set item content', async function() {
+	it('should set item content', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let xml = await API.createAttachmentItem('imported_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -90,7 +90,7 @@ describe('Full-text (API v2)', function() {
 	});
 
 	// PHP: testModifyAttachmentWithFulltext
-	it('should modify attachment with fulltext', async function() {
+	it('should modify attachment with fulltext', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let xml = await API.createAttachmentItem('imported_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -125,7 +125,7 @@ describe('Full-text (API v2)', function() {
 	});
 
 	// PHP: testNewerContent
-	it('should get newer content', async function() {
+	it('should get newer content', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Store content for one item
@@ -195,7 +195,7 @@ describe('Full-text (API v2)', function() {
 	});
 
 	// PHP: testDeleteItemContent
-	it('should delete item content', async function() {
+	it('should delete item content', async function () {
 		let key = await API.createItem('book', {}, 'key');
 		let xml = await API.createAttachmentItem('imported_file', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);

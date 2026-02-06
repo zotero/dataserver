@@ -13,25 +13,25 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Params (API v2)', function() {
+describe('Params (API v2)', function () {
 	this.timeout(60000);
 
 	let collectionKeys = [];
 	let itemKeys = [];
 	let searchKeys = [];
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await API.userClear(config.get('userID'));
 		collectionKeys = [];
 		itemKeys = [];
@@ -39,7 +39,7 @@ describe('Params (API v2)', function() {
 	});
 
 	// PHP: testFormatKeys
-	it('should support format=keys', async function() {
+	it('should support format=keys', async function () {
 		// Create collections
 		for (let i = 0; i < 5; i++) {
 			collectionKeys.push(await API.createCollection('Test', false, 'key'));
@@ -59,8 +59,9 @@ describe('Params (API v2)', function() {
 		// Test format=keys for each type
 		for (let objectType of ['collection', 'item', 'search']) {
 			let objectTypePlural = API.getPluralObjectType(objectType);
-			let expectedKeys = objectType === 'collection' ? collectionKeys :
-				objectType === 'item' ? itemKeys : searchKeys;
+			let expectedKeys = objectType === 'collection'
+				? collectionKeys
+				: objectType === 'item' ? itemKeys : searchKeys;
 
 			let response = await API.userGet(
 				config.get('userID'),
@@ -76,7 +77,7 @@ describe('Params (API v2)', function() {
 	});
 
 	// PHP: testObjectKeyParameter
-	it('should support object key parameter', async function() {
+	it('should support object key parameter', async function () {
 		for (let objectType of ['collection', 'item', 'search']) {
 			let objectTypePlural = API.getPluralObjectType(objectType);
 			let keys = [];
@@ -87,12 +88,14 @@ describe('Params (API v2)', function() {
 				keys.push(API.parseDataFromAtomEntry(xml1).key);
 				let xml2 = await API.createCollection('Name', false, 'atom');
 				keys.push(API.parseDataFromAtomEntry(xml2).key);
-			} else if (objectType === 'item') {
+			}
+			else if (objectType === 'item') {
 				let xml1 = await API.createItem('book', false, 'atom');
 				keys.push(API.parseDataFromAtomEntry(xml1).key);
 				let xml2 = await API.createItem('book', false, 'atom');
 				keys.push(API.parseDataFromAtomEntry(xml2).key);
-			} else {
+			}
+			else {
 				let xml1 = await API.createSearch('Name', [
 					{ condition: 'title', operator: 'contains', value: 'test' }
 				], 'atom');
@@ -129,7 +132,7 @@ describe('Params (API v2)', function() {
 	});
 
 	// PHP: testCollectionQuickSearch
-	it('should support collection quick search', async function() {
+	it('should support collection quick search', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 
@@ -158,7 +161,7 @@ describe('Params (API v2)', function() {
 	});
 
 	// PHP: testItemQuickSearch
-	it('should support item quick search', async function() {
+	it('should support item quick search', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 		let year2 = '2013';
@@ -202,7 +205,7 @@ describe('Params (API v2)', function() {
 	});
 
 	// PHP: testItemQuickSearchOrderByDate
-	it('should support item quick search order by date', async function() {
+	it('should support item quick search order by date', async function () {
 		let title1 = 'Test Title';
 		let title2 = 'Another Title';
 

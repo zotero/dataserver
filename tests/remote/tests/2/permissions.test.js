@@ -16,23 +16,23 @@ import {
 } from '../../assertions2.js';
 import { setup } from '../../setup.js';
 
-describe('Permissions (API v2)', function() {
+describe('Permissions (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.setKeyOption(
 			config.get('userID'), config.get('apiKey'), 'libraryWrite', 1
 		);
 	});
 
 	// PHP: testUserGroupsAnonymous
-	it('should get user groups anonymously', async function() {
+	it('should get user groups anonymously', async function () {
 		let response = await API.get(`users/${config.get('userID')}/groups?content=json`);
 		assert200(response);
 		// Note: PHP version checks numPublicGroups and specific group IDs
@@ -40,7 +40,7 @@ describe('Permissions (API v2)', function() {
 	});
 
 	// PHP: testUserGroupsOwned
-	it('should get user groups owned', async function() {
+	it('should get user groups owned', async function () {
 		let response = await API.get(
 			`users/${config.get('userID')}/groups?content=json&key=${config.get('apiKey')}`
 		);
@@ -50,7 +50,7 @@ describe('Permissions (API v2)', function() {
 	});
 
 	// PHP: testKeyNoteAccess
-	it('should handle key note access', async function() {
+	it('should handle key note access', async function () {
 		await API.userClear(config.get('userID'));
 
 		await API.setKeyOption(
@@ -239,7 +239,7 @@ describe('Permissions (API v2)', function() {
 	});
 
 	// PHP: testTagDeletePermissions
-	it('should handle tag delete permissions', async function() {
+	it('should handle tag delete permissions', async function () {
 		await API.userClear(config.get('userID'));
 
 		await API.createItem('book', {

@@ -7,14 +7,14 @@ import { assert } from 'chai';
 import config from 'config';
 import crypto from 'crypto';
 import { API } from '../../api3.js';
-import { assert200, assert204, assert400, assert400ForObject, assert409, assert409ForObject, assert413ForObject } from '../../assertions3.js';
+import { assert200, assert204, assert400, assert400ForObject, assert404, assert409ForObject, assert413ForObject } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Items', function() {
+describe('Items', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -25,18 +25,18 @@ describe('Items', function() {
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
-	beforeEach(function() {
+	beforeEach(function () {
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
 	// PHP: testNewEmptyBookItem
-	it('should create new empty book item', async function() {
+	it('should create new empty book item', async function () {
 		let json = await API.createItem('book');
 		let data = json.successful[0].data;
 
@@ -47,7 +47,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewEmptyBookItemMultiple
-	it('should create new empty book item multiple', async function() {
+	it('should create new empty book item multiple', async function () {
 		let json = await API.getItemTemplate('book');
 
 		let data = [];
@@ -88,7 +88,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditBookItem
-	it('should edit book item', async function() {
+	it('should edit book item', async function () {
 		let json = await API.createItem('book');
 		let itemData = json.successful[0].data;
 		let key = itemData.key;
@@ -130,7 +130,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDate
-	it('should handle date', async function() {
+	it('should handle date', async function () {
 		let date = 'Sept 18, 2012';
 		let parsedDate = '2012-09-18';
 
@@ -154,7 +154,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateWithoutDay
-	it('should handle date without day', async function() {
+	it('should handle date without day', async function () {
 		let date = 'Sept 2012';
 		let parsedDate = '2012-09';
 
@@ -178,7 +178,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateWithoutMonth
-	it('should handle date without month', async function() {
+	it('should handle date without month', async function () {
 		let date = '2012';
 		let parsedDate = '2012';
 
@@ -202,7 +202,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateUnparseable
-	it('should handle date unparseable', async function() {
+	it('should handle date unparseable', async function () {
 		let json = await API.createItem('book', { date: 'n.d.' }, 'jsonData');
 		let key = json.key;
 
@@ -221,14 +221,14 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAccessed8601
-	it('should handle dateAccessed ISO 8601', async function() {
+	it('should handle dateAccessed ISO 8601', async function () {
 		let date = '2014-02-01T01:23:45Z';
 		let data = await API.createItem('book', { accessDate: date }, 'jsonData');
 		assert.equal(data.accessDate, date);
 	});
 
 	// PHP: testDateAccessed8601TZ
-	it('should handle dateAccessed ISO 8601 TZ', async function() {
+	it('should handle dateAccessed ISO 8601 TZ', async function () {
 		let date = '2014-02-01T01:23:45-0400';
 		let dateUTC = '2014-02-01T05:23:45Z';
 		let data = await API.createItem('book', { accessDate: date }, 'jsonData');
@@ -236,7 +236,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAccessedSQL
-	it('should handle dateAccessed SQL', async function() {
+	it('should handle dateAccessed SQL', async function () {
 		let date = '2014-02-01 01:23:45';
 		let date8601 = '2014-02-01T01:23:45Z';
 		let data = await API.createItem('book', { accessDate: date }, 'jsonData');
@@ -244,7 +244,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAccessedInvalid
-	it('should handle dateAccessed invalid', async function() {
+	it('should handle dateAccessed invalid', async function () {
 		let date = 'February 1, 2014';
 		let response = await API.get('items/new?itemType=book');
 		let json = JSON.parse(response.getBody());
@@ -260,7 +260,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAddedNewItem8601
-	it('should handle dateAdded new item ISO 8601', async function() {
+	it('should handle dateAdded new item ISO 8601', async function () {
 		let dateAdded = '2013-03-03T21:33:53Z';
 		let itemData = {
 			title: 'Test',
@@ -271,7 +271,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAddedNewItem8601TZ
-	it('should handle dateAdded new item ISO 8601 TZ', async function() {
+	it('should handle dateAdded new item ISO 8601 TZ', async function () {
 		let dateAdded = '2013-03-03T17:33:53-0400';
 		let dateAddedUTC = '2013-03-03T21:33:53Z';
 		let itemData = {
@@ -283,7 +283,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateAddedNewItemSQL
-	it('should handle dateAdded new item SQL', async function() {
+	it('should handle dateAdded new item SQL', async function () {
 		let dateAdded = '2013-03-03 21:33:53';
 		let dateAdded8601 = '2013-03-03T21:33:53Z';
 		let itemData = {
@@ -295,7 +295,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateModified
-	it('should handle dateModified', async function() {
+	it('should handle dateModified', async function () {
 		let itemData = { title: 'Test' };
 		let json = await API.createItem('videoRecording', itemData, 'jsonData');
 		let objectKey = json.key;
@@ -352,7 +352,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateModifiedTmpZoteroClientHack
-	it('should handle dateModified tmp zotero client hack', async function() {
+	it('should handle dateModified tmp zotero client hack', async function () {
 		let itemData = { title: 'Test' };
 		let json = await API.createItem('videoRecording', itemData, 'jsonData');
 		let objectKey = json.key;
@@ -410,7 +410,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateModifiedCollectionChange
-	it('should handle dateModified collection change', async function() {
+	it('should handle dateModified collection change', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 		let json = await API.createItem('book', { title: 'Test' }, 'jsonData');
 
@@ -437,7 +437,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testChangeItemType
-	it('should change itemType', async function() {
+	it('should change itemType', async function () {
 		let json = await API.getItemTemplate('book');
 		json.title = 'Foo';
 		json.numPages = 100;
@@ -476,13 +476,13 @@ describe('Items', function() {
 	});
 
 	// PHP: testPatchItem
-	it('should patch item', async function() {
+	it('should patch item', async function () {
 		let itemData = { title: 'Test' };
 		let json = await API.createItem('book', itemData, 'jsonData');
 		let itemKey = json.key;
 		let itemVersion = json.version;
 
-		let patch = async function(itemKey, itemVersion, itemData, newData) {
+		let patch = async function (itemKey, itemVersion, itemData, newData) {
 			for (let field in newData) {
 				itemData[field] = newData[field];
 			}
@@ -525,11 +525,11 @@ describe('Items', function() {
 		itemVersion = await patch(itemKey, itemVersion, itemData, newData);
 
 		newData = { collections: [] };
-		itemVersion = await patch(itemKey, itemVersion, itemData, newData);
+		await patch(itemKey, itemVersion, itemData, newData);
 	});
 
 	// PHP: testPatchAttachment
-	it('should patch attachment', async function() {
+	it('should patch attachment', async function () {
 		let json = await API.createAttachmentItem('imported_file', {}, false, 'jsonData');
 		let itemKey = json.key;
 		let itemVersion = json.version;
@@ -563,7 +563,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testPatchNote
-	it('should patch note', async function() {
+	it('should patch note', async function () {
 		let text = '<p>Test</p>';
 		let newText = '<p>Test 2</p>';
 		let json = await API.createNoteItem(text, false, 'jsonData');
@@ -589,7 +589,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testPatchNoteOnBookError
-	it('should handle PATCH note on book error', async function() {
+	it('should handle PATCH note on book error', async function () {
 		let json = await API.createItem('book', {}, 'jsonData');
 		let itemKey = json.key;
 		let itemVersion = json.version;
@@ -608,13 +608,13 @@ describe('Items', function() {
 	});
 
 	// PHP: testPatchItems
-	it('should patch items', async function() {
+	it('should patch items', async function () {
 		let itemData = { title: 'Test' };
 		let json = await API.createItem('book', itemData, 'jsonData');
 		let itemKey = json.key;
 		let itemVersion = json.version;
 
-		let patch = async function(itemKey, itemVersion, itemData, newData) {
+		let patch = async function (itemKey, itemVersion, itemData, newData) {
 			for (let field in newData) {
 				itemData[field] = newData[field];
 			}
@@ -656,11 +656,11 @@ describe('Items', function() {
 		itemVersion = await patch(itemKey, itemVersion, itemData, newData);
 
 		newData = { collections: [] };
-		itemVersion = await patch(itemKey, itemVersion, itemData, newData);
+		await patch(itemKey, itemVersion, itemData, newData);
 	});
 
 	// PHP: testNewComputerProgramItem
-	it('should create new computer program item', async function() {
+	it('should create new computer program item', async function () {
 		let data = await API.createItem('computerProgram', false, 'jsonData');
 		let key = data.key;
 		assert.equal(data.itemType, 'computerProgram');
@@ -680,7 +680,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewInvalidBookItem
-	it('should reject new invalid book item', async function() {
+	it('should reject new invalid book item', async function () {
 		let json = await API.getItemTemplate('book');
 
 		// Missing itemType
@@ -707,7 +707,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditTopLevelNote
-	it('should edit top level note', async function() {
+	it('should edit top level note', async function () {
 		let noteText = '<p>Test</p>';
 
 		let json = await API.createNoteItem(noteText, null, 'jsonData');
@@ -730,7 +730,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditChildNote
-	it('should edit child note', async function() {
+	it('should edit child note', async function () {
 		let noteText = '<p>Test</p>';
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
 		let json = await API.createNoteItem(noteText, key, 'jsonData');
@@ -754,7 +754,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testConvertChildNoteToParentViaPatch
-	it('should convert child note to parent via PATCH', async function() {
+	it('should convert child note to parent via PATCH', async function () {
 		let noteText = '<p>Test</p>';
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
 		let json = await API.createNoteItem(noteText, key, 'jsonData');
@@ -772,7 +772,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_convert_child_note_to_top_level_and_add_to_collection_via_PATCH
-	it('should convert child note to top level and add to collection via p a t c h', async function() {
+	it('should convert child note to top level and add to collection via p a t c h', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
 		let json = await API.createNoteItem('<p>Test</p>', key, 'jsonData');
@@ -794,7 +794,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_convert_child_note_to_top_level_and_add_to_collection_via_PUT
-	it('should convert child note to top level and add to collection via p u t', async function() {
+	it('should convert child note to top level and add to collection via p u t', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
 		let json = await API.createNoteItem('<p>Test</p>', key, 'jsonData');
@@ -816,7 +816,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_convert_child_attachment_to_top_level_and_add_to_collection_via_PATCH_without_parentItem_false
-	it('should convert child attachment to top level and add to collection via PATCH without parentItem false', async function() {
+	it('should convert child attachment to top level and add to collection via PATCH without parentItem false', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 		let parentItemKey = await API.createItem('book', { title: 'Test' }, 'key');
 		let attachmentJSON = await API.createAttachmentItem('linked_url', {}, parentItemKey, 'jsonData');
@@ -838,7 +838,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditTitleWithCollectionInMultipleMode
-	it('should edit title with collection in multiple mode', async function() {
+	it('should edit title with collection in multiple mode', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 		let json = await API.createItem('book', {
 			title: 'A',
@@ -858,7 +858,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditTitleWithTagInMultipleMode
-	it('should edit title with tag in multiple mode', async function() {
+	it('should edit title with tag in multiple mode', async function () {
 		let json = await API.createItem('book', {
 			title: 'A',
 			tags: [{ tag: 'B' }]
@@ -877,7 +877,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_treat_null_value_as_empty_string
-	it('should treat null value as empty string', async function() {
+	it('should treat null value as empty string', async function () {
 		let json = await API.createItem('book', { place: 'New York' }, 'jsonData');
 
 		json.place = null;
@@ -892,7 +892,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewEmptyAttachmentFields
-	it('should create new empty attachment fields', async function() {
+	it('should create new empty attachment fields', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('linked_url', {}, key, 'jsonData');
 
@@ -904,7 +904,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewTopLevelImportedFileAttachment
-	it('should create new top level imported file attachment', async function() {
+	it('should create new top level imported file attachment', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=imported_file');
 		let json = JSON.parse(response.getBody());
 
@@ -918,7 +918,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_create_embedded_image_attachment_for_note
-	it('should create embedded image attachment for note', async function() {
+	it('should create embedded image attachment for note', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 		let imageKey = await API.createAttachmentItem(
 			'embedded_image',
@@ -930,7 +930,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_num_children_and_children_on_note_with_embedded_image_attachment
-	it('should handle numChildren and children on note with embedded image attachment', async function() {
+	it('should handle numChildren and children on note with embedded image attachment', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 		let imageKey = await API.createAttachmentItem(
 			'embedded_image',
@@ -957,7 +957,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_embedded_image_attachment_without_parent
-	it('should reject embedded image attachment without parent', async function() {
+	it('should reject embedded image attachment without parent', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=embedded_image');
 		let json = JSON.parse(response.getBody());
 		json.parentItem = false;
@@ -973,7 +973,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_changing_parent_of_embedded_image_attachment
-	it('should reject changing parent of embedded image attachment', async function() {
+	it('should reject changing parent of embedded image attachment', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 		let note2Key = await API.createNoteItem('Test 2', null, 'key');
 
@@ -1008,7 +1008,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_clearing_parent_of_embedded_image_attachment
-	it('should reject clearing parent of embedded image attachment', async function() {
+	it('should reject clearing parent of embedded image attachment', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=embedded_image');
@@ -1042,7 +1042,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_invalid_content_type_for_embedded_image_attachment
-	it('should reject invalid content type for embedded image attachment', async function() {
+	it('should reject invalid content type for embedded image attachment', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=embedded_image');
@@ -1060,7 +1060,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_embedded_note_for_embedded_image_attachment
-	it('should reject embedded note for embedded image attachment', async function() {
+	it('should reject embedded note for embedded image attachment', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=embedded_image');
@@ -1078,7 +1078,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewInvalidTopLevelAttachment
-	it('should reject new invalid top level attachment', async function() {
+	it('should reject new invalid top level attachment', async function () {
 		let linkModes = ['linked_file', 'linked_url'];
 		for (let linkMode of linkModes) {
 			let response = await API.get(`items/new?itemType=attachment&linkMode=${linkMode}`);
@@ -1097,7 +1097,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testPatchTopLevelAttachment
-	it('should patch top level attachment', async function() {
+	it('should patch top level attachment', async function () {
 		let json = await API.createAttachmentItem('linked_url', {}, null, 'jsonData');
 		let key = json.key;
 
@@ -1171,7 +1171,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewEmptyLinkAttachmentItemWithItemKey
-	it('should create new empty link attachment item with item key', async function() {
+	it('should create new empty link attachment item with item key', async function () {
 		let key = await API.createItem('book', false, 'key');
 		await API.createAttachmentItem('linked_url', {}, key, 'json');
 
@@ -1197,7 +1197,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditEmptyLinkAttachmentItem
-	it('should edit empty link attachment item', async function() {
+	it('should edit empty link attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('linked_url', {}, key, 'jsonData');
 
@@ -1220,7 +1220,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditEmptyImportedURLAttachmentItem
-	it('should edit empty imported URL attachment item', async function() {
+	it('should edit empty imported URL attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('imported_url', {}, key, 'jsonData');
 
@@ -1243,7 +1243,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditLinkAttachmentItem
-	it('should edit link attachment item', async function() {
+	it('should edit link attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('linked_url', {}, key, 'jsonData');
 
@@ -1273,7 +1273,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testCreateLinkedFileAttachment
-	it('should create linked file attachment', async function() {
+	it('should create linked file attachment', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let path = 'attachments:tést.txt';
 		let json = await API.createAttachmentItem('linked_file', { path: path }, key, 'jsonData');
@@ -1283,7 +1283,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_linked_file_attachment_in_group
-	it('should reject linked file attachment in group', async function() {
+	it('should reject linked file attachment in group', async function () {
 		let key = await API.groupCreateItem(
 			config.get('ownedPrivateGroupID'),
 			'book',
@@ -1307,7 +1307,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateModifiedChangeOnEdit
-	it('should handle dateModified change on edit', async function() {
+	it('should handle dateModified change on edit', async function () {
 		let json = await API.createAttachmentItem('linked_file', {}, false, 'jsonData');
 		let modified = json.dateModified;
 
@@ -1340,7 +1340,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testDateModifiedNoChange
-	it('should handle dateModified no change', async function() {
+	it('should handle dateModified no change', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let json = await API.createItem('book', false, 'jsonData');
@@ -1388,7 +1388,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditAttachmentAtomUpdatedTimestamp
-	it('should update attachment Atom updated timestamp when edited', async function() {
+	it('should update attachment Atom updated timestamp when edited', async function () {
 		let xml = await API.createAttachmentItem('linked_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let atomUpdatedNode = xpathSelect(xml, '//atom:entry/atom:updated/text()', true);
@@ -1413,7 +1413,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testEditAttachmentAtomUpdatedTimestampTmpZoteroClientHack
-	it('should update attachment Atom updated timestamp when edited (tmp Zotero client hack)', async function() {
+	it('should update attachment Atom updated timestamp when edited (tmp Zotero client hack)', async function () {
 		let xml = await API.createAttachmentItem('linked_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let atomUpdatedNode = xpathSelect(xml, '//atom:entry/atom:updated/text()', true);
@@ -1443,7 +1443,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewAttachmentItemInvalidLinkMode
-	it('should reject new attachment item invalid linkMode', async function() {
+	it('should reject new attachment item invalid linkMode', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
 		let json = JSON.parse(response.getBody());
 
@@ -1469,7 +1469,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewAttachmentItemMD5OnLinkedURL
-	it('should reject new attachment item MD5 on linked URL', async function() {
+	it('should reject new attachment item MD5 on linked URL', async function () {
 		let parentKey = await API.createItem('book', false, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
@@ -1487,7 +1487,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNewAttachmentItemModTimeOnLinkedURL
-	it('should reject new attachment item mod time on linked URL', async function() {
+	it('should reject new attachment item mod time on linked URL', async function () {
 		let parentKey = await API.createItem('book', false, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
@@ -1505,7 +1505,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_ignore_null_for_existing_storage_properties
-	it('should ignore null for existing storage properties', async function() {
+	it('should ignore null for existing storage properties', async function () {
 		let json = await API.createAttachmentItem('imported_file', {}, false, 'jsonData');
 		let key = json.key;
 
@@ -1539,7 +1539,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testMappedCreatorTypes
-	it('should handle mapped creator types', async function() {
+	it('should handle mapped creator types', async function () {
 		let json = [
 			{
 				itemType: 'presentation',
@@ -1576,7 +1576,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testLibraryUser
-	it('should handle library user', async function() {
+	it('should handle library user', async function () {
 		let json = await API.createItem('book', false, 'json');
 		assert.equal(json.library.type, 'user');
 		assert.equal(config.get('userID'), json.library.id);
@@ -1586,7 +1586,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testLibraryGroup
-	it('should handle library group', async function() {
+	it('should handle library group', async function () {
 		let json = await API.groupCreateItem(config.get('ownedPrivateGroupID'), 'book', {}, 'json');
 		assert.equal(json.library.type, 'group');
 		assert.equal(config.get('ownedPrivateGroupID'), json.library.id);
@@ -1596,14 +1596,14 @@ describe('Items', function() {
 	});
 
 	// PHP: test_createdByUser
-	it('should set and return createdByUser', async function() {
+	it('should set and return createdByUser', async function () {
 		let json = await API.groupCreateItem(config.get('ownedPrivateGroupID'), 'book', {}, 'json');
 		assert.equal(config.get('userID'), json.meta.createdByUser.id);
 		assert.equal(config.get('username'), json.meta.createdByUser.username);
 	});
 
 	// PHP: testNumChildrenJSON
-	it('should return numChildren in JSON', async function() {
+	it('should return numChildren in JSON', async function () {
 		let json = await API.createItem('book', false, 'json');
 		assert.equal(json.meta.numChildren, 0);
 		let key = json.key;
@@ -1628,7 +1628,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testNumChildrenAtom
-	it('should return numChildren in Atom', async function() {
+	it('should return numChildren in Atom', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let numChildrenNode = xpathSelect(xml, '//atom:entry/zapi:numChildren/text()', true);
 		assert.equal(numChildrenNode ? numChildrenNode.nodeValue : '', '0');
@@ -1658,7 +1658,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_num_children_and_children_on_attachment_with_annotation
-	it('should handle numChildren and children on attachment with annotation', async function() {
+	it('should handle numChildren and children on attachment with annotation', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let attachmentKey = await API.createAttachmentItem(
 			'imported_url',
@@ -1669,7 +1669,7 @@ describe('Items', function() {
 			key,
 			'key'
 		);
-		let annotationKey = await API.createAnnotationItem(
+		let _annotationKey = await API.createAnnotationItem(
 			'image',
 			{ annotationComment: 'ccc' },
 			attachmentKey,
@@ -1694,7 +1694,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testTop
-	it('should handle top', async function() {
+	it('should handle top', async function () {
 		await API.userClear(config.get('userID'));
 
 		let collectionKey = await API.createCollection('Test', false, 'key');
@@ -1758,7 +1758,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testTopWithSince
-	it('should handle top with since', async function() {
+	it('should handle top with since', async function () {
 		await API.userClear(config.get('userID'));
 
 		let parentKeys = [];
@@ -1766,15 +1766,15 @@ describe('Items', function() {
 
 		let version1 = await API.getLibraryVersion();
 		parentKeys.push(await API.createItem('book', {}, 'key'));
-		let version2 = await API.getLibraryVersion();
+		let _version2 = await API.getLibraryVersion();
 		childKeys.push(await API.createAttachmentItem('linked_url', {}, parentKeys[0], 'key'));
-		let version3 = await API.getLibraryVersion();
+		let _version3 = await API.getLibraryVersion();
 		parentKeys.push(await API.createItem('journalArticle', {}, 'key'));
 		let version4 = await API.getLibraryVersion();
 		childKeys.push(await API.createNoteItem('', parentKeys[1], 'key'));
-		let version5 = await API.getLibraryVersion();
+		let _version5 = await API.getLibraryVersion();
 		parentKeys.push(await API.createItem('book', {}, 'key'));
-		let version6 = await API.getLibraryVersion();
+		let _version6 = await API.getLibraryVersion();
 
 		let response = await API.userGet(
 			config.get('userID'),
@@ -1802,7 +1802,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_top_should_return_top_level_item_for_three_level_hierarchy
-	it('should return top level item for three level hierarchy', async function() {
+	it('should return top level item for three level hierarchy', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Create parent item, PDF attachment, and annotation
@@ -1816,7 +1816,7 @@ describe('Items', function() {
 			itemKey,
 			'key'
 		);
-		let annotationKey = await API.createAnnotationItem(
+		let _annotationKey = await API.createAnnotationItem(
 			'highlight',
 			{ annotationComment: 'ccc' },
 			attachmentKey,
@@ -1844,7 +1844,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testIncludeTrashed
-	it('should return items in trash with includeTrashed', async function() {
+	it('should return items in trash with includeTrashed', async function () {
 		await API.userClear(config.get('userID'));
 
 		let key1 = await API.createItem('book', false, 'key');
@@ -1887,7 +1887,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testTrash
-	it('should handle items in trash', async function() {
+	it('should handle items in trash', async function () {
 		await API.userClear(config.get('userID'));
 
 		let key1 = await API.createItem('book', false, 'key');
@@ -1921,7 +1921,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_patch_of_item_should_set_trash_state
-	it('should set trash state via PATCH', async function() {
+	it('should set trash state via PATCH', async function () {
 		let json = await API.createItem('book', {}, 'json');
 
 		let data = [
@@ -1939,7 +1939,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_patch_of_item_should_clear_trash_state
-	it('should clear trash state via PATCH', async function() {
+	it('should clear trash state via PATCH', async function () {
 		let json = await API.createItem('book', { deleted: true }, 'json');
 
 		let data = [
@@ -1956,7 +1956,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_patch_of_item_in_trash_without_deleted_should_not_remove_it_from_trash
-	it('should not remove item from trash via PATCH without deleted property', async function() {
+	it('should not remove item from trash via PATCH without deleted property', async function () {
 		let json = await API.createItem('book', { deleted: true }, 'json');
 
 		let data = [
@@ -1974,7 +1974,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testParentItem
-	it('should handle parentItem', async function() {
+	it('should handle parentItem', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let parentKey = json.key;
 
@@ -2001,7 +2001,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_parentItem_that_matches_item_key
-	it('should reject parentItem that matches item key', async function() {
+	it('should reject parentItem that matches item key', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=imported_file');
 		let json = JSON.parse(response.getBody());
 		// Generate a valid Zotero key
@@ -2027,7 +2027,7 @@ describe('Items', function() {
 	});
 
 	// PHP: testParentItemPatch
-	it('should handle parentItem PATCH', async function() {
+	it('should handle parentItem PATCH', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let parentKey = json.key;
 
@@ -2067,7 +2067,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_move_attachment_with_annotation_under_regular_item
-	it('should move attachment with annotation under regular item', async function() {
+	it('should move attachment with annotation under regular item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2111,7 +2111,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_move_attachment_with_annotation_out_from_under_regular_item
-	it('should move attachment with annotation out from under regular item', async function() {
+	it('should move attachment with annotation out from under regular item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2155,7 +2155,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_parent_item_should_delete_child_linked_file_attachment
-	it('should delete child linked file attachment when deleting parent item', async function() {
+	it('should delete child linked file attachment when deleting parent item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let parentKey = json.key;
 
@@ -2189,7 +2189,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_parent_item_should_delete_attachment_and_child_annotation
-	it('should delete attachment and child annotation when deleting parent item', async function() {
+	it('should delete attachment and child annotation when deleting parent item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2222,7 +2222,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_linked_file_attachment_should_delete_child_annotation
-	it('should delete child annotation when deleting linked file attachment', async function() {
+	it('should delete child annotation when deleting linked file attachment', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2255,7 +2255,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_allow_changing_parent_item_of_annotation_to_another_file_attachment
-	it('should allow changing parent item of annotation to another file attachment', async function() {
+	it('should allow changing parent item of annotation to another file attachment', async function () {
 		let attachment1Key = await API.createAttachmentItem(
 			'imported_url',
 			{ contentType: 'application/pdf' },
@@ -2284,7 +2284,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_reject_changing_parent_item_of_annotation_to_invalid_items
-	it('should reject changing parent item of annotation to invalid items', async function() {
+	it('should reject changing parent item of annotation to invalid items', async function () {
 		let itemKey = await API.createItem('book', false, 'key');
 		let linkedURLAttachmentKey = await API.createAttachmentItem('linked_url', {}, itemKey, 'key');
 
@@ -2337,7 +2337,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_parent_item_should_delete_note_and_embedded_image_attachment
-	it('should delete note and embedded image attachment when deleting parent item', async function() {
+	it('should delete note and embedded image attachment when deleting parent item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2376,7 +2376,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_parent_item_should_delete_attachment_and_annotation
-	it('should delete attachment and annotation when deleting parent item', async function() {
+	it('should delete attachment and annotation when deleting parent item', async function () {
 		let json = await API.createItem('book', false, 'jsonData');
 		let itemKey = json.key;
 
@@ -2422,7 +2422,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_user_library_attachment_should_delete_lastPageIndex_setting
-	it('should delete last page index setting when deleting user library attachment', async function() {
+	it('should delete last page index setting when deleting user library attachment', async function () {
 		let json = await API.createAttachmentItem(
 			'imported_file',
 			{ contentType: 'application/pdf' },
@@ -2467,7 +2467,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_deleting_group_library_attachment_should_delete_lastPageIndex_setting_for_all_users
-	it('should delete last page index setting for all users when deleting group library attachment', async function() {
+	it('should delete last page index setting for all users when deleting group library attachment', async function () {
 		let json = await API.groupCreateAttachmentItem(
 			config.get('ownedPrivateGroupID'),
 			'imported_file',
@@ -2529,7 +2529,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_preserve_createdByUserID_on_undelete
-	it('should preserve createdByUserID on undelete', async function() {
+	it('should preserve createdByUserID on undelete', async function () {
 		let json = await API.groupCreateItem(
 			config.get('ownedPrivateGroupID'),
 			'book',
@@ -2569,7 +2569,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_return_409_on_missing_parent
-	it('should return 409 on missing parent', async function() {
+	it('should return 409 on missing parent', async function () {
 		let missingParentKey = 'BDARG2AV';
 		let response = await API.get('items/new?itemType=note');
 		let json = JSON.parse(response.getBody());
@@ -2588,7 +2588,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_return_409_on_missing_parent_if_parent_failed
-	it('should return 409 on missing parent if parent failed', async function() {
+	it('should return 409 on missing parent if parent failed', async function () {
 		// Collection
 		let collectionKey = await API.createCollection('A', null, 'key');
 
@@ -2640,7 +2640,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_return_409_on_missing_collection
-	it('should return 409 on missing collection', async function() {
+	it('should return 409 on missing collection', async function () {
 		let missingCollectionKey = 'BDARG2AV';
 		let response = await API.get('items/new?itemType=book');
 		let json = JSON.parse(response.getBody());
@@ -2658,7 +2658,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_return_409_if_a_note_references_a_note_as_a_parent_item
-	it('should return 409 if a note references a note as a parent item', async function() {
+	it('should return 409 if a note references a note as a parent item', async function () {
 		let parentKey = await API.createNoteItem('<p>Parent</p>', null, 'key');
 
 		let response = await API.get('items/new?itemType=note');
@@ -2678,7 +2678,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_return_409_if_an_attachment_references_a_note_as_a_parent_item
-	it('should return 409 if an attachment references a note as a parent item', async function() {
+	it('should return 409 if an attachment references a note as a parent item', async function () {
 		let parentKey = await API.createNoteItem('<p>Parent</p>', null, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=imported_file');
@@ -2697,7 +2697,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_allow_emoji_in_title
-	it('should allow emoji in title', async function() {
+	it('should allow emoji in title', async function () {
 		let title = '🐶'; // 4-byte character
 
 		let key = await API.createItem('book', { title: title }, 'key');
@@ -2718,7 +2718,7 @@ describe('Items', function() {
 	});
 
 	// PHP: test_should_not_return_empty_fields_from_newer_schema_to_old_client
-	it('should not return empty fields from newer schema to old client', async function() {
+	it('should not return empty fields from newer schema to old client', async function () {
 		API.useSchemaVersion(false);
 
 		let json = await API.createItem('book', {}, 'jsonData');

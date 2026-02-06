@@ -114,7 +114,7 @@ class API {
 		let fetchOptions = {
 			method,
 			headers: { ...headers },
-			redirect: redirect  // Default to 'manual' to not follow redirects
+			redirect: redirect // Default to 'manual' to not follow redirects
 		};
 
 		if (auth) {
@@ -455,7 +455,7 @@ class API {
 				return this.createCollection('Test', data, returnFormat);
 			case 'item':
 				return this.createItem('book', data, returnFormat);
-			case 'search':
+			case 'search': {
 				let conditions = data.conditions || [{
 					condition: 'title',
 					operator: 'contains',
@@ -467,6 +467,7 @@ class API {
 				let searchData = { name, conditions, ...data };
 				let response = await this.postObjects('search', [searchData]);
 				return this.handleCreateResponse('search', response, returnFormat);
+			}
 		}
 	}
 
@@ -476,7 +477,7 @@ class API {
 			case 'collection':
 				return { name: 'Test' };
 			case 'item':
-				return await this.getItemTemplate('book');
+				return this.getItemTemplate('book');
 			case 'search':
 				return {
 					name: 'Test',
@@ -607,7 +608,7 @@ class API {
 	}
 	
 	// Response parsing
-	static getJSONFromResponse(response, asObject = false) {
+	static getJSONFromResponse(response, _asObject = false) {
 		let json = JSON.parse(response.getBody());
 		if (json === null) {
 			console.log(response.getBody());
@@ -657,11 +658,13 @@ class API {
 				let child = contentNode.childNodes[i];
 				if (child.nodeType === 1) { // Element node
 					content += child.toString();
-				} else if (child.nodeType === 3) { // Text node
+				}
+				else if (child.nodeType === 3) { // Text node
 					content += child.nodeValue;
 				}
 			}
-		} else {
+		}
+		else {
 			content = contentNode.textContent || '';
 		}
 
@@ -796,7 +799,7 @@ class API {
 		}
 	}
 	
-	static async setKeyGroupPermission(key, groupID, permission, value) {
+	static async setKeyGroupPermission(key, groupID, permission, _value) {
 		let response = await this.get(
 			`keys/${key}`,
 			[],
@@ -925,7 +928,8 @@ class API {
 			if (objectType === 'item') {
 				if (returnFormat === 'atom') {
 					getter = this.getItemXML(key);
-				} else {
+				}
+				else {
 					getter = this.getItem(key, 'json', groupID);
 				}
 			}
@@ -938,7 +942,7 @@ class API {
 			else {
 				throw new Error(`Unknown object type '${objectType}'`);
 			}
-			return getter.then(result => {
+			return getter.then((result) => {
 				if (returnFormat === 'atom') {
 					return result;
 				}

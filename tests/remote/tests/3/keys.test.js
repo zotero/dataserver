@@ -14,22 +14,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Keys', function() {
+describe('Keys', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testGetKeys
-	it('should get keys with root access', async function() {
+	it('should get keys with root access', async function () {
 		// No anonymous access
 		API.useAPIKey('');
 		let response = await API.userGet(
@@ -66,7 +66,7 @@ describe('Keys', function() {
 	});
 
 	// PHP: testGetKeyInfoCurrent
-	it('should get key info for current key', async function() {
+	it('should get key info for current key', async function () {
 		API.useAPIKey('');
 		let response = await API.get(
 			'keys/current',
@@ -95,14 +95,14 @@ describe('Keys', function() {
 	});
 
 	// PHP: testGetKeyInfoCurrentWithoutHeader
-	it('should return 403 for current key without header', async function() {
+	it('should return 403 for current key without header', async function () {
 		API.useAPIKey('');
 		let response = await API.get('keys/current');
 		assert403(response);
 	});
 
 	// PHP: testGetKeyInfoByPath
-	it('should get key info by path', async function() {
+	it('should get key info by path', async function () {
 		API.useAPIKey('');
 		let response = await API.get(`keys/${config.get('apiKey')}`);
 		assert200(response);
@@ -124,7 +124,7 @@ describe('Keys', function() {
 	});
 
 	// PHP: testGetKeyInfoWithUser
-	it('should get key info with user (deprecated)', async function() {
+	it('should get key info with user (deprecated)', async function () {
 		API.useAPIKey('');
 		let response = await API.userGet(
 			config.get('userID'),
@@ -145,7 +145,7 @@ describe('Keys', function() {
 	});
 
 	// PHP: testKeyCreateAndDelete
-	it('should create and delete key', async function() {
+	it('should create and delete key', async function () {
 		API.useAPIKey('');
 
 		let name = `Test ${Date.now()}`;
@@ -212,7 +212,7 @@ describe('Keys', function() {
 	});
 
 	// PHP: testKeyCreateAndModifyWithCredentials
-	it('should create and modify key with credentials (private API)', async function() {
+	it('should create and modify key with credentials (private API)', async function () {
 		API.useAPIKey('');
 
 		let name = `Test ${Date.now()}`;
@@ -303,7 +303,7 @@ describe('Keys', function() {
 	});
 
 	// PHP: testKeyCreateWithEmailAddress
-	it('should create key with email address (private API)', async function() {
+	it('should create key with email address (private API)', async function () {
 		API.useAPIKey('');
 
 		let name = `Test ${Date.now()}`;
@@ -326,7 +326,7 @@ describe('Keys', function() {
 			);
 			assert201(response);
 			let json = API.getJSONFromResponse(response);
-			let key = json.key;
+			let _key = json.key;
 			assert.equal(json.userID, config.get('userID'));
 			assert.equal(json.username, config.get('username'));
 			assert.equal(json.displayName, config.get('displayName'));

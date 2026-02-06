@@ -11,22 +11,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Cache (API v2)', function() {
+describe('Cache (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testCacheCreatorPrimaryData
-	it('should cache creator primary data', async function() {
+	it('should cache creator primary data', async function () {
 		let data = {
 			title: 'Title',
 			creators: [

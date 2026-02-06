@@ -13,22 +13,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Relations (API v2)', function() {
+describe('Relations (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewItemRelations
-	it('should create item with relations', async function() {
+	it('should create item with relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/items/AAAAAAAA',
 			'dc:relation': [
@@ -46,7 +46,8 @@ describe('Relations (API v2)', function() {
 			let object = relations[predicate];
 			if (typeof object === 'string') {
 				assert.equal(json.relations[predicate], object);
-			} else {
+			}
+			else {
 				for (let rel of object) {
 					assert.include(json.relations[predicate], rel);
 				}
@@ -55,7 +56,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testRelatedItemRelations
-	it('should handle bidirectional related item relations', async function() {
+	it('should handle bidirectional related item relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/items/AAAAAAAA'
 		};
@@ -104,7 +105,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testRelatedItemRelationsSingleRequest
-	it('should handle bidirectional related item relations in single request', async function() {
+	it('should handle bidirectional related item relations in single request', async function () {
 		let uriPrefix = `http://zotero.org/users/${config.get('userID')}/items/`;
 		let item1Key = API.generateKey();
 		let item2Key = API.generateKey();
@@ -139,7 +140,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testInvalidItemRelation
-	it('should reject invalid item relations', async function() {
+	it('should reject invalid item relations', async function () {
 		let response = await API.createItem('book', {
 			relations: {
 				'foo:unknown': 'http://zotero.org/groups/1/items/AAAAAAAA'
@@ -163,7 +164,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testDeleteItemRelation
-	it('should delete item relations', async function() {
+	it('should delete item relations', async function () {
 		let relations = {
 			'owl:sameAs': [
 				'http://zotero.org/groups/1/items/AAAAAAAA',
@@ -211,7 +212,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testNewCollectionRelations
-	it('should create collection with relations', async function() {
+	it('should create collection with relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/collections/AAAAAAAA'
 		};
@@ -227,7 +228,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testInvalidCollectionRelation
-	it('should reject invalid collection relations', async function() {
+	it('should reject invalid collection relations', async function () {
 		let json = {
 			name: 'Test',
 			relations: {
@@ -261,7 +262,7 @@ describe('Relations (API v2)', function() {
 	});
 
 	// PHP: testDeleteCollectionRelation
-	it('should delete collection relations', async function() {
+	it('should delete collection relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/collections/AAAAAAAA'
 		};

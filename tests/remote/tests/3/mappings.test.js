@@ -13,17 +13,17 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Mappings', function() {
+describe('Mappings', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 	});
 
 	// PHP: testNewItem
-	it('should return item template', async function() {
+	it('should return item template', async function () {
 		let response = await API.get('items/new?itemType=invalidItemType');
 		assert400(response);
 
@@ -35,7 +35,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_return_a_note_template
-	it('should return a note template', async function() {
+	it('should return a note template', async function () {
 		let response = await API.get('items/new?itemType=note');
 		assert200(response);
 		assertContentType(response, 'application/json');
@@ -45,7 +45,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_return_attachment_fields
-	it('should return attachment fields', async function() {
+	it('should return attachment fields', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
 		let json = JSON.parse(response.getBody());
 		assert.strictEqual(json.url, '');
@@ -84,19 +84,19 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_reject_missing_annotation_type
-	it('should reject missing annotation type', async function() {
+	it('should reject missing annotation type', async function () {
 		let response = await API.get('items/new?itemType=annotation');
 		assert400(response);
 	});
 
 	// PHP: test_should_reject_unknown_annotation_type
-	it('should reject unknown annotation type', async function() {
+	it('should reject unknown annotation type', async function () {
 		let response = await API.get('items/new?itemType=annotation&annotationType=foo');
 		assert400(response);
 	});
 
 	// PHP: test_should_return_fields_for_all_annotation_types
-	it('should return fields for all annotation types', async function() {
+	it('should return fields for all annotation types', async function () {
 		for (let type of ['highlight', 'note', 'image']) {
 			let response = await API.get(`items/new?itemType=annotation&annotationType=${type}`);
 			let json = API.getJSONFromResponse(response);
@@ -115,7 +115,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_return_fields_for_highlight_annotations
-	it('should return fields for highlight annotations', async function() {
+	it('should return fields for highlight annotations', async function () {
 		let response = await API.get('items/new?itemType=annotation&annotationType=highlight');
 		let json = API.getJSONFromResponse(response);
 		assert.property(json, 'annotationText');
@@ -123,7 +123,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_return_fields_for_note_annotations
-	it('should return fields for note annotations', async function() {
+	it('should return fields for note annotations', async function () {
 		let response = await API.get('items/new?itemType=annotation&annotationType=highlight');
 		let json = API.getJSONFromResponse(response);
 		assert.property(json, 'annotationText');
@@ -131,7 +131,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: test_should_return_fields_for_image_annotations
-	it('should return fields for image annotations', async function() {
+	it('should return fields for image annotations', async function () {
 		let response = await API.get('items/new?itemType=annotation&annotationType=image');
 		let json = API.getJSONFromResponse(response);
 		assert.equal(json.annotationPosition.width, 0);
@@ -139,7 +139,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: testComputerProgramVersion
-	it('should return computer program version field', async function() {
+	it('should return computer program version field', async function () {
 		let response = await API.get('items/new?itemType=computerProgram');
 		assert200(response);
 		let json = JSON.parse(response.getBody());
@@ -155,7 +155,7 @@ describe('Mappings', function() {
 	});
 
 	// PHP: testLocale
-	it('should support locale parameter', async function() {
+	it('should support locale parameter', async function () {
 		let response = await API.get('itemTypes?locale=fr-FR');
 		assert200(response);
 		let json = JSON.parse(response.getBody());

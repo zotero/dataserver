@@ -17,29 +17,29 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Collections', function() {
+describe('Collections', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewCollection
-	it('should create new collection', async function() {
+	it('should create new collection', async function () {
 		let name = 'Test Collection';
 		let json = await API.createCollection(name, false, 'json');
 		assert.equal(json.data.name, name);
 	});
 
 	// PHP: testNewSubcollection
-	it('should create new subcollection', async function() {
+	it('should create new subcollection', async function () {
 		let parentName = 'Test Parent';
 		let parentJSON = await API.createCollection(parentName, false, 'json');
 		let parent = parentJSON.key;
@@ -59,7 +59,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testNewMultipleCollections
-	it('should create new multiple collections', async function() {
+	it('should create new multiple collections', async function () {
 		let json = await API.createCollection('Test Collection 1', false, 'jsonData');
 
 		let name1 = 'Test Collection 2';
@@ -113,7 +113,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testCreateKeyedCollections
-	it('should create keyed collections', async function() {
+	it('should create keyed collections', async function () {
 		let key1 = API.generateKey();
 		let name1 = 'Test Collection 2';
 		let name2 = 'Test Subcollection';
@@ -165,7 +165,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testUpdateMultipleCollections
-	it('should update multiple collections', async function() {
+	it('should update multiple collections', async function () {
 		let collection1Data = await API.createCollection('Test 1', false, 'jsonData');
 		let collection2Name = 'Test 2';
 		let collection2Data = await API.createCollection(collection2Name, false, 'jsonData');
@@ -244,7 +244,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testCollectionItemChange
-	it('should handle collection item change', async function() {
+	it('should handle collection item change', async function () {
 		let collectionKey1 = await API.createCollection('Test', false, 'key');
 		let collectionKey2 = await API.createCollection('Test', false, 'key');
 
@@ -337,7 +337,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testCollectionChildItemError
-	it('should handle collection child item error', async function() {
+	it('should handle collection child item error', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let key = await API.createItem('book', {}, 'key');
@@ -355,7 +355,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: test_should_convert_child_attachent_with_embedded_note_in_collection_to_standalone_attachment_while_changing_note
-	it('should convert child attachment with embedded note in collection to standalone attachment while changing note', async function() {
+	it('should convert child attachment with embedded note in collection to standalone attachment while changing note', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let key = await API.createItem('book', { collections: [collectionKey] }, 'key');
@@ -381,7 +381,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: testCollectionItems
-	it('should get collection items', async function() {
+	it('should get collection items', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let json = await API.createItem('book', { collections: [collectionKey] }, 'jsonData');
@@ -419,13 +419,13 @@ describe('Collections', function() {
 	});
 
 	// PHP: testCollectionItemMissingCollection
-	it('should handle collection item missing collection', async function() {
+	it('should handle collection item missing collection', async function () {
 		let response = await API.createItem('book', { collections: ['AAAAAAAA'] }, 'response');
 		assert409ForObject(response, 'Collection AAAAAAAA not found');
 	});
 
 	// PHP: test_should_return_409_on_missing_parent_collection
-	it('should return 409 on missing parent collection', async function() {
+	it('should return 409 on missing parent collection', async function () {
 		let missingCollectionKey = 'GDHRG8AZ';
 		let response = await API.createCollection('Test', { parentCollection: missingCollectionKey }, 'response');
 		let json = API.getJSONFromResponse(response);
@@ -434,7 +434,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: test_should_return_413_if_collection_name_is_too_long
-	it('should return 413 if collection name is too long', async function() {
+	it('should return 413 if collection name is too long', async function () {
 		let content = '1'.repeat(256);
 		let json = [
 			{
@@ -452,7 +452,7 @@ describe('Collections', function() {
 
 	// MySQL FK cascade limit is 15, but we detect the error and work around it
 	// PHP: test_should_delete_collection_with_20_levels_below_it
-	it('should delete collection with 20 levels below it', async function() {
+	it('should delete collection with 20 levels below it', async function () {
 		let json = await API.createCollection('0', false, 'json');
 		let topCollectionKey = json.key;
 		let parentCollectionKey = topCollectionKey;
@@ -469,7 +469,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: test_should_move_parent_collection_to_root_if_descendent_of_collection
-	it('should move parent collection to root if descendent of collection', async function() {
+	it('should move parent collection to root if descendent of collection', async function () {
 		let jsonA = await API.createCollection('A', false, 'jsonData');
 		// Set B as a child of A
 		let keyB = await API.createCollection('B', { parentCollection: jsonA.key }, 'key');
@@ -491,7 +491,7 @@ describe('Collections', function() {
 	});
 
 	// PHP: test_should_allow_emoji_in_name
-	it('should allow emoji in name', async function() {
+	it('should allow emoji in name', async function () {
 		let name = '\uD83D\uDC36'; // Dog emoji (4-byte character)
 		let json = await API.createCollection(name, false, 'json');
 		assert.equal(json.data.name, name);

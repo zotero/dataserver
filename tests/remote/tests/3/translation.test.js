@@ -14,22 +14,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Translation', function() {
+describe('Translation', function () {
 	this.timeout(30000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testWebTranslationSingle
-	it('should translate single web page', async function() {
+	it('should translate single web page', async function () {
 		let url = 'https://forums.zotero.org';
 		let title = 'Recent Discussions';
 
@@ -50,8 +50,8 @@ describe('Translation', function() {
 	});
 
 	// PHP: testWebTranslationMultiple
-	it('should translate multiple web pages', async function() {
-		this.timeout(60000);  // Longer timeout for translation service
+	it('should translate multiple web pages', async function () {
+		this.timeout(60000); // Longer timeout for translation service
 
 		let url = 'https://zotero-static.s3.amazonaws.com/test-multiple.html';
 		let title = 'Digital history: A guide to gathering, preserving, and presenting the past on the web';
@@ -126,12 +126,11 @@ describe('Translation', function() {
 	});
 
 	// PHP: testWebTranslationInvalidToken
-	it('should reject invalid token', async function() {
+	it('should reject invalid token', async function () {
 		let url = 'https://zotero-static.s3.amazonaws.com/test.html';
 
 		// Generate a random MD5-like token
-		let token = Array.from({ length: 32 }, () =>
-			Math.floor(Math.random() * 16).toString(16)
+		let token = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)
 		).join('');
 
 		let response = await API.userPost(

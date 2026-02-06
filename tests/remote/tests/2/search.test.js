@@ -13,24 +13,24 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Searches (API v2)', function() {
+describe('Searches (API v2)', function () {
 	this.timeout(30000);
 
 	let savedSearchData = null;
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewSearch
-	it('should create new search', async function() {
+	it('should create new search', async function () {
 		let name = 'Test Search';
 		let conditions = [
 			{
@@ -70,7 +70,7 @@ describe('Searches (API v2)', function() {
 	});
 
 	// PHP: testModifySearch
-	it('should modify search', async function() {
+	it('should modify search', async function () {
 		if (!savedSearchData) {
 			this.skip();
 		}
@@ -111,7 +111,7 @@ describe('Searches (API v2)', function() {
 	});
 
 	// PHP: testNewSearchNoName
-	it('should reject search with no name', async function() {
+	it('should reject search with no name', async function () {
 		let response = await API.createSearch(
 			'',
 			[
@@ -127,13 +127,13 @@ describe('Searches (API v2)', function() {
 	});
 
 	// PHP: testNewSearchNoConditions
-	it('should reject search with no conditions', async function() {
+	it('should reject search with no conditions', async function () {
 		let response = await API.createSearch('Test', [], 'response');
 		assert400ForObject(response, "'conditions' cannot be empty");
 	});
 
 	// PHP: testNewSearchConditionErrors
-	it('should reject search with condition errors', async function() {
+	it('should reject search with condition errors', async function () {
 		// Missing condition property
 		let response = await API.createSearch(
 			'Test',

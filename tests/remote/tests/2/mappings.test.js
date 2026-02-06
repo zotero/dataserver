@@ -13,17 +13,17 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Mappings (API v2)', function() {
+describe('Mappings (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 	});
 
 	// PHP: testNewItem
-	it('should return error for invalid item type and valid item for valid type', async function() {
+	it('should return error for invalid item type and valid item for valid type', async function () {
 		let response = await API.get('items/new?itemType=invalidItemType');
 		assert400(response);
 
@@ -35,7 +35,7 @@ describe('Mappings (API v2)', function() {
 	});
 
 	// PHP: testNewItemAttachment
-	it('should handle new item attachment templates', async function() {
+	it('should handle new item attachment templates', async function () {
 		let response = await API.get('items/new?itemType=attachment');
 		assert400(response);
 
@@ -56,7 +56,7 @@ describe('Mappings (API v2)', function() {
 	});
 
 	// PHP: testComputerProgramVersion
-	it('should use "version" field for computerProgram', async function() {
+	it('should use "version" field for computerProgram', async function () {
 		let response = await API.get('items/new?itemType=computerProgram');
 		assert200(response);
 		let json = JSON.parse(response.getBody());

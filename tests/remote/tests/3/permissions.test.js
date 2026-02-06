@@ -17,10 +17,10 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Permissions', function() {
+describe('Permissions', function () {
 	this.timeout(30000);
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		await API.resetKey(config.get('apiKey'));
 		await API.setKeyUserPermission(config.get('apiKey'), 'library', true);
@@ -29,7 +29,7 @@ describe('Permissions', function() {
 		await API.setKeyGroupPermission(config.get('apiKey'), 0, 'write', true);
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await API.resetKey(config.get('apiKey'));
 		await API.setKeyUserPermission(config.get('apiKey'), 'library', true);
 		await API.setKeyUserPermission(config.get('apiKey'), 'notes', true);
@@ -38,7 +38,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: testUserGroupsAnonymousJSON
-	it('should list user groups anonymously in JSON', async function() {
+	it('should list user groups anonymously in JSON', async function () {
 		API.useAPIKey('');
 		let response = await API.get(`users/${config.get('userID')}/groups`);
 		assert200(response);
@@ -52,7 +52,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: testUserGroupsAnonymousAtom
-	it('should list user groups anonymously in Atom', async function() {
+	it('should list user groups anonymously in Atom', async function () {
 		API.useAPIKey('');
 		let response = await API.get(`users/${config.get('userID')}/groups?content=json`);
 		assert200(response);
@@ -66,7 +66,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: testUserGroupsOwned
-	it('should list owned groups', async function() {
+	it('should list owned groups', async function () {
 		API.useAPIKey(config.get('apiKey'));
 		let response = await API.userGet(config.get('userID'), 'groups');
 		assert200(response);
@@ -75,7 +75,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: test_should_see_private_group_listed_when_using_key_with_library_read_access
-	it('should see private group listed when using key with library read access', async function() {
+	it('should see private group listed when using key with library read access', async function () {
 		await API.resetKey(config.get('apiKey'));
 		let response = await API.userGet(config.get('userID'), 'groups');
 		assert200(response);
@@ -99,7 +99,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: testGroupLibraryReading
-	it('should allow reading from group library', async function() {
+	it('should allow reading from group library', async function () {
 		// Create item in group
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.groupCreateItem(
@@ -118,7 +118,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: test_shouldnt_be_able_to_write_to_group_using_key_with_library_read_access
-	it("shouldn't be able to write to group using key with library read access", async function() {
+	it("shouldn't be able to write to group using key with library read access", async function () {
 		// Set key to read-only
 		await API.resetKey(config.get('apiKey'));
 		await API.setKeyUserPermission(config.get('apiKey'), 'library', true);
@@ -136,7 +136,7 @@ describe('Permissions', function() {
 	});
 
 	// PHP: testKeyNoteAccessWriteError
-	it('should handle key note access permissions', async function() {
+	it('should handle key note access permissions', async function () {
 		await API.userClear(config.get('userID'));
 
 		await API.setKeyUserPermission(config.get('apiKey'), 'notes', true);
@@ -293,13 +293,14 @@ describe('Permissions', function() {
 
 		// format=keys - should only return book keys
 		response = await API.userGet(config.get('userID'), 'items?format=keys');
-		let returnedKeys = response.getBody().trim().split('\n').sort();
+		let returnedKeys = response.getBody().trim().split('\n')
+.sort();
 		let expectedKeys = [...bookKeys].sort();
 		assert.deepEqual(returnedKeys, expectedKeys);
 	});
 
 	// PHP: testKeyNoteAccess
-	it('should handle note access based on key permission', async function() {
+	it('should handle note access based on key permission', async function () {
 		await API.userClear(config.get('userID'));
 
 		await API.setKeyUserPermission(config.get('apiKey'), 'notes', true);
@@ -462,13 +463,14 @@ describe('Permissions', function() {
 			config.get('userID'),
 			'items?format=keys'
 		);
-		let responseKeys = response.getBody().trim().split('\n').sort();
+		let responseKeys = response.getBody().trim().split('\n')
+.sort();
 		bookKeys.sort();
 		assert.deepEqual(responseKeys, bookKeys);
 	});
 
 	// PHP: testTagDeletePermissions
-	it('should enforce tag delete permissions', async function() {
+	it('should enforce tag delete permissions', async function () {
 		await API.userClear(config.get('userID'));
 
 		await API.createItem('book', {

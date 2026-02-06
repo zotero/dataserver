@@ -14,12 +14,12 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Atom', function() {
+describe('Atom', function () {
 	this.timeout(30000);
 
 	let items = {};
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -37,7 +37,7 @@ describe('Atom', function() {
 			]
 		}, 'key');
 		items[key] = '<content xmlns:zapi="http://zotero.org/ns/api" type="application/xml"><zapi:subcontent zapi:type="bib"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 1em; text-indent:-1em;"><div class="csl-entry">Last, First. <i>Title</i>, n.d.</div></div></zapi:subcontent><zapi:subcontent zapi:type="json">'
-			+ JSON.stringify({ "key": "", "version": 0, "itemType": "book", "title": "Title", "creators": [ { "creatorType": "author", "firstName": "First", "lastName": "Last" } ], "abstractNote": "", "series": "", "seriesNumber": "", "volume": "", "numberOfVolumes": "", "edition": "", "date": "", "publisher": "", "place": "", "originalDate": "", "originalPublisher": "", "originalPlace": "", "format": "", "numPages": "", "ISBN": "", "DOI": "", "citationKey": "", "url": "", "accessDate": "", "ISSN": "", "archive": "", "archiveLocation": "", "shortTitle": "", "language": "", "libraryCatalog": "", "callNumber": "", "rights": "", "extra": "", "tags": [], "collections": [], "relations": {}, "dateAdded": "", "dateModified": "" }, null, "\t")
+			+ JSON.stringify({ key: "", version: 0, itemType: "book", title: "Title", creators: [{ creatorType: "author", firstName: "First", lastName: "Last" }], abstractNote: "", series: "", seriesNumber: "", volume: "", numberOfVolumes: "", edition: "", date: "", publisher: "", place: "", originalDate: "", originalPublisher: "", originalPlace: "", format: "", numPages: "", ISBN: "", DOI: "", citationKey: "", url: "", accessDate: "", ISSN: "", archive: "", archiveLocation: "", shortTitle: "", language: "", libraryCatalog: "", callNumber: "", rights: "", extra: "", tags: [], collections: [], relations: {}, dateAdded: "", dateModified: "" }, null, "\t")
 			+ '</zapi:subcontent></content>';
 
 		key = await API.createItem('book', {
@@ -56,16 +56,16 @@ describe('Atom', function() {
 			]
 		}, 'key');
 		items[key] = '<content xmlns:zapi="http://zotero.org/ns/api" type="application/xml"><zapi:subcontent zapi:type="bib"><div xmlns="http://www.w3.org/1999/xhtml" class="csl-bib-body" style="line-height: 1.35; padding-left: 1em; text-indent:-1em;"><div class="csl-entry">Last, First. <i>Title 2</i>. Edited by Ed McEditor, n.d.</div></div></zapi:subcontent><zapi:subcontent zapi:type="json">'
-			+ JSON.stringify({ "key": "", "version": 0, "itemType": "book", "title": "Title 2", "creators": [ { "creatorType": "author", "firstName": "First", "lastName": "Last" }, { "creatorType": "editor", "firstName": "Ed", "lastName": "McEditor" } ], "abstractNote": "", "series": "", "seriesNumber": "", "volume": "", "numberOfVolumes": "", "edition": "", "date": "", "publisher": "", "place": "", "originalDate": "", "originalPublisher": "", "originalPlace": "", "format": "", "numPages": "", "ISBN": "", "DOI": "", "citationKey": "", "url": "", "accessDate": "", "ISSN": "", "archive": "", "archiveLocation": "", "shortTitle": "", "language": "", "libraryCatalog": "", "callNumber": "", "rights": "", "extra": "", "tags": [], "collections": [], "relations": {}, "dateAdded": "", "dateModified": "" }, null, "\t")
+			+ JSON.stringify({ key: "", version: 0, itemType: "book", title: "Title 2", creators: [{ creatorType: "author", firstName: "First", lastName: "Last" }, { creatorType: "editor", firstName: "Ed", lastName: "McEditor" }], abstractNote: "", series: "", seriesNumber: "", volume: "", numberOfVolumes: "", edition: "", date: "", publisher: "", place: "", originalDate: "", originalPublisher: "", originalPlace: "", format: "", numPages: "", ISBN: "", DOI: "", citationKey: "", url: "", accessDate: "", ISSN: "", archive: "", archiveLocation: "", shortTitle: "", language: "", libraryCatalog: "", callNumber: "", rights: "", extra: "", tags: [], collections: [], relations: {}, dateAdded: "", dateModified: "" }, null, "\t")
 			+ '</zapi:subcontent></content>';
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testFeedURIs
-	it('should return correct feed URIs', async function() {
+	it('should return correct feed URIs', async function () {
 		let userID = config.get('userID');
 
 		let response = await API.userGet(
@@ -89,7 +89,7 @@ describe('Atom', function() {
 	});
 
 	// PHP: testTotalResults
-	it('should return total results', async function() {
+	it('should return total results', async function () {
 		let response = await API.userHead(
 			config.get('userID'),
 			'items?format=atom'
@@ -110,7 +110,7 @@ describe('Atom', function() {
 	});
 
 	// PHP: testMultiContent
-	it('should return multi-content', async function() {
+	it('should return multi-content', async function () {
 		let keys = Object.keys(items);
 		let keyStr = keys.join(',');
 
@@ -160,13 +160,13 @@ describe('Atom', function() {
 			}
 
 			// Compare XML strings (normalize whitespace for comparison)
-			let normalizeXml = (str) => str.replace(/>\s+</g, '><').trim();
+			let normalizeXml = str => str.replace(/>\s+</g, '><').trim();
 			assert.equal(normalizeXml(content), normalizeXml(items[key]), `Content mismatch for item ${key}`);
 		}
 	});
 
 	// PHP: testMultiContentCached
-	it('should return cached multi-content', async function() {
+	it('should return cached multi-content', async function () {
 		// Re-run the multi-content test to verify caching
 		let keys = Object.keys(items);
 		let keyStr = keys.join(',');
@@ -184,7 +184,7 @@ describe('Atom', function() {
 	});
 
 	// PHP: testAcceptHeader
-	it('should handle Accept header', async function() {
+	it('should handle Accept header', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			'items',

@@ -29,7 +29,7 @@ import path from 'path';
 import { xpathSelect } from '../../xpath.js';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
-describe('My Publications', function() {
+describe('My Publications', function () {
 	this.timeout(120000);
 
 	let workDir = path.join(process.cwd(), 'work');
@@ -55,14 +55,14 @@ describe('My Publications', function() {
 		return parts.join('&');
 	}
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		await setup();
 		await API.userClear(config.get('userID'));
 		// Default to anonymous requests
 		API.useAPIKey('');
 	});
 
-	after(async function() {
+	after(async function () {
 		let s3Client = getS3Client();
 
 		if (!s3Client || !config.has('s3Bucket') || toDelete.length === 0) {
@@ -76,18 +76,19 @@ describe('My Publications', function() {
 					Bucket: config.get('s3Bucket'),
 					Key: hash
 				}));
-			} catch (err) {
+			}
+			catch {
 				// Ignore cleanup errors
 			}
 		}
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: test_should_return_no_results_for_empty_publications_list
-	it('should return no results for empty publications list', async function() {
+	it('should return no results for empty publications list', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/items`);
 		assert200(response);
 		assertNumResults(response, 0);
@@ -95,7 +96,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_no_results_for_empty_publications_list_with_key
-	it('should return no results for empty publications list with key', async function() {
+	it('should return no results for empty publications list with key', async function () {
 		API.useAPIKey(config.get('apiKey'));
 		let response = await API.userGet(
 			config.get('userID'),
@@ -107,7 +108,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_no_atom_results_for_empty_publications_list
-	it('should return no atom results for empty publications list', async function() {
+	it('should return no atom results for empty publications list', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/items?format=atom`);
 		assert200(response);
 		assertNumResults(response, 0);
@@ -115,16 +116,16 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_200_for_settings_request_with_no_items
-	it('should return 200 for settings request with no items', async function() {
+	it('should return 200 for settings request with no items', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/settings`);
 		assert200(response);
 	});
 
 	// PHP: test_should_return_400_for_settings_request_with_items
-	it('should return 400 for settings request with items', async function() {
+	it('should return 400 for settings request with items', async function () {
 		// Add item to publications
 		API.useAPIKey(config.get('apiKey'));
-		let key = await API.createItem('book', {
+		let _key = await API.createItem('book', {
 			title: 'Test',
 			inPublications: true
 		}, 'key');
@@ -136,25 +137,25 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_200_for_deleted_request
-	it('should return 200 for deleted request', async function() {
+	it('should return 200 for deleted request', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/deleted`);
 		assert200(response);
 	});
 
 	// PHP: test_should_return_404_for_collections_request
-	it('should return 404 for collections request', async function() {
+	it('should return 404 for collections request', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/collections`);
 		assert404(response);
 	});
 
 	// PHP: test_should_return_404_for_searches_request
-	it('should return 404 for searches request', async function() {
+	it('should return 404 for searches request', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/searches`);
 		assert404(response);
 	});
 
 	// PHP: test_should_return_403_for_anonymous_write
-	it('should return 403 for anonymous write', async function() {
+	it('should return 403 for anonymous write', async function () {
 		API.useAPIKey('');
 		let json = await API.getItemTemplate('book');
 		json.inPublications = true;
@@ -169,7 +170,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_405_for_authenticated_write
-	it('should return 405 for authenticated write', async function() {
+	it('should return 405 for authenticated write', async function () {
 		API.useAPIKey(config.get('apiKey'));
 		let json = await API.getItemTemplate('book');
 		json.inPublications = true;
@@ -184,7 +185,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_404_for_anonymous_request_for_item_not_in_publications
-	it('should return 404 for anonymous request for item not in publications', async function() {
+	it('should return 404 for anonymous request for item not in publications', async function () {
 		// Create item without inPublications
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
@@ -196,7 +197,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_return_404_for_authenticated_request_for_item_not_in_publications
-	it('should return 404 for authenticated request for item not in publications', async function() {
+	it('should return 404 for authenticated request for item not in publications', async function () {
 		// Create item without inPublications
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
@@ -210,7 +211,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_item_for_anonymous_single_object_request
-	it('should show item for anonymous single-object request', async function() {
+	it('should show item for anonymous single-object request', async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', {
@@ -228,10 +229,10 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_item_for_anonymous_multi_object_request
-	it('should show item for anonymous multi-object request', async function() {
+	it('should show item for anonymous multi-object request', async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
-		let key = await API.createItem('book', {
+		let _key = await API.createItem('book', {
 			title: 'Test',
 			inPublications: true
 		}, 'key');
@@ -247,7 +248,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_child_item_not_in_publications
-	it("shouldn't show child item not in publications", async function() {
+	it("shouldn't show child item not in publications", async function () {
 		// Create parent item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let parentKey = await API.createItem('book', {
@@ -256,7 +257,7 @@ describe('My Publications', function() {
 		}, 'key');
 
 		// Create child note without inPublications
-		let childKey = await API.createNoteItem('Child note', parentKey, 'key');
+		let _childKey = await API.createNoteItem('Child note', parentKey, 'key');
 
 		// Anonymous request should only show parent
 		API.useAPIKey('');
@@ -266,7 +267,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_child_item_not_in_publications_for_item_children_request
-	it("shouldn't show child item not in publications for item children request", async function() {
+	it("shouldn't show child item not in publications for item children request", async function () {
 		// Create parent item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let parentKey = await API.createItem('book', {
@@ -275,7 +276,7 @@ describe('My Publications', function() {
 		}, 'key');
 
 		// Create child note without inPublications
-		let childKey = await API.createNoteItem('Child note', parentKey, 'key');
+		let _childKey = await API.createNoteItem('Child note', parentKey, 'key');
 
 		// Anonymous request for children should return 0 results
 		API.useAPIKey('');
@@ -285,7 +286,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_include_hidden_child_items_in_numChildren
-	it("shouldn't include hidden child items in numChildren", async function() {
+	it("shouldn't include hidden child items in numChildren", async function () {
 		// Create parent item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let parentKey = await API.createItem('book', {
@@ -305,7 +306,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_child_items_in_top_mode
-	it("shouldn't show child items in top mode", async function() {
+	it("shouldn't show child items in top mode", async function () {
 		// Create parent item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let parentKey = await API.createItem('book', {
@@ -329,10 +330,10 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_trashed_item
-	it("shouldn't show trashed item", async function() {
+	it("shouldn't show trashed item", async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
-		let key = await API.createItem('book', {
+		let _key = await API.createItem('book', {
 			title: 'Test',
 			inPublications: true,
 			deleted: true
@@ -346,7 +347,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_restricted_properties
-	it("shouldn't show restricted properties", async function() {
+	it("shouldn't show restricted properties", async function () {
 		// Create item in publications with various properties
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', {
@@ -369,10 +370,10 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_show_trashed_item_in_versions_response
-	it("shouldn't show trashed item in versions response", async function() {
+	it("shouldn't show trashed item in versions response", async function () {
 		// Create trashed item in publications
 		API.useAPIKey(config.get('apiKey'));
-		let key = await API.createItem('book', {
+		let _key = await API.createItem('book', {
 			title: 'Test',
 			inPublications: true,
 			deleted: true
@@ -387,7 +388,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_publications_urls_in_json_response_for_single_object_request
-	it('should show publications urls in json response for single object request', async function() {
+	it('should show publications urls in json response for single object request', async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', {
@@ -408,7 +409,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_publications_urls_in_json_response_for_multi_object_request
-	it('should show publications URLs in JSON response for multi-object request', async function() {
+	it('should show publications URLs in JSON response for multi-object request', async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let key = await API.createItem('book', {
@@ -429,7 +430,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: testTopLevelAttachmentAndNote
-	it('should reject top level attachment and note in publications', async function() {
+	it('should reject top level attachment and note in publications', async function () {
 		let msg = 'Top-level notes and attachments cannot be added to My Publications';
 
 		// Try to create attachment in publications
@@ -457,7 +458,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: testLinkedFileAttachment
-	it('should reject linked file attachment', async function() {
+	it('should reject linked file attachment', async function () {
 		// Try to create linked file attachment in publications
 		API.useAPIKey(config.get('apiKey'));
 		let json = await API.getItemTemplate('attachment&linkMode=linked_file');
@@ -476,7 +477,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_remove_inPublications_on_POST_with_false
-	it('should remove inPublications on POST with false', async function() {
+	it('should remove inPublications on POST with false', async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let json = await API.createItem('book', {
@@ -502,7 +503,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_remove_inPublications_on_POST_without_property
-	it("shouldn't remove inPublications on POST without property", async function() {
+	it("shouldn't remove inPublications on POST without property", async function () {
 		// Create item in publications
 		API.useAPIKey(config.get('apiKey'));
 		let json = await API.createItem('book', {
@@ -529,7 +530,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_shouldnt_allow_inPublications_in_group_library
-	it("shouldn't allow inPublications in group library", async function() {
+	it("shouldn't allow inPublications in group library", async function () {
 		API.useAPIKey(config.get('apiKey'));
 		let json = await API.getItemTemplate('book');
 		json.inPublications = true;
@@ -544,7 +545,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_trigger_notification_on_publications_topic
-	it('should trigger notification on publications topic', async function() {
+	it('should trigger notification on publications topic', async function () {
 		// Create item with inPublications
 		API.useAPIKey(config.get('apiKey'));
 		let response = await API.createItem('book', { inPublications: true }, 'response');
@@ -560,23 +561,21 @@ describe('My Publications', function() {
 		assert.equal(notifications.length, 2, 'Expected 2 notifications');
 
 		// Check for regular library notification
-		let libraryNotification = notifications.find(n =>
-			n.event === 'topicUpdated' &&
-			n.topic === `/users/${config.get('userID')}` &&
-			n.version === version
+		let libraryNotification = notifications.find(n => n.event === 'topicUpdated'
+			&& n.topic === `/users/${config.get('userID')}`
+			&& n.version === version
 		);
 		assert.exists(libraryNotification, 'Expected library notification');
 
 		// Check for publications notification
-		let publicationsNotification = notifications.find(n =>
-			n.event === 'topicUpdated' &&
-			n.topic === `/users/${config.get('userID')}/publications`
+		let publicationsNotification = notifications.find(n => n.event === 'topicUpdated'
+			&& n.topic === `/users/${config.get('userID')}/publications`
 		);
 		assert.exists(publicationsNotification, 'Expected publications notification');
 	});
 
 	// PHP: test_should_include_download_details
-	it('should include download details', async function() {
+	it('should include download details', async function () {
 		let s3Client = getS3Client();
 		if (!s3Client || !config.has('s3Bucket')) {
 			throw new Error('S3 configuration is required for this test');
@@ -698,7 +697,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_publications_urls_in_atom_response_for_single_object_request
-	it('should show publications URLs in Atom response for single object request', async function() {
+	it('should show publications URLs in Atom response for single object request', async function () {
 		API.useAPIKey(config.get('apiKey'));
 		let itemKey = await API.createItem('book', { inPublications: true }, 'key');
 
@@ -722,7 +721,7 @@ describe('My Publications', function() {
 	});
 
 	// PHP: test_should_show_publications_urls_in_atom_response_for_multi_object_request
-	it('should show publications URLs in Atom response for multi-object request', async function() {
+	it('should show publications URLs in Atom response for multi-object request', async function () {
 		let response = await API.get(`users/${config.get('userID')}/publications/items?format=atom`);
 		let xml = API.getXMLFromResponse(response);
 		// id

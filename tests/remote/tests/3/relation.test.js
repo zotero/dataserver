@@ -15,22 +15,22 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Relations', function() {
+describe('Relations', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testNewItemRelations
-	it('should create item with relations', async function() {
+	it('should create item with relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/items/AAAAAAAA',
 			'dc:relation': [
@@ -56,7 +56,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testRelatedItemRelations
-	it('should create bidirectional related item relations', async function() {
+	it('should create bidirectional related item relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/items/AAAAAAAA'
 		};
@@ -106,7 +106,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testRelatedItemRelationsSingleRequest
-	it('should create bidirectional related item relations in single request', async function() {
+	it('should create bidirectional related item relations in single request', async function () {
 		let uriPrefix = `http://zotero.org/users/${config.get('userID')}/items/`;
 		let item1Key = API.generateKey();
 		let item2Key = API.generateKey();
@@ -137,7 +137,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: test_should_add_a_URL_to_a_relation_with_PATCH
-	it('should add a URL to a relation with PATCH', async function() {
+	it('should add a URL to a relation with PATCH', async function () {
 		let relations = {
 			'dc:replaces': [
 				`http://zotero.org/users/${config.get('userID')}/items/AAAAAAAA`
@@ -170,7 +170,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: test_should_remove_a_URL_from_a_relation_with_PATCH
-	it('should remove a URL from a relation with PATCH', async function() {
+	it('should remove a URL from a relation with PATCH', async function () {
 		let userID = config.get('userID');
 
 		let relations = {
@@ -203,7 +203,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testInvalidItemRelation
-	it('should reject invalid item relations', async function() {
+	it('should reject invalid item relations', async function () {
 		let response = await API.createItem('book', {
 			relations: {
 				'foo:unknown': 'http://zotero.org/groups/1/items/AAAAAAAA'
@@ -227,7 +227,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testCircularItemRelations
-	it('should handle circular item relations', async function() {
+	it('should handle circular item relations', async function () {
 		let item1Data = await API.createItem('book', null, 'jsonData');
 		let item2Data = await API.createItem('book', null, 'jsonData');
 		let userID = config.get('userID');
@@ -244,7 +244,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testDeleteItemRelation
-	it('should delete item relations', async function() {
+	it('should delete item relations', async function () {
 		let relations = {
 			'owl:sameAs': [
 				'http://zotero.org/groups/1/items/AAAAAAAA',
@@ -292,7 +292,7 @@ describe('Relations', function() {
 	// Collections
 	//
 	// PHP: testNewCollectionRelations
-	it('should create collection with relations', async function() {
+	it('should create collection with relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/collections/AAAAAAAA'
 		};
@@ -307,7 +307,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testInvalidCollectionRelation
-	it('should reject invalid collection relations', async function() {
+	it('should reject invalid collection relations', async function () {
 		let json = {
 			name: 'Test',
 			relations: {
@@ -341,7 +341,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: testDeleteCollectionRelation
-	it('should delete collection relations', async function() {
+	it('should delete collection relations', async function () {
 		let relations = {
 			'owl:sameAs': 'http://zotero.org/groups/1/collections/AAAAAAAA'
 		};
@@ -368,7 +368,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: test_should_return_200_for_values_for_mendeleyDB_collection_relation
-	it('should return 200 for values for mendeleyDB collection relation', async function() {
+	it('should return 200 for values for mendeleyDB collection relation', async function () {
 		let relations = {
 			'mendeleyDB:remoteFolderUUID': 'b95b84b9-8b27-4a55-b5ea-5b98c1cac205'
 		};
@@ -383,7 +383,7 @@ describe('Relations', function() {
 	});
 
 	// PHP: test_should_return_200_for_arrays_for_mendeleyDB_collection_relation
-	it('should return 200 for arrays for mendeleyDB collection relation', async function() {
+	it('should return 200 for arrays for mendeleyDB collection relation', async function () {
 		let json = {
 			name: 'Test',
 			relations: {

@@ -12,18 +12,18 @@ import {
 import { setup } from '../../setup.js';
 import { xpathSelect } from '../../xpath.js';
 
-describe('Storage Admin', function() {
+describe('Storage Admin', function () {
 	this.timeout(30000);
 
 	const DEFAULT_QUOTA = 300;
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
 	});
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		// Clear subscription
 		let response = await API.post(
 			`users/${config.get('userID')}/storageadmin`,
@@ -40,7 +40,7 @@ describe('Storage Admin', function() {
 		assert.equal(parseInt(quotaNode ? quotaNode.nodeValue : '0'), DEFAULT_QUOTA);
 	});
 
-	after(async function() {
+	after(async function () {
 		// Clear subscription
 		await API.post(
 			`users/${config.get('userID')}/storageadmin`,
@@ -54,7 +54,7 @@ describe('Storage Admin', function() {
 	});
 
 	// PHP: test2GB
-	it('should set 2GB quota', async function() {
+	it('should set 2GB quota', async function () {
 		let quota = 2000;
 		let expiration = Math.floor(Date.now() / 1000) + (86400 * 365);
 
@@ -76,7 +76,7 @@ describe('Storage Admin', function() {
 	});
 
 	// PHP: testUnlimited
-	it('should set unlimited quota', async function() {
+	it('should set unlimited quota', async function () {
 		let quota = 'unlimited';
 		let expiration = Math.floor(Date.now() / 1000) + (86400 * 365);
 

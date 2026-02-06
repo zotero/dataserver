@@ -78,7 +78,8 @@ class HTTP {
 			clearTimeout(timeoutId);
 			let body = await response.text();
 			return new HTTPResponse(response.status, Object.fromEntries(response.headers), body);
-		} catch (error) {
+		}
+		catch (error) {
 			clearTimeout(timeoutId);
 			throw error;
 		}

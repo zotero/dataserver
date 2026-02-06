@@ -10,7 +10,6 @@ import {
 	assert200,
 	assert200ForObject,
 	assert204,
-	assert400,
 	assert400ForObject,
 	assert412,
 	assertNumResults
@@ -18,10 +17,10 @@ import {
 import { xpathSelect } from '../../xpath.js';
 import { setup } from '../../setup.js';
 
-describe('Items (API v2)', function() {
+describe('Items (API v2)', function () {
 	this.timeout(60000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
@@ -29,13 +28,13 @@ describe('Items (API v2)', function() {
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 		await API.groupClear(config.get('ownedPrivateGroupID'));
 	});
 
 	// PHP: testNewEmptyBookItem
-	it('should create new empty book item', async function() {
+	it('should create new empty book item', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let json = JSON.parse(data.content);
@@ -43,7 +42,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewEmptyBookItemMultiple
-	it('should create new empty book item multiple', async function() {
+	it('should create new empty book item multiple', async function () {
 		let json = await API.getItemTemplate('book');
 
 		let data = [];
@@ -70,7 +69,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditBookItem
-	it('should edit book item', async function() {
+	it('should edit book item', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let key = data.key;
@@ -114,7 +113,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testDateModified
-	it('should handle dateModified', async function() {
+	it('should handle dateModified', async function () {
 		let itemData = { title: 'Test' };
 		let xml = await API.createItem('videoRecording', itemData, 'atom');
 
@@ -177,7 +176,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testDateAccessedInvalid
-	it('should ignore invalid dateAccessed', async function() {
+	it('should ignore invalid dateAccessed', async function () {
 		let date = 'February 1, 2014';
 		let xml = await API.createItem('book', {
 			accessDate: date
@@ -189,7 +188,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testChangeItemType
-	it('should change item type', async function() {
+	it('should change item type', async function () {
 		let json = await API.getItemTemplate('book');
 		json.title = 'Foo';
 		json.numPages = 100;
@@ -235,7 +234,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testModifyItemPartial
-	it('should modify item partially with PATCH', async function() {
+	it('should modify item partially with PATCH', async function () {
 		let itemData = { title: 'Test' };
 		let xml = await API.createItem('book', itemData, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -265,7 +264,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewComputerProgramItem
-	it('should create new computerProgram item', async function() {
+	it('should create new computerProgram item', async function () {
 		let xml = await API.createItem('computerProgram', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let key = data.key;
@@ -310,7 +309,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewInvalidBookItem
-	it('should reject invalid book item', async function() {
+	it('should reject invalid book item', async function () {
 		let json = await API.getItemTemplate('book');
 
 		// Missing item type
@@ -341,7 +340,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditTopLevelNote
-	it('should edit top level note', async function() {
+	it('should edit top level note', async function () {
 		let xml = await API.createNoteItem('<p>Test</p>', null, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let json = JSON.parse(data.content);
@@ -366,7 +365,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditChildNote
-	it('should edit child note', async function() {
+	it('should edit child note', async function () {
 		let key = await API.createItem('book', { title: 'Test' }, 'key');
 		let xml = await API.createNoteItem('<p>Test</p>', key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -392,7 +391,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditTitleWithCollectionInMultipleMode
-	it('should edit title with collection in multiple mode', async function() {
+	it('should edit title with collection in multiple mode', async function () {
 		let collectionKey = await API.createCollection('Test', false, 'key');
 
 		let xml = await API.createItem('book', {
@@ -422,7 +421,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewTopLevelImportedFileAttachment
-	it('should create new top level imported file attachment', async function() {
+	it('should create new top level imported file attachment', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=imported_file');
 		let json = JSON.parse(response.getBody());
 
@@ -438,7 +437,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewEmptyLinkAttachmentItem
-	it('should create new empty link attachment item', async function() {
+	it('should create new empty link attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let xml = await API.createAttachmentItem('linked_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -446,7 +445,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditLinkAttachmentItem
-	it('should edit link attachment item', async function() {
+	it('should edit link attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let xml = await API.createAttachmentItem('linked_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -480,7 +479,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewAttachmentItemInvalidLinkMode
-	it('should reject attachment item with invalid link mode', async function() {
+	it('should reject attachment item with invalid link mode', async function () {
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
 		let json = JSON.parse(response.getBody());
 
@@ -510,7 +509,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testMappedCreatorTypes
-	it('should handle mapped creator types', async function() {
+	it('should handle mapped creator types', async function () {
 		let json = {
 			items: [
 				{
@@ -547,7 +546,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNumChildren
-	it('should count numChildren', async function() {
+	it('should count numChildren', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		// Note: createItem returns a feed, so /atom:entry/... doesn't match at root
 		// PHP test passes because (int) array_get_first([]) == (int) null == 0
@@ -579,7 +578,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditTitleWithTagInMultipleMode
-	it('should edit title with tag in multiple mode', async function() {
+	it('should edit title with tag in multiple mode', async function () {
 		let tag1 = { tag: 'foo', type: 1 };
 		let tag2 = { tag: 'bar' };
 
@@ -616,7 +615,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewEmptyImportedURLAttachmentItem
-	it('should create new empty imported URL attachment item', async function() {
+	it('should create new empty imported URL attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let xml = await API.createAttachmentItem('imported_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -624,7 +623,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditEmptyLinkAttachmentItem
-	it('should edit empty link attachment item', async function() {
+	it('should edit empty link attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let xml = await API.createAttachmentItem('linked_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -651,7 +650,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewAttachmentItemMD5OnLinkedURL
-	it('should reject MD5 on linked URL attachment', async function() {
+	it('should reject MD5 on linked URL attachment', async function () {
 		let parentKey = await API.createItem('book', false, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
@@ -671,7 +670,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewAttachmentItemModTimeOnLinkedURL
-	it('should reject mtime on linked URL attachment', async function() {
+	it('should reject mtime on linked URL attachment', async function () {
 		let parentKey = await API.createItem('book', false, 'key');
 
 		let response = await API.get('items/new?itemType=attachment&linkMode=linked_url');
@@ -691,7 +690,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testParentItemPatch
-	it('should handle parent item with PATCH', async function() {
+	it('should handle parent item with PATCH', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let parentKey = data.key;
@@ -723,7 +722,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testParentItem
-	it('should handle parent item', async function() {
+	it('should handle parent item', async function () {
 		let xml = await API.createItem('book', false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let parentKey = data.key;
@@ -769,7 +768,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testDate
-	it('should handle date', async function() {
+	it('should handle date', async function () {
 		let date = 'Sept 18, 2012';
 
 		let xml = await API.createItem('book', { date: date }, 'atom');
@@ -790,7 +789,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testUnicodeTitle
-	it('should handle unicode title', async function() {
+	it('should handle unicode title', async function () {
 		let title = 'Tést';
 
 		let xml = await API.createItem('book', { title: title }, 'atom');
@@ -813,7 +812,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditEmptyImportedURLAttachmentItem
-	it('should edit empty imported URL attachment item', async function() {
+	it('should edit empty imported URL attachment item', async function () {
 		let key = await API.createItem('book', false, 'key');
 		let xml = await API.createAttachmentItem('imported_url', {}, key, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
@@ -840,7 +839,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testNewEmptyLinkAttachmentItemWithItemKey
-	it('should create new empty link attachment item with itemKey', async function() {
+	it('should create new empty link attachment item with itemKey', async function () {
 		let key = await API.createItem('book', false, 'key');
 		await API.createAttachmentItem('linked_url', {}, key, 'atom');
 
@@ -848,8 +847,7 @@ describe('Items (API v2)', function() {
 		let json = JSON.parse(response.getBody());
 		json.parentItem = key;
 		// Generate a random 8-character key
-		json.itemKey = Array.from({ length: 8 }, () =>
-			'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]
+		json.itemKey = Array.from({ length: 8 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[Math.floor(Math.random() * 32)]
 		).join('');
 		json.itemVersion = 0;
 
@@ -865,7 +863,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testEditAttachmentUpdatedTimestamp
-	it('should update attachment timestamp on edit', async function() {
+	it('should update attachment timestamp on edit', async function () {
 		let xml = await API.createAttachmentItem('linked_file', {}, false, 'atom');
 		let data = API.parseDataFromAtomEntry(xml);
 		let atomUpdated = xpathSelect(xml, '//atom:entry/atom:updated/text()', true).nodeValue;
@@ -888,7 +886,7 @@ describe('Items (API v2)', function() {
 	});
 
 	// PHP: testTop
-	it('should handle top items endpoint', async function() {
+	it('should handle top items endpoint', async function () {
 		await API.userClear(config.get('userID'));
 
 		let collectionKey = await API.createCollection('Test', false, 'key');

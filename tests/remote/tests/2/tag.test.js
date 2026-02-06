@@ -16,22 +16,22 @@ import {
 } from '../../assertions2.js';
 import { setup } from '../../setup.js';
 
-describe('Tags (API v2)', function() {
+describe('Tags (API v2)', function () {
 	this.timeout(30000);
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
 		await API.userClear(config.get('userID'));
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: test_empty_tag_should_be_ignored
-	it('should ignore empty tag', async function() {
+	it('should ignore empty tag', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags.push({
 			tag: '',
@@ -43,7 +43,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testInvalidTagObject
-	it('should reject invalid tag object', async function() {
+	it('should reject invalid tag object', async function () {
 		let json = await API.getItemTemplate('book');
 		json.tags.push(['invalid']);
 
@@ -52,7 +52,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testItemTagSearch
-	it('should handle item tag search', async function() {
+	it('should handle item tag search', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Create items with tags
@@ -173,7 +173,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testTagSearch
-	it('should handle tag search', async function() {
+	it('should handle tag search', async function () {
 		let tags1 = ['a', 'aa', 'b'];
 		let tags2 = ['b', 'c', 'cc'];
 
@@ -194,7 +194,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testTagNewer
-	it('should handle tag newer', async function() {
+	it('should handle tag newer', async function () {
 		await API.userClear(config.get('userID'));
 
 		// Create items with tags
@@ -238,7 +238,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testMultiTagDelete
-	it('should handle multi tag delete', async function() {
+	it('should handle multi tag delete', async function () {
 		await API.userClear(config.get('userID'));
 
 		let tags1 = ['a', 'aa', 'b'];
@@ -292,7 +292,7 @@ describe('Tags (API v2)', function() {
 	});
 
 	// PHP: testTagAddItemVersionChange
-	it('should handle tag add item version change', async function() {
+	it('should handle tag add item version change', async function () {
 		await API.userClear(config.get('userID'));
 
 		let xml1 = await API.createItem('book', {
@@ -303,7 +303,7 @@ describe('Tags (API v2)', function() {
 		}, 'atom');
 		let data1 = API.parseDataFromAtomEntry(xml1);
 		let json1 = JSON.parse(data1.content);
-		let version1 = parseInt(data1.version);
+		let _version1 = parseInt(data1.version);
 
 		let xml2 = await API.createItem('book', {
 			tags: [

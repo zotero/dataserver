@@ -3,7 +3,7 @@ import config from 'config';
 import { API } from '../../api3.js';
 import HTTP from '../../http.js';
 import {
-	assert200, assert201, assert204, assert302, assert400, assert401, assert403, assert404,
+	assert200, assert201, assert204, assert302, assert400, assert401, assert404,
 	assert412, assert413, assert428, assertContentType
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
@@ -12,7 +12,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import AdmZip from 'adm-zip';
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,7 +44,7 @@ function getRandomUnicodeString() {
 }
 
 // Helper function to generate random string
-function randomString(length, type = 'mixed') {
+function randomString(length, _type = 'mixed') {
 	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	let result = '';
 	for (let i = 0; i < length; i++) {
@@ -53,12 +53,12 @@ function randomString(length, type = 'mixed') {
 	return result;
 }
 
-describe('File', function() {
+describe('File', function () {
 	this.timeout(240000); // File operations and S3 uploads can be slow
 
 	let workDir = path.join(process.cwd(), 'work');
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(3);
@@ -72,7 +72,7 @@ describe('File', function() {
 		await API.userClear(config.get('userID'));
 	});
 
-	beforeEach(function() {
+	beforeEach(function () {
 		// Delete work files
 		let deleteFiles = ['file', 'old', 'new', 'patch'];
 		for (let file of deleteFiles) {
@@ -83,7 +83,7 @@ describe('File', function() {
 		}
 	});
 
-	after(async function() {
+	after(async function () {
 		let s3Client = getS3Client();
 
 		if (!s3Client || !config.has('s3Bucket') || toDelete.length === 0) {
@@ -97,10 +97,12 @@ describe('File', function() {
 					Bucket: config.get('s3Bucket'),
 					Key: fileKey
 				}));
-			} catch (err) {
+			}
+			catch (err) {
 				if (err.name === 'NoSuchKey') {
 					console.log(`\n${fileKey} not found on S3 to delete`);
-				} else {
+				}
+				else {
 					console.log(`\nError deleting ${fileKey} from S3: ${err.message}`);
 				}
 			}
@@ -108,7 +110,7 @@ describe('File', function() {
 	});
 
 	// PHP: testNewEmptyImportedFileAttachmentItem
-	it('should create new empty imported file attachment item', async function() {
+	it('should create new empty imported file attachment item', async function () {
 		let key = await API.createAttachmentItem('imported_file', [], false, 'key');
 		assert.ok(key);
 
@@ -117,7 +119,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileFormDataAuthorizationErrors
-	it('should validate file upload authorization parameters', async function() {
+	it('should validate file upload authorization parameters', async function () {
 		// Create attachment item first
 		let parentKey = await API.createAttachmentItem('imported_file', [], false, 'key');
 
@@ -181,11 +183,11 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileFormDataFull
-	it('should add file with form data full flow', async function() {
+	it('should add file with form data full flow', async function () {
 		let parentKey = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('imported_file', [], parentKey, 'json');
 		let attachmentKey = json.key;
-		let originalVersion = json.version;
+		let _originalVersion = json.version;
 
 		let file = path.join(workDir, 'file');
 		let fileContents = getRandomUnicodeString();
@@ -279,10 +281,10 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileFormDataFullParams
-	it('should add file with form data and params', async function() {
+	it('should add file with form data and params', async function () {
 		let json = await API.createAttachmentItem('imported_file', [], false, 'jsonData');
 		let attachmentKey = json.key;
-		let serverDateModified = json.dateAdded;
+		let _serverDateModified = json.dateAdded;
 
 		// Sleep to ensure serverDateModified changes
 		await new Promise(resolve => setTimeout(resolve, 1000));
@@ -369,7 +371,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileExisting
-	it('should return `exists` for existing file upload', async function() {
+	it('should return `exists` for existing file upload', async function () {
 		// Create and upload a file first
 		let parentKey = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('imported_file', [], parentKey, 'json');
@@ -453,7 +455,7 @@ describe('File', function() {
 	});
 
 	// PHP: testGetFile
-	it('should get file in view and download mode', async function() {
+	it('should get file in view and download mode', async function () {
 		// Create and upload a file first
 		let parentKey = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('imported_file', [], parentKey, 'json');
@@ -540,7 +542,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFilePartial
-	it('should add file with partial update', async function() {
+	it('should add file with partial update', async function () {
 		let { execSync } = await import('child_process');
 
 		// Create and upload initial file
@@ -649,7 +651,7 @@ describe('File', function() {
 			try {
 				execSync(cmd);
 			}
-			catch (e) {
+			catch {
 				console.log(`Warning: Error running ${algo} -- skipping file upload test`);
 				continue;
 			}
@@ -704,7 +706,7 @@ describe('File', function() {
 	});
 
 	// PHP: testExistingFileWithOldStyleFilename
-	it('should handle existing file with old-style filename', async function() {
+	it('should handle existing file with old-style filename', async function () {
 		let s3Client = getS3Client();
 
 		if (!s3Client || !config.has('s3Bucket')) {
@@ -719,7 +721,7 @@ describe('File', function() {
 		let parentKey = await API.createItem('book', false, 'key');
 		let json = await API.createAttachmentItem('imported_file', {}, parentKey, 'jsonData');
 		let key = json.key;
-		let originalVersion = json.version;
+		let _originalVersion = json.version;
 		let mtime = Date.now();
 		let contentType = 'text/plain';
 		let charset = 'utf-8';
@@ -811,7 +813,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileClientV5
-	it('should add file with client v5 flow', async function() {
+	it('should add file with client v5 flow', async function () {
 		await API.userClear(config.get('userID'));
 
 		let file = path.join(workDir, 'file');
@@ -939,7 +941,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileClientV5Zip
-	it('should add file with client v5 ZIP flow', async function() {
+	it('should add file with client v5 ZIP flow', async function () {
 		await API.userClear(config.get('userID'));
 
 		let fileContents = getRandomUnicodeString();
@@ -965,7 +967,7 @@ describe('File', function() {
 			charset: charset
 		}, parentKey, 'jsonData');
 		let key = json.key;
-		let originalVersion = json.version;
+		let _originalVersion = json.version;
 
 		// Create ZIP file
 		let zip = new AdmZip();
@@ -1097,7 +1099,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_should_reject_file_in_personal_library_if_it_would_put_user_over_quota
-	it('should reject file that would put user over quota', async function() {
+	it('should reject file that would put user over quota', async function () {
 		// Clear user data to reset storage usage
 		await API.userClear(config.get('userID'));
 
@@ -1131,7 +1133,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_should_reject_file_in_group_library_if_it_would_put_owner_over_quota
-	it('should reject file in group library that would put owner over quota', async function() {
+	it('should reject file in group library that would put owner over quota', async function () {
 		let ownerUserID = config.get('userID2');
 		let groupID = await API.createGroup({
 			owner: ownerUserID,
@@ -1179,7 +1181,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_add_embedded_image_attachment
-	it('should add embedded image attachment', async function() {
+	it('should add embedded image attachment', async function () {
 		await API.userClear(config.get('userID'));
 
 		let noteKey = await API.createNoteItem('', null, 'key');
@@ -1251,7 +1253,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_replace_file_with_new_file
-	it('should replace file with new file', async function() {
+	it('should replace file with new file', async function () {
 		await API.userClear(config.get('userID'));
 
 		let file = path.join(workDir, 'file');
@@ -1271,7 +1273,7 @@ describe('File', function() {
 			charset: charset
 		}, false, 'jsonData');
 		let key = json.key;
-		let originalVersion = json.version;
+		let _originalVersion = json.version;
 
 		// Get authorization for initial file
 		let response = await API.userPost(
@@ -1376,7 +1378,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_should_include_best_attachment_link_on_parent_for_imported_file
-	it('should include best attachment link on parent for imported file', async function() {
+	it('should include best attachment link on parent for imported file', async function () {
 		let json = await API.createItem('book', false, 'json');
 		assert.equal(json.meta.numChildren, 0);
 		let parentKey = json.key;
@@ -1460,7 +1462,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_should_include_best_attachment_link_on_parent_for_imported_url
-	it('should include best attachment link on parent for imported url', async function() {
+	it('should include best attachment link on parent for imported url', async function () {
 		let json = await API.createItem('book', false, 'json');
 		assert.equal(json.meta.numChildren, 0);
 		let parentKey = json.key;
@@ -1552,7 +1554,7 @@ describe('File', function() {
 	});
 
 	// PHP: testClientV5ShouldRejectFileSizeMismatch
-	it('should reject file size mismatch for client v5', async function() {
+	it('should reject file size mismatch for client v5', async function () {
 		await API.userClear(config.get('userID'));
 
 		let file = path.join(workDir, 'file');
@@ -1601,7 +1603,7 @@ describe('File', function() {
 	});
 
 	// PHP: testClientV5ShouldReturn404GettingAuthorizationForMissingFile
-	it('should return 404 getting authorization for missing file', async function() {
+	it('should return 404 getting authorization for missing file', async function () {
 		// Try to get authorization for non-existent item
 		let response = await API.userPost(
 			config.get('userID'),
@@ -1618,7 +1620,7 @@ describe('File', function() {
 	});
 
 	// PHP: testAddFileLinkedAttachment
-	it('should handle linked attachment', async function() {
+	it('should handle linked attachment', async function () {
 		let json = await API.createAttachmentItem('linked_file', [], false, 'jsonData');
 		let key = json.key;
 
@@ -1644,7 +1646,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_updating_attachment_hash_should_clear_associated_storage_file
-	it('should clear storage file when updating attachment hash', async function() {
+	it('should clear storage file when updating attachment hash', async function () {
 		let file = path.join(workDir, 'file');
 		let fileContents = getRandomUnicodeString();
 		let contentType = 'text/html';
@@ -1723,7 +1725,7 @@ describe('File', function() {
 	});
 
 	// PHP: test_updating_compressed_attachment_hash_should_clear_associated_storage_file
-	it('should clear storage file when updating compressed attachment hash', async function() {
+	it('should clear storage file when updating compressed attachment hash', async function () {
 		// Create initial file
 		let fileContents = getRandomUnicodeString();
 		let contentType = 'text/html';
@@ -1815,11 +1817,11 @@ describe('File', function() {
 	});
 
 	// PHP: test_should_not_allow_anonymous_access_to_file_in_public_closed_group_with_library_reading_for_all
-	it('should not allow anonymous access to file in public closed group with library reading for all', async function() {
+	it('should not allow anonymous access to file in public closed group with library reading for all', async function () {
 		let file = path.join(workDir, 'file');
 		let fileContents = getRandomUnicodeString();
-		let contentType = 'text/html';
-		let charset = 'utf-8';
+		let _contentType = 'text/html';
+		let _charset = 'utf-8';
 		fs.writeFileSync(file, fileContents);
 		let hash = crypto.createHash('md5').update(fileContents).digest('hex');
 		let filename = `test_${fileContents}`;
@@ -1902,7 +1904,7 @@ describe('File', function() {
 	});
 
 	// PHP: testLastStorageSyncNoAuthorization
-	it('should require authorization for last storage sync', async function() {
+	it('should require authorization for last storage sync', async function () {
 		API.useAPIKey(false);
 		let response = await API.userGet(
 			config.get('userID'),

@@ -11,7 +11,7 @@ import {
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
-describe('Sort (API v2)', function() {
+describe('Sort (API v2)', function () {
 	this.timeout(60000);
 
 	let itemKeys = [];
@@ -23,7 +23,7 @@ describe('Sort (API v2)', function() {
 	const attachmentTitles = ['v', 'x', null, 'a', null];
 	const notes = [null, 'aaa', null, null, 'taf'];
 
-	before(async function() {
+	before(async function () {
 		await setup();
 		API.useAPIKey(config.get('apiKey'));
 		API.useAPIVersion(2);
@@ -75,12 +75,12 @@ describe('Sort (API v2)', function() {
 		);
 	});
 
-	after(async function() {
+	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
 
 	// PHP: testSortTopItemsTitle
-	it('should sort top items by title', async function() {
+	it('should sort top items by title', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			`items/top?key=${config.get('apiKey')}&format=keys&order=title`
@@ -99,7 +99,7 @@ describe('Sort (API v2)', function() {
 	});
 
 	// PHP: testSortTopItemsCreator
-	it('should sort top items by creator', async function() {
+	it('should sort top items by creator', async function () {
 		let response = await API.userGet(
 			config.get('userID'),
 			`items/top?key=${config.get('apiKey')}&format=keys&order=creator`
