@@ -151,8 +151,6 @@ if (Z_CONFIG::$TESTING_SITE) {
 	
 	// Display errors on testing site
 	ini_set("display_errors", "1");
-	//error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE | E_STRICT);
-	error_reporting(-1);
 	ini_set('html_errors', '0');
 	
 	define('Z_ENV_DEV_SITE', !empty(Z_CONFIG::$DEV_SITE));
