@@ -1134,6 +1134,8 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
+				$this->_addToPDFIndexingQueueIfNeeded($info, $item->key);
+
 				header("HTTP/1.1 204 No Content");
 				header("Last-Modified-Version: " . $item->version);
 				exit;
@@ -1187,6 +1189,8 @@ class ItemsController extends ApiController {
 				
 				Zotero_DB::commit();
 				
+				$this->_addToPDFIndexingQueueIfNeeded($info, $item->key);
+
 				header("HTTP/1.1 204 No Content");
 				exit;
 			}
@@ -1195,4 +1199,25 @@ class ItemsController extends ApiController {
 		}
 		exit;
 	}
+
+		// If it's a PDF and request is not from desktop app, add it to SQS
+	// to be processed by full-text-extractor
+	private function _addToPDFIndexingQueueIfNeeded($info, $itemKey) {
+		if ( ($info->contentType != "application/pdf" && !strpos($info->filename, ".pdf")) || !empty($_SERVER['HTTP_X_ZOTERO_VERSION'])) {
+			return;
+		}
+		if (Z_CONFIG::$SQS_URL == '') {
+			return;
+		}
+		$payload = [
+			"fileName" => $info->hash, 
+			"itemKey" => $itemKey];
+		if (isset($this->objectGroupID)) {
+			$payload['groupID'] = $this->objectGroupID;
+		} 
+		else {
+			$payload['userID'] = $this->userID;
+		}
+		Z_SQS::send(Z_CONFIG::$SQS_URL, json_encode($payload));
+		}
 }
