@@ -431,7 +431,12 @@ class Zotero_Items {
 				
 				$tagIDs = array_unique($tagIDs);
 				
-				$tmpSQL = "SELECT itemID FROM items JOIN itemTags USING (itemID) "
+				// If /top items are requested, fetch itemIDs of top level items whose
+				// children match the tag query
+				$tmpSelect = $onlyTopLevel ? "COALESCE(topLevelItemID, itemID)" : "itemID";
+				$tmpJoin = $onlyTopLevel ? "LEFT JOIN itemTopLevel USING (itemID) " : " ";
+				$tmpSQL = "SELECT $tmpSelect FROM items JOIN itemTags USING (itemID) "
+						. $tmpJoin
 						. "WHERE tagID IN (" . implode(',', array_fill(0, sizeOf($tagIDs), '?')) . ")";
 				$ids = Zotero_DB::columnQuery($tmpSQL, $tagIDs, $shardID);
 				
