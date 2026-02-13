@@ -37,7 +37,7 @@ foreach ($shardIDs as $shardID) {
 	
 	$sql = "SELECT DISTINCT storageFileID FROM storageFileItems";
 	$ids = Zotero_DB::columnQuery($sql, false, $shardID);
-	
+	if (!$ids) continue;
 	$inserted = 0;
 	$origInsertSQL = "INSERT IGNORE INTO storageFilesExisting VALUES ";
 	
