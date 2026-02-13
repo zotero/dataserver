@@ -251,6 +251,10 @@ class ItemsController extends ApiController {
 		else {
 			$this->allowMethods(array('HEAD', 'GET', 'POST', 'DELETE'));
 			
+			if (!$this->objectLibraryID){
+				$this->e404();
+			}
+			
 			// Check for general library access
 			if (!$this->publications && !$this->permissions->canAccess($this->objectLibraryID)) {
 				$this->e403();
