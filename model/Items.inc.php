@@ -2583,7 +2583,8 @@ class Zotero_Items {
 		if (!$title) {
 			return '';
 		}
-		return mb_strcut(preg_replace('/^[[({\-"\'“‘ ]+(.*)[\])}\-"\'”’ ]*?$/Uu', '$1', $title), 0, Zotero_Notes::$MAX_TITLE_LENGTH);
+		$cleaned_of_characters = preg_replace('/[\[({\\-"\'“‘\])}\-"\'”’]/u', '$1', $title);
+		return mb_strcut(strip_tags($cleaned_of_characters), 0, Zotero_Notes::$MAX_TITLE_LENGTH);
 	}
 }
 
