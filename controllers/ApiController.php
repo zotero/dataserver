@@ -208,7 +208,14 @@ class ApiController extends Controller {
 					);
 					$this->e401('Invalid login');
 				}
-				$this->userID = 0;
+				// Allow super-user requests to specify a user via Zotero-User header
+				// for non-user-based paths (e.g., /tts/credits)
+				if (!empty($_SERVER['HTTP_ZOTERO_USER'])) {
+					$this->userID = (int) $_SERVER['HTTP_ZOTERO_USER'];
+				}
+				else {
+					$this->userID = 0;
+				}
 				$this->permissions = new Zotero_Permissions;
 				$this->permissions->setSuper();
 			}
