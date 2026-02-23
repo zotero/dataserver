@@ -4220,28 +4220,28 @@ class Zotero_Item extends Zotero_DataObject {
 				? "_" . Z_CONFIG::$CACHE_VERSION_BIB
 				: "");
 		
-		$cached = Z_Core::$MC->get($cacheKey);
-		if (false && $cached) {
+		if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)) {
+			$cached = Z_Core::$MC->get($cacheKey);
+		}
+		else {
+			$cached = false;
+		}
+		if ($cached) {
 			if ($isRegularItem
 					|| $this->isNote()
 					|| $this->isPDFAttachment()) {
 				$cached['meta']->numChildren = $numChildren;
 			}
-			
+
 			StatsD::timing("api.items.itemToResponseJSON.cached", (microtime(true) - $t) * 1000);
 			StatsD::increment("memcached.items.itemToResponseJSON.hit");
-			
-			// Skip the cache every 10 times for now, to ensure cache sanity
-			if (!Z_Core::probability(10)) {
-				return $cached;
-			}
 		}
 		
 		
 		$json = [
 			'key' => $this->key,
 			'version' => $version,
-			'library' => Zotero_Libraries::toJSON($this->libraryID)
+			'library' => new stdClass()
 		];
 		
 		$url = Zotero_API::getItemURI($this);
@@ -4408,7 +4408,7 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		
-		// TEMP
+		// TEMP: Compare cached vs fresh to validate cache correctness
 		if ($cached) {
 			$cachedStr = Zotero_Utilities::formatJSON($cached);
 			$uncachedStr = Zotero_Utilities::formatJSON($json);
@@ -4416,16 +4416,19 @@ class Zotero_Item extends Zotero_DataObject {
 				error_log("Cached JSON item entry does not match");
 				error_log("  Cached: " . $cachedStr);
 				error_log("Uncached: " . $uncachedStr);
-				
-				//Z_Core::$MC->set($cacheKey, $uncached, 3600); // 1 hour for now
 			}
 		}
-		else {
-			/*Z_Core::$MC->set($cacheKey, $json, 10);
-			StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
-			StatsD::increment("memcached.items.itemToResponseJSON.miss");*/
+
+		if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)) {
+			Z_Core::$MC->set($cacheKey, $json, 86400);
+			if (!$cached) {
+				StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
+				StatsD::increment("memcached.items.itemToResponseJSON.miss");
+			}
 		}
-		
+
+		$json['library'] = Zotero_Libraries::toJSON($this->libraryID);
+
 		return $json;
 	}
 	
