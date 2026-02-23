@@ -78,6 +78,7 @@ class ItemsController extends ApiController {
 			}
 			
 			$allResults = ['results' => [], 'total' => 0];
+			$this->startTiming('search');
 			foreach ($groupedLibraryItems as $libraryID => $keys) {
 				if (!$this->permissions->canAccess($libraryID)) {
 					continue;
@@ -109,7 +110,10 @@ class ItemsController extends ApiController {
 				);
 				$allResults['total'] += $results['total'];
 			}
+			$this->endTiming('search');
+			$this->startTiming('response');
 			$this->generateMultiResponse($allResults);
+			$this->endTiming('response');
 			$this->end();
 		}
 		
@@ -385,12 +389,14 @@ class ItemsController extends ApiController {
 					$this->allowMethods(array('GET'));
 					
 					$title = "Top-Level Items";
+					$this->startTiming('search');
 					$results = Zotero_Items::search(
 						$this->objectLibraryID,
 						true,
 						$this->queryParams,
 						$this->permissions
 					);
+					$this->endTiming('search');
 				}
 				// Deleted items
 				else if ($this->subset == 'trash') {
@@ -399,12 +405,14 @@ class ItemsController extends ApiController {
 					$title = "Deleted Items";
 					$this->queryParams['includeTrashed'] = true;
 					$this->queryParams['trashedItemsOnly'] = true;
+					$this->startTiming('search');
 					$results = Zotero_Items::search(
 						$this->objectLibraryID,
 						false,
 						$this->queryParams,
 						$this->permissions
 					);
+					$this->endTiming('search');
 				}
 				else if ($this->subset == 'children') {
 					$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $this->objectKey);
@@ -431,8 +439,9 @@ class ItemsController extends ApiController {
 						}
 						
 						Zotero_DB::beginTransaction();
-						
+
 						$obj = $this->jsonDecode($this->body);
+						$this->startTiming('write');
 						$results = Zotero_Items::updateMultipleFromJSON(
 							$obj,
 							$this->queryParams,
@@ -442,7 +451,8 @@ class ItemsController extends ApiController {
 							$libraryTimestampChecked ? 0 : 1,
 							$item
 						);
-						
+						$this->endTiming('write');
+
 						Zotero_DB::commit();
 						
 						if ($cacheKey = $this->getWriteTokenCacheKey()) {
@@ -465,12 +475,14 @@ class ItemsController extends ApiController {
 						$this->responseCode = 201;
 						
 						$title = "Items";
+						$this->startTiming('search');
 						$results = Zotero_Items::search(
 							$this->objectLibraryID,
 							false,
 							$this->queryParams,
 							$this->permissions
 						);
+						$this->endTiming('search');
 					}
 					// Display items
 					else {
@@ -541,6 +553,7 @@ class ItemsController extends ApiController {
 								Zotero_DB::beginTransaction();
 							}
 							
+							$this->startTiming('write');
 							$results = Zotero_Items::updateMultipleFromJSON(
 								$obj,
 								$this->queryParams,
@@ -550,6 +563,7 @@ class ItemsController extends ApiController {
 								$libraryTimestampChecked ? 0 : 1,
 								null
 							);
+							$this->endTiming('write');
 							
 							if ($this->apiVersion < 2) {
 								Zotero_DB::commit();
@@ -570,12 +584,14 @@ class ItemsController extends ApiController {
 								$this->responseCode = 201;
 								
 								$title = "Items";
+								$this->startTiming('search');
 								$results = Zotero_Items::search(
 									$this->objectLibraryID,
 									false,
 									$this->queryParams,
 									$this->permissions
 								);
+								$this->endTiming('search');
 							}
 						}
 						
@@ -586,21 +602,25 @@ class ItemsController extends ApiController {
 					// Delete items
 					else if ($this->method == 'DELETE') {
 						Zotero_DB::beginTransaction();
+						$this->startTiming('write');
 						foreach ($this->queryParams['itemKey'] as $itemKey) {
 							Zotero_Items::delete($this->objectLibraryID, $itemKey);
 						}
+						$this->endTiming('write');
 						Zotero_DB::commit();
 						$this->e204();
 					}
 					// Display items
 					else {
 						$title = "Items";
+						$this->startTiming('search');
 						$results = Zotero_Items::search(
 							$this->objectLibraryID,
 							false,
 							$this->queryParams,
 							$this->permissions
 						);
+						$this->endTiming('search');
 					}
 				}
 			}
@@ -612,12 +632,14 @@ class ItemsController extends ApiController {
 				if ($itemKeys) {
 					$this->queryParams['itemKey'] = $itemKeys;
 				}
+				$this->startTiming('search');
 				$results = Zotero_Items::search(
 					$this->objectLibraryID,
 					$this->subset == 'top',
 					$this->queryParams,
 					$this->permissions
 				);
+				$this->endTiming('search');
 			}
 			
 			if ($this->queryParams['format'] == 'bib') {
@@ -627,7 +649,9 @@ class ItemsController extends ApiController {
 				}
 			}
 			
+			$this->startTiming('response');
 			$this->generateMultiResponse($results, $title);
+			$this->endTiming('response');
 		}
 		
 		$this->end();

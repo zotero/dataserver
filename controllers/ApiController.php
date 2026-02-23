@@ -30,7 +30,7 @@ class ApiController extends Controller {
 	protected $writeTokenCacheTime = 43200; // 12 hours
 	
 	private $profile = false;
-	private $timeLogThreshold = 5;
+	private $timeLogThreshold = 1;
 	
 	protected $apiVersion;
 	protected $method;
@@ -71,6 +71,7 @@ class ApiController extends Controller {
 	
 	private $startTime = false;
 	private $timeLogged = false;
+	private $timings = [];
 	
 	
 	public function init($extra) {
@@ -1306,8 +1307,26 @@ class ApiController extends Controller {
 	protected function currentRequestTime() {
 		return round(microtime(true) - $this->startTime, 2);
 	}
-	
-	
+
+
+	protected function startTiming($label) {
+		$this->timings['_start_' . $label] = microtime(true);
+	}
+
+
+	protected function endTiming($label) {
+		$startKey = '_start_' . $label;
+		if (isset($this->timings[$startKey])) {
+			$elapsed = microtime(true) - $this->timings[$startKey];
+			unset($this->timings[$startKey]);
+			if (!isset($this->timings[$label])) {
+				$this->timings[$label] = 0;
+			}
+			$this->timings[$label] += $elapsed;
+		}
+	}
+
+
 	protected function logRequestTime($point=false) {
 		if ($this->timeLogged) {
 			return;
@@ -1323,11 +1342,26 @@ class ApiController extends Controller {
 				$shardHostStr = " with shard host " . $shardInfo['shardHostID'];
 			}
 			
+			$timingStr = "";
+			$parts = [];
+			foreach ($this->timings as $label => $elapsed) {
+				// Skip internal start markers
+				if (str_starts_with($label, '_start_')) continue;
+				$parts[] = "$label=" . round($elapsed * 1000) . "ms";
+			}
+			if (Z_Core::$MC) {
+				$parts[] = "mc=" . round(Z_Core::$MC->requestTime * 1000) . "ms";
+			}
+			if ($parts) {
+				$timingStr = " [" . implode(" ", $parts) . "]";
+			}
+
 			error_log(
 				"Slow API request" . ($point ? " at point " . $point : "")
 				. $shardHostStr . ": "
 				. $time . " sec for "
 				. $_SERVER['REQUEST_METHOD'] . " " . Z_Core::getCleanRequestURI()
+				. $timingStr
 			);
 		}
 	}
@@ -1449,6 +1483,11 @@ class ApiController extends Controller {
 			error_log("WARNING: " . $e);
 		}
 		
+		foreach ($this->timings as $label => $elapsed) {
+			if (str_starts_with($label, '_start_')) continue;
+			StatsD::timing("api.request.phase.$label", $elapsed * 1000, 0.25);
+		}
+
 		StatsD::timing("api.memcached", Z_Core::$MC->requestTime * 1000, 0.25);
 		StatsD::timing("api.request.total", (microtime(true) - $this->startTime) * 1000, 0.25);
 	}

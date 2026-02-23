@@ -124,7 +124,9 @@ class CollectionsController extends ApiController {
 					$this->allowMethods(array('GET'));
 					
 					$title = "Top-Level Collections";
+					$this->startTiming('search');
 					$results = Zotero_Collections::search($this->objectLibraryID, true, $this->queryParams);
+					$this->endTiming('search');
 				}
 				else {
 					// Create a collection
@@ -168,7 +170,9 @@ class CollectionsController extends ApiController {
 							);
 							
 							$title = "Collections";
+							$this->startTiming('search');
 							$results = Zotero_Collections::search($this->objectLibraryID, false, $this->queryParams);
+							$this->endTiming('search');
 						}
 					}
 					// Delete collections
@@ -183,16 +187,21 @@ class CollectionsController extends ApiController {
 					// Display collections
 					else {
 						$title = "Collections";
+						$this->startTiming('search');
 						$results = Zotero_Collections::search($this->objectLibraryID, false, $this->queryParams);
+						$this->endTiming('search');
 					}
 				}
 			}
 			
 			if ($collectionIDs) {
 				$this->queryParams['collectionIDs'] = $collectionIDs;
+				$this->startTiming('search');
 				$results = Zotero_Collections::search($this->objectLibraryID, false, $this->queryParams);
+				$this->endTiming('search');
 			}
-			
+
+			$this->startTiming('response');
 			$options = [
 				'action' => $this->action,
 				'uri' => $this->uri,
@@ -228,6 +237,7 @@ class CollectionsController extends ApiController {
 			default:
 				throw new Exception("Unexpected format '" . $this->queryParams['format'] . "'");
 			}
+			$this->endTiming('response');
 		}
 		
 		$this->end();

@@ -236,6 +236,7 @@ class GroupsController extends ApiController {
 				$this->e503();
 			}
 			
+			$this->startTiming('search');
 			try {
 				$results = Zotero_Groups::getAllAdvanced($this->objectUserID, $this->queryParams, $this->permissions);
 			}
@@ -246,7 +247,8 @@ class GroupsController extends ApiController {
 				}
 				throw ($e);
 			}
-			
+			$this->endTiming('search');
+
 			$options = [
 				'action' => $this->action,
 				'uri' => $this->uri,
@@ -255,17 +257,18 @@ class GroupsController extends ApiController {
 				'permissions' => $this->permissions,
 				'head' => $this->method == 'HEAD'
 			];
+			$this->startTiming('response');
 			switch ($this->queryParams['format']) {
 				case 'atom':
 					$this->responseXML = Zotero_API::multiResponse(array_merge($options, [
 						'title' => $title
 					]));
 					break;
-				
+
 				case 'json':
 					Zotero_API::multiResponse($options);
 					break;
-				
+
 				case 'etags':
 				case 'versions':
 					$prop = substr($this->queryParams['format'], 0, -1); // remove 's'
@@ -276,10 +279,11 @@ class GroupsController extends ApiController {
 					$options['results']['results'] = $newResults;
 					Zotero_API::multiResponse($options, 'versions');
 					break;
-				
+
 				default:
 					throw new Exception("Unexpected format '" . $this->queryParams['format'] . "'");
 			}
+			$this->endTiming('response');
 		}
 		
 		$this->end();

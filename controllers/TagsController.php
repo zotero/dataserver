@@ -110,30 +110,36 @@ class TagsController extends ApiController {
 						];
 					}
 					else if ($this->subset == 'top') {
+						$this->startTiming('search');
 						$itemResults = Zotero_Items::search(
 							$this->objectLibraryID,
 							true,
 							$itemParams,
 							$this->permissions
 						);
+						$this->endTiming('search');
 					}
 					else if ($this->subset == 'trash') {
 						$itemParams['includeTrashed'] = true;
 						$itemParams['trashedItemsOnly'] = true;
+						$this->startTiming('search');
 						$itemResults = Zotero_Items::search(
 							$this->objectLibraryID,
 							false,
 							$itemParams,
 							$this->permissions
 						);
+						$this->endTiming('search');
 					}
 					else {
+						$this->startTiming('search');
 						$itemResults = Zotero_Items::search(
 							$this->objectLibraryID,
 							false,
 							$itemParams,
 							$this->permissions
 						);
+						$this->endTiming('search');
 					}
 					
 					$title = "Tags Within Items";
@@ -141,7 +147,9 @@ class TagsController extends ApiController {
 					if ($itemResults['total']) {
 						$tagParams = $this->queryParams;
 						$tagParams['itemIDs'] = $itemResults['results'];
+						$this->startTiming('search');
 						$results = Zotero_Tags::search($this->objectLibraryID, $tagParams);
+						$this->endTiming('search');
 					}
 				}
 				// Tags within a collection or item
@@ -199,16 +207,22 @@ class TagsController extends ApiController {
 			}
 			else {
 				$title = "Tags";
+				$this->startTiming('search');
 				$results = Zotero_Tags::search($this->objectLibraryID, $this->queryParams);
+				$this->endTiming('search');
 			}
 		}
 		
 		if ($tagIDs) {
 			$this->queryParams['tagIDs'] = $tagIDs;
+			$this->startTiming('search');
 			$results = Zotero_Tags::search($this->objectLibraryID, $this->queryParams);
+			$this->endTiming('search');
 		}
-		
+
+		$this->startTiming('response');
 		$this->generateMultiResponse($results, $title, $fixedValues);
+		$this->endTiming('response');
 		$this->end();
 	}
 	
