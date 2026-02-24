@@ -826,6 +826,9 @@ class ItemsController extends ApiController {
 					$attachmentProxy = in_array($country, $proxiedCountries);
 				}
 			}
+			catch (\GeoIp2\Exception\AddressNotFoundException $e) {
+				Z_Core::logError("IP address $ip not in GeoIP database");
+			}
 			catch (Exception $e) {
 				Z_Core::logError($e);
 			}
@@ -1072,6 +1075,9 @@ class ItemsController extends ApiController {
 							$proxiedCountries = ['CN'];
 							$attachmentProxy = in_array($country, $proxiedCountries);
 						}
+					}
+					catch (\GeoIp2\Exception\AddressNotFoundException $e) {
+						Z_Core::logError("IP address $ip not in GeoIP database");
 					}
 					catch (Exception $e) {
 						Z_Core::logError($e);
