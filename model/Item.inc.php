@@ -288,7 +288,8 @@ class Zotero_Item extends Zotero_DataObject {
 			$this->loadItemData();
 		}
 		
-		$value = $this->itemData[$fieldID] !== false ? $this->itemData[$fieldID] : '';
+		$value = ($this->itemData[$fieldID] !== false && $this->itemData[$fieldID] !== null)
+			? $this->itemData[$fieldID] : '';
 		
         if (!$unformatted) {
 			// Multipart date fields
