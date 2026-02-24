@@ -4193,11 +4193,12 @@ class Zotero_Item extends Zotero_DataObject {
 			'style',
 			'css',
 			'linkwrap',
-			'publications'
+			'publications',
+			'schemaVersion'
 		];
 		$cachedParams = Z_Array::filterKeys($requestParams, $allowedParams);
-		
-		$cacheVersion = 1;
+
+		$cacheVersion = 2;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
