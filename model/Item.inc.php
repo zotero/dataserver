@@ -4228,12 +4228,7 @@ class Zotero_Item extends Zotero_DataObject {
 				? "_" . Z_CONFIG::$CACHE_VERSION_BIB
 				: "");
 		
-		if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)) {
-			$cached = Z_Core::$MC->get($cacheKey);
-		}
-		else {
-			$cached = false;
-		}
+		$cached = Z_Core::$MC->get($cacheKey);
 		if ($cached) {
 			if ($isRegularItem
 					|| $this->isNote()
@@ -4264,6 +4259,14 @@ class Zotero_Item extends Zotero_DataObject {
 
 			StatsD::timing("api.items.itemToResponseJSON.cached", (microtime(true) - $t) * 1000);
 			StatsD::increment("memcached.items.itemToResponseJSON.hit");
+
+			// When serving from cache, return early unless we're doing a periodic comparison
+			if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)
+					&& !Z_Core::probability(10)) {
+				// Keep in sync with 'library' assignment below
+				$cached['library'] = Zotero_Libraries::toJSON($this->libraryID);
+				return $cached;
+			}
 		}
 		
 		
@@ -4437,7 +4440,7 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		
-		// TEMP: Compare cached vs fresh to validate cache correctness
+		// Compare cached vs fresh to validate cache correctness
 		if ($cached) {
 			$cachedStr = Zotero_Utilities::formatJSON($cached);
 			$uncachedStr = Zotero_Utilities::formatJSON($json);
@@ -4469,14 +4472,13 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 
-		if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)) {
-			Z_Core::$MC->set($cacheKey, $json, 86400);
-			if (!$cached) {
-				StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
-				StatsD::increment("memcached.items.itemToResponseJSON.miss");
-			}
+		Z_Core::$MC->set($cacheKey, $json, 86400);
+		if (!$cached) {
+			StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
+			StatsD::increment("memcached.items.itemToResponseJSON.miss");
 		}
 
+		// Keep in sync with 'library' assignment in early return above
 		$json['library'] = Zotero_Libraries::toJSON($this->libraryID);
 
 		return $json;
