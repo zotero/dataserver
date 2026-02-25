@@ -4201,7 +4201,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$requestParams['schemaVersion'] ?? null
 		);
 
-		$cacheVersion = 4;
+		$cacheVersion = 5;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
@@ -4239,6 +4239,27 @@ class Zotero_Item extends Zotero_DataObject {
 					|| $this->isNote()
 					|| $this->isPDFAttachment()) {
 				$cached['meta']->numChildren = $numChildren;
+			}
+
+			// Relations are bidirectional -- adding a relation to item B makes it
+			// visible on item A without bumping A's version -- so always refresh
+			if (isset($cached['data']['relations'])) {
+				$cached['data']['relations'] = $this->getRelations();
+			}
+
+			// Update mutable user profile data (username, name) on cached copy,
+			// while preserving IDs for mismatch detection
+			if (!empty($cached['meta']->createdByUser)) {
+				$freshUser = Zotero_Users::toJSON($cached['meta']->createdByUser['id']);
+				$cached['meta']->createdByUser['username'] = $freshUser['username'];
+				$cached['meta']->createdByUser['name'] = $freshUser['name'];
+				$cached['meta']->createdByUser['links'] = $freshUser['links'];
+			}
+			if (!empty($cached['meta']->lastModifiedByUser)) {
+				$freshUser = Zotero_Users::toJSON($cached['meta']->lastModifiedByUser['id']);
+				$cached['meta']->lastModifiedByUser['username'] = $freshUser['username'];
+				$cached['meta']->lastModifiedByUser['name'] = $freshUser['name'];
+				$cached['meta']->lastModifiedByUser['links'] = $freshUser['links'];
 			}
 
 			StatsD::timing("api.items.itemToResponseJSON.cached", (microtime(true) - $t) * 1000);
