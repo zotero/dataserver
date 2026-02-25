@@ -4811,7 +4811,16 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$itemTypeFields = Zotero_ItemFields::getItemTypeFields($this->itemTypeID);
-		
+
+		// Initialize fields in schema order so that field ordering in toJSON() is consistent
+		// regardless of whether data was loaded from DB (fieldID order) or set during a write
+		// (schema order from setType())
+		if ($itemTypeFields) {
+			foreach ($itemTypeFields as $fieldID) {
+				$this->itemData[$fieldID] = null;
+			}
+		}
+
 		if ($fields) {
 			foreach ($fields as $field) {
 				$this->setField($field['fieldID'], $field['value'], true, true);
