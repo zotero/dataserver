@@ -4442,9 +4442,30 @@ class Zotero_Item extends Zotero_DataObject {
 			$cachedStr = Zotero_Utilities::formatJSON($cached);
 			$uncachedStr = Zotero_Utilities::formatJSON($json);
 			if ($cachedStr != $uncachedStr) {
-				error_log("Cached JSON item entry does not match");
-				error_log("  Cached: " . $cachedStr);
-				error_log("Uncached: " . $uncachedStr);
+				error_log("Cached JSON item entry does not match for "
+					. $this->libraryID . "/" . $this->key);
+				// Find first differing line
+				$cachedLines = explode("\n", $cachedStr);
+				$uncachedLines = explode("\n", $uncachedStr);
+				$maxLines = max(count($cachedLines), count($uncachedLines));
+				for ($i = 0; $i < $maxLines; $i++) {
+					$cl = $cachedLines[$i] ?? '<missing>';
+					$ul = $uncachedLines[$i] ?? '<missing>';
+					if ($cl !== $ul) {
+						error_log("  First diff at line $i:");
+						error_log("    Cached:   " . $cl);
+						error_log("    Uncached: " . $ul);
+						// Show a few more lines of context
+						for ($j = $i + 1; $j < min($i + 4, $maxLines); $j++) {
+							$cl2 = $cachedLines[$j] ?? '<missing>';
+							$ul2 = $uncachedLines[$j] ?? '<missing>';
+							$marker = ($cl2 !== $ul2) ? '!' : ' ';
+							error_log("   $marker Cached:   " . $cl2);
+							error_log("   $marker Uncached: " . $ul2);
+						}
+						break;
+					}
+				}
 			}
 		}
 
