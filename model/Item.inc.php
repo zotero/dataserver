@@ -4195,11 +4195,13 @@ class Zotero_Item extends Zotero_DataObject {
 			'css',
 			'linkwrap',
 			'publications',
-			'schemaVersion'
 		];
 		$cachedParams = Z_Array::filterKeys($requestParams, $allowedParams);
+		$effectiveSchemaVersion = \Zotero\Schema::getEffectiveVersion(
+			$requestParams['schemaVersion'] ?? null
+		);
 
-		$cacheVersion = 2;
+		$cacheVersion = 4;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
@@ -4210,6 +4212,10 @@ class Zotero_Item extends Zotero_DataObject {
 				. ($libraryType == 'group' ? Zotero_URI::getItemURI($this, true) : '')
 			)
 			. "_" . $requestParams['v']
+			// For schema changes (new/reordered fields)
+			. "_" . \Zotero\Schema::getVersion()
+			// For client-requested schema version (field visibility)
+			. "_" . $effectiveSchemaVersion
 			// For code-based changes
 			. "_" . $cacheVersion
 			// For data-based changes
