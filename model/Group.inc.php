@@ -313,7 +313,8 @@ class Zotero_Group {
 		
 		// Clear cache
 		unset($this->userData[$userID]);
-		
+		Z_Core::$MC->delete("groupData_" . $this->id);
+
 		// Delete any record of this user losing access to the group
 		if ($added) {
 			$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
@@ -368,7 +369,8 @@ class Zotero_Group {
 		
 		// Clear cache
 		unset($this->userData[$userID]);
-		
+		Z_Core::$MC->delete("groupData_" . $this->id);
+
 		Zotero_DB::commit();
 		
 		return $updated;
@@ -403,7 +405,8 @@ class Zotero_Group {
 		
 		// Clear cache
 		unset($this->userData[$userID]);
-		
+		Z_Core::$MC->delete("groupData_" . $this->id);
+
 		// A group user removal is logged as a deletion of the group from the user's personal library
 		$sql = "REPLACE INTO syncDeleteLogIDs (libraryID, objectType, id) VALUES (?, 'group', ?)";
 		$libraryID = Zotero_Users::getLibraryIDFromUserID($userID);
@@ -649,7 +652,8 @@ class Zotero_Group {
 		}
 		
 		Zotero_DB::commit();
-		
+
+		Z_Core::$MC->delete("groupData_" . $this->id);
 		$this->load();
 		
 		return $libraryID;
@@ -711,7 +715,8 @@ class Zotero_Group {
 		);
 		
 		Zotero_DB::commit();
-		
+
+		Z_Core::$MC->delete("groupData_" . $this->id);
 		$this->erased = true;
 	}
 	
@@ -1119,12 +1124,24 @@ class Zotero_Group {
 	
 	
 	private function load() {
+		$cacheKey = "groupData_" . $this->id;
+		$cached = Z_Core::$MC->get($cacheKey);
+		if ($cached) {
+			foreach ($cached as $field => $value) {
+				$this->$field = $value;
+			}
+			$this->loaded = true;
+			$this->changed = [];
+			return;
+		}
+
 		$sql = "SELECT * FROM `groups` WHERE groupID=?";
 		$row = Zotero_DB::rowQuery($sql, $this->id);
 		if (!$row) {
 			return false;
 		}
-		
+
+		$cacheData = [];
 		foreach ($row as $field=>$value) {
 			switch ($field) {
 				case 'groupID':
@@ -1133,6 +1150,7 @@ class Zotero_Group {
 			}
 			
 			$this->$field = $value;
+			$cacheData[$field] = $value;
 		}
 		
 		$sql = "SELECT userID FROM groupUsers WHERE groupID=? AND role='owner'";
@@ -1141,9 +1159,12 @@ class Zotero_Group {
 			throw new Exception("Group $this->id doesn't have an owner");
 		}
 		$this->ownerUserID = $userID;
-		
+		$cacheData['ownerUserID'] = $userID;
+
 		$this->loaded = true;
-		$this->changed = array();
+		$this->changed = [];
+
+		Z_Core::$MC->set($cacheKey, $cacheData, 600);
 	}
 	
 	
