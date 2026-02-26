@@ -876,8 +876,32 @@ class Zotero_Item extends Zotero_DataObject {
 	public function isAnnotation() {
 		return Zotero_ItemTypes::getName($this->getField('itemTypeID')) == 'annotation';
 	}
-	
-	
+
+
+	/**
+	 * Check if this annotation needs an invalidProp warning for unsupported clients
+	 */
+	private function needsInvalidProp($schemaVersion) {
+		if (!$this->isAnnotation() || !$schemaVersion || $schemaVersion >= 29) {
+			return false;
+		}
+		// New annotation types
+		if (in_array($this->annotationType, ['underline', 'text'])) {
+			return true;
+		}
+		$parent = $this->getSource();
+		$parentItem = Zotero_Items::get($this->_libraryID, $parent);
+		if (!$parentItem) {
+			throw new Exception("Parent item $this->_libraryID/$parent not found");
+		}
+		// Annotations on EPUBs or snapshots
+		return in_array(
+			$parentItem->attachmentContentType,
+			['application/epub+zip', 'text/html']
+		);
+	}
+
+
 	private function getCreatorSummary() {
 		if ($this->creatorSummary !== null) {
 			return $this->creatorSummary;
@@ -4248,6 +4272,12 @@ class Zotero_Item extends Zotero_DataObject {
 				$cached['data']['relations'] = $this->getRelations();
 			}
 
+			// invalidProp is excluded from the cache since it depends on the raw
+			// schemaVersion, not effectiveSchemaVersion
+			if ($this->needsInvalidProp($requestParams['schemaVersion'])) {
+				$cached['data']['invalidProp'] = 1;
+			}
+
 			// Username can change without item version bumping, so refresh
 			// the alternate link
 			if (isset($cached['links']['alternate'])) {
@@ -4452,10 +4482,13 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		
-		// Compare cached vs fresh to validate cache correctness
+		// Compare cached vs fresh to validate cache correctness.
+		// Strip invalidProp from fresh copy before comparing, since it's excluded from the cache.
 		if ($cached) {
+			$uncachedCmp = $json;
+			unset($uncachedCmp['data']['invalidProp']);
 			$cachedStr = Zotero_Utilities::formatJSON($cached);
-			$uncachedStr = Zotero_Utilities::formatJSON($json);
+			$uncachedStr = Zotero_Utilities::formatJSON($uncachedCmp);
 			if ($cachedStr != $uncachedStr) {
 				error_log("Cached JSON item entry does not match for "
 					. $this->libraryID . "/" . $this->key);
@@ -4484,10 +4517,19 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 
+		// Strip invalidProp before caching -- it depends on the raw schemaVersion,
+		// which isn't part of the cache key
+		$hadInvalidProp = isset($json['data']['invalidProp']);
+		unset($json['data']['invalidProp']);
+
 		Z_Core::$MC->set($cacheKey, $json, 86400);
 		if (!$cached) {
 			StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
 			StatsD::increment("memcached.items.itemToResponseJSON.miss");
+		}
+
+		if ($hadInvalidProp) {
+			$json['data']['invalidProp'] = 1;
 		}
 
 		// Keep in sync with 'library' assignment in early return above
@@ -4681,27 +4723,10 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		if ($this->isAnnotation()) {
-			// Trigger upgrade warning for reader2 annotations in unsupported clients
-			if ($schemaVersion && $schemaVersion < 29) {
-				// New annotation types
-				$block = in_array($this->annotationType, ['underline', 'text']);
-				if (!$block) {
-					$parent = $this->getSource();
-					$parentItem = Zotero_Items::get($this->_libraryID, $parent);
-					if (!$parentItem) {
-						throw new Exception("Parent item $this->_libraryID/$parent not found");
-					}
-					// Annotations on EPUBs or snapshots
-					$block = in_array(
-						$parentItem->attachmentContentType,
-						['application/epub+zip', 'text/html']
-					);
-				}
-				if ($block) {
-					$arr['invalidProp'] = 1;
-				}
+			if ($this->needsInvalidProp($schemaVersion)) {
+				$arr['invalidProp'] = 1;
 			}
-			
+
 			$props = ['type', 'authorName', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
 			foreach ($props as $prop) {
 				if ($prop == 'authorName' && $this->annotationAuthorName === '') {
