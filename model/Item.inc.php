@@ -4248,6 +4248,12 @@ class Zotero_Item extends Zotero_DataObject {
 				$cached['data']['relations'] = $this->getRelations();
 			}
 
+			// Username can change without item version bumping, so refresh
+			// the alternate link
+			if (isset($cached['links']['alternate'])) {
+				$cached['links']['alternate']['href'] = Zotero_URI::getItemURI($this, true);
+			}
+
 			// Update mutable user profile data (username, name) on cached copy,
 			// while preserving IDs for mismatch detection
 			if (!empty($cached['meta']->createdByUser)) {
