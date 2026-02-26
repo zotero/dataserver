@@ -4236,6 +4236,12 @@ class Zotero_Item extends Zotero_DataObject {
 				$cached['meta']->numChildren = $numChildren;
 			}
 
+			// Deleting a collection removes items from it without bumping their
+			// versions, so always refresh
+			if (isset($cached['data']['collections'])) {
+				$cached['data']['collections'] = $this->getCollections(true);
+			}
+
 			// Relations are bidirectional -- adding a relation to item B makes it
 			// visible on item A without bumping A's version -- so always refresh
 			if (isset($cached['data']['relations'])) {
