@@ -4483,11 +4483,14 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		// Compare cached vs fresh to validate cache correctness.
-		// Strip invalidProp from fresh copy before comparing, since it's excluded from the cache.
 		if ($cached) {
+			$cachedCmp = $cached;
 			$uncachedCmp = $json;
+			// Strip invalidProp from both copies before comparing, since it's excluded from the
+			// cache and re-added on cache hit.
+			unset($cachedCmp['data']['invalidProp']);
 			unset($uncachedCmp['data']['invalidProp']);
-			$cachedStr = Zotero_Utilities::formatJSON($cached);
+			$cachedStr = Zotero_Utilities::formatJSON($cachedCmp);
 			$uncachedStr = Zotero_Utilities::formatJSON($uncachedCmp);
 			if ($cachedStr != $uncachedStr) {
 				error_log("Cached JSON item entry does not match for "
