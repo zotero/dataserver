@@ -562,7 +562,12 @@ class Zotero_Key {
 		if (Z_Core::$MC->get($cacheKey)) {
 			return;
 		}
-		
+
+		// Set cache key before the DB write so that rate-limiting still works even if the
+		// write fails or times out -- otherwise failed writes cause every subsequent request
+		// to retry immediately, flooding the master
+		Z_Core::$MC->set($cacheKey, "1", 600);
+
 		try {
 			if ($ip) {
 				$sql = "INSERT INTO keyAccessLog (keyID, ipAddress) VALUES (?, INET_ATON(?)) "
@@ -576,8 +581,6 @@ class Zotero_Key {
 		catch (Exception $e) {
 			error_log("WARNING: " . $e);
 		}
-		
-		Z_Core::$MC->set($cacheKey, "1", 600);
 	}
 	
 	
