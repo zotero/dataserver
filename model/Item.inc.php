@@ -4217,6 +4217,7 @@ class Zotero_Item extends Zotero_DataObject {
 			'include',
 			'style',
 			'css',
+			'locale',
 			'linkwrap',
 			'publications',
 		];
