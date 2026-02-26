@@ -238,7 +238,9 @@ class Zotero_ItemFields {
 	
 	
 	private static function cacheItemTypeFields(int $schemaVersion, int $itemTypeID, array $itemTypeFieldIDs) {
-		self::$itemTypeFieldsCache[$itemTypeID] = $itemTypeFieldIDs;
+		// Don't write to $itemTypeFieldsCache here -- it's used by getItemTypeFields() for field
+		// ordering (via DB orderIndex), and this method can be called with an old schema version
+		// that has a different field order.
 		self::$isValidForTypeCache[$schemaVersion][$itemTypeID] = [];
 		foreach ($itemTypeFieldIDs as $fieldID) {
 			self::$isValidForTypeCache[$schemaVersion][$itemTypeID][$fieldID] = true;
