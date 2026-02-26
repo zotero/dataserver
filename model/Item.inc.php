@@ -3527,7 +3527,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$sql = "SELECT $field FROM itemAnnotations WHERE itemID=?";
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 		$value = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-		if (!$value) {
+		if ($value === false) {
 			$value = '';
 		}
 		
