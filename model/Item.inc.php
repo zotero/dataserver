@@ -4201,7 +4201,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$requestParams['schemaVersion'] ?? null
 		);
 
-		$cacheVersion = 5;
+		$cacheVersion = 7;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
@@ -4941,6 +4941,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$this->collections) {
 			$this->collections = [];
 		}
+		sort($this->collections);
 		$this->loaded['collections'] = true;
 		$this->clearChanged('collections');
 	}
