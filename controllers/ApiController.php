@@ -1175,6 +1175,9 @@ class ApiController extends Controller {
 			Zotero_DB::profileEnd($this->objectLibraryID, true, $this->uri);
 		}
 		
+		// Commit read snapshot started in header.inc.php for consistent reads on replicas
+		Zotero_DB::commitReadSnapshot();
+		
 		// If a transaction is still open, return a 500 (without logging a warning, since this is
 		// also checked in a shutdown handler)
 		if ($this->checkDBTransactionState(true)) {

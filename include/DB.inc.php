@@ -51,6 +51,8 @@ class Zotero_DB {
 	private $transactionTimestampUnix;
 	private $transactionConnections = [];
 	
+	private $readSnapshotActive = false;
+	private $readSnapshotConns = [];
 	private $testFailureCounts = [];
 	
 	private $callbacks = array(
@@ -102,7 +104,7 @@ class Zotero_DB {
 					array_shift($this->replicaConnections[$linkID]);
 				}
 				//error_log($this->replicaConnections[$linkID][0]->link->getConnection()->host_info);
-				return $this->replicaConnections[$linkID][0];
+				return $this->ensureReadSnapshot($this->replicaConnections[$linkID][0]);
 			}
 		}
 		// Read queries in read/write mode
@@ -218,7 +220,7 @@ class Zotero_DB {
 				}
 				
 				//error_log($this->replicaConnections[$linkID][0]->link->getConnection()->host_info);
-				return $this->replicaConnections[$linkID][0];
+				return $this->ensureReadSnapshot($this->replicaConnections[$linkID][0]);
 			}
 		}
 		
@@ -439,6 +441,65 @@ class Zotero_DB {
 	public static function transactionInProgress() {
 		$instance = self::getInstance();
 		return $instance->transactionLevel > 0;
+	}
+
+
+	/**
+	 * Start a read snapshot for consistent reads across all replica connections.
+	 *
+	 * Unlike beginTransaction(), this does not use the virtual transaction nesting counter.
+	 * It eagerly starts a real MySQL transaction on the master replica connection and lazily
+	 * starts transactions on shard replica connections as they're first used (via
+	 * ensureReadSnapshot()). This ensures all reads on each connection use the same MVCC
+	 * snapshot, preventing inconsistencies when a write commits between queries. Normal write
+	 * transactions via beginTransaction()/commit()/rollback() are unaffected.
+	 */
+	public static function beginReadSnapshot() {
+		$instance = self::getInstance();
+		if (!$instance->isReadOnly()) {
+			throw new Exception("beginReadSnapshot() requires read-only mode");
+		}
+		if ($instance->readSnapshotActive) {
+			throw new Exception("Read snapshot already active");
+		}
+		$instance->readSnapshotActive = true;
+		$instance->readSnapshotConns = [];
+	}
+
+
+	/**
+	 * If a read snapshot is active, start a transaction on the given connection if not already
+	 * started. Called from getShardConnection() before returning replica connections.
+	 */
+	private function ensureReadSnapshot($conn) {
+		if ($this->readSnapshotActive && empty($conn->readSnapshotStarted)) {
+			$conn->link->beginTransaction();
+			$conn->readSnapshotStarted = true;
+			$this->readSnapshotConns[] = $conn;
+		}
+		return $conn;
+	}
+
+
+	/**
+	 * Commit (close) the read snapshot started by beginReadSnapshot()
+	 */
+	public static function commitReadSnapshot() {
+		$instance = self::getInstance();
+		if (!$instance->readSnapshotActive) {
+			return;
+		}
+		foreach ($instance->readSnapshotConns as $conn) {
+			try {
+				$conn->link->commit();
+			}
+			catch (Exception $e) {
+				// Connection may have been closed
+			}
+			$conn->readSnapshotStarted = false;
+		}
+		$instance->readSnapshotConns = [];
+		$instance->readSnapshotActive = false;
 	}
 	
 	
@@ -1394,6 +1455,7 @@ class Zotero_DB_Connection {
 	public $link;
 	public $statements = [];
 	public $transactionStarted = false;
+	public $readSnapshotStarted = false;
 }
 
 
