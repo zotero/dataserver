@@ -4505,6 +4505,10 @@ class Zotero_Item extends Zotero_DataObject {
 					$ul = $uncachedLines[$i] ?? '<missing>';
 					if ($cl !== $ul) {
 						error_log("  First diff at line $i:");
+						// Show a few lines before the diff for context
+						for ($j = max(0, $i - 3); $j < $i; $j++) {
+							error_log("     Before:  " . $cachedLines[$j]);
+						}
 						error_log("    Cached:   " . $cl);
 						error_log("    Uncached: " . $ul);
 						// Show a few more lines of context
