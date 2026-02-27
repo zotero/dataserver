@@ -51,7 +51,7 @@ class Zotero_Users {
 		$cacheKey = 'user' . ucwords($libraryType) . 'LibraryID_' . $userID . '_1';
 		$libraryID = Z_Core::$MC->get($cacheKey);
 		if ($libraryID) {
-			self::$userLibraryIDs[$libraryType][$libraryID] = $libraryID;
+			self::$userLibraryIDs[$libraryType][$userID] = $libraryID;
 			return $libraryID;
 		}
 		switch ($libraryType) {
