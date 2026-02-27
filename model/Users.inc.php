@@ -47,7 +47,8 @@ class Zotero_Users {
 		if (isset(self::$userLibraryIDs[$libraryType][$userID])) {
 			return self::$userLibraryIDs[$libraryType][$userID];
 		}
-		$cacheKey = 'user' . ucwords($libraryType) . 'LibraryID_' . $userID;
+		// TEMP: Cache version to invalidate stale entries from rolled-back transactions
+		$cacheKey = 'user' . ucwords($libraryType) . 'LibraryID_' . $userID . '_1';
 		$libraryID = Z_Core::$MC->get($cacheKey);
 		if ($libraryID) {
 			self::$userLibraryIDs[$libraryType][$libraryID] = $libraryID;

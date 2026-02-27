@@ -599,7 +599,7 @@ class ApiController extends Controller {
 				$sql = "DELETE FROM libraries WHERE libraryID=?";
 				Zotero_DB::query($sql, $publicationsLibraryID);
 				
-				Z_Core::$MC->delete('userPublicationsLibraryID_' . $userID);
+				Z_Core::$MC->delete('userPublicationsLibraryID_' . $userID . '_1');
 				Z_Core::$MC->delete('libraryUserID_' . $publicationsLibraryID);
 			}
 			Zotero_DB::commit();
