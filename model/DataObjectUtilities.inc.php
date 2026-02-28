@@ -32,7 +32,7 @@ abstract class DataObjectUtilities {
 	
 	public static function getTypeFromObject($object) {
 		if (!preg_match("/(Item|Collection|Search|Setting)$/", get_class($object), $matches)) {
-			throw new Exception("Invalid object type");
+			throw new \Exception("Invalid object type");
 		}
 		return strtolower($matches[0]);
 	}
@@ -48,7 +48,7 @@ abstract class DataObjectUtilities {
 	
 	public static function checkID($dataID) {
 		if (!is_int($dataID) || $dataID <= 0) {
-			throw new Exception("id must be a positive integer");
+			throw new \Exception("id must be a positive integer");
 		}
 		return $dataID;
 	}
@@ -56,7 +56,7 @@ abstract class DataObjectUtilities {
 	
 	public static function checkKey($key) {
 		if (!$key) return null;
-		if (!self::isValidKey($key)) throw new Exception("key is not valid");
+		if (!self::isValidKey($key)) throw new \Exception("key is not valid");
 		return $key;
 	}
 	
