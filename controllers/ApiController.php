@@ -131,7 +131,7 @@ class ApiController extends Controller {
 			header("Access-Control-Allow-Origin: *");
 			header("Access-Control-Allow-Methods: HEAD, GET, POST, PUT, PATCH, DELETE");
 			header("Access-Control-Allow-Headers: Authorization, Content-Type, If-Match, If-None-Match, If-Modified-Since-Version, If-Unmodified-Since-Version, Zotero-API-Key, Zotero-API-Version, Zotero-Schema-Version, Zotero-Write-Token");
-			header("Access-Control-Expose-Headers: Backoff, ETag, Last-Modified-Version, Link, Retry-After, Total-Results, Zotero-API-Version");
+			header("Access-Control-Expose-Headers: Backoff, ETag, Last-Modified-Version, Link, Retry-After, Total-Results, Zotero-API-Version, Zotero-TTS-Standard-Credits-Remaining, Zotero-TTS-Premium-Credits-Remaining, Zotero-TTS-Dev");
 		}
 		
 		if (isset($_SERVER['HTTP_CONTINUED'])) {
@@ -1228,6 +1228,7 @@ class ApiController extends Controller {
 			case 300:
 			case 304:
 			case 400:
+			case 402:
 			case 403:
 			case 404:
 			case 405:

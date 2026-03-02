@@ -118,6 +118,13 @@ $router->map('/itemTypeCreatorTypes', array('controller' => 'Mappings', 'extra' 
 $router->map('/creatorFields', array('controller' => 'Mappings', 'extra' => array('subset' => 'creatorFields')));
 $router->map('/items/new', array('controller' => 'Mappings', 'action' => 'newItem'));
 
+// Text-to-Speech
+$router->map('/tts/voices', ['controller' => 'TTS', 'action' => 'voices']);
+$router->map('/tts/sample', ['controller' => 'TTS', 'action' => 'sample']);
+$router->map('/tts/speak', ['controller' => 'TTS', 'action' => 'speak']);
+$router->map('/tts/credits/add', ['controller' => 'TTS', 'action' => 'addCredits']);
+$router->map('/tts/credits', ['controller' => 'TTS', 'action' => 'credits']);
+
 // 4.0 sync warning
 $router->map('/login', ['controller' => 'Api', 'action' => 'noop']);
 

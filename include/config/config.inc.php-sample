@@ -65,6 +65,15 @@ class Z_CONFIG {
 	public static $ATTACHMENT_PROXY_URL = "https://files.example.com/";
 	public static $ATTACHMENT_PROXY_SECRET = "";
 	
+	public static $TTS_TABLE = "TTS";
+	public static $S3_BUCKET_TTS = 'tts-cache';
+	public static $TTS_AUDIO_DOMAIN = '';
+	public static $TTS_CREDIT_LIMITS = [
+		'standard' => ['free' => 240, 'personal' => 999999, 'institutional' => 999999],
+		'premium' => ['free' => 150, 'personal' => 3000, 'institutional' => 300],
+	];
+	public static $TTS_DAILY_LIMIT_MINUTES = 480; // 8 hours -- safety valve for runaway tabs
+
 	public static $STATSD_ENABLED = false;
 	public static $STATSD_PREFIX = "";
 	public static $STATSD_HOST = "monitor.localdomain";

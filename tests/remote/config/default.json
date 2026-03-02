@@ -19,5 +19,7 @@
 	"userID2": 0,
 	"username2": "phpunit2",
 	"displayName2": "Real Name 2",
-	"password2": ""
+	"password2": "",
+
+	"ttsTestKey": ""
 }
