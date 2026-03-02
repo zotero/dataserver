@@ -259,8 +259,18 @@ class ApiController extends Controller {
 				}
 			}
 			if ($key) {
+				$maxKeyAuthFailures = 5;
+				$keyAuthFailureWindow = 300;
+				$ip = IPAddress::getIP();
+				$failCacheKey = "keyAuthFailures_" . $ip;
+				if (Z_Core::$MC->get($failCacheKey) > $maxKeyAuthFailures) {
+					$this->e429("Too many authentication failures");
+				}
+
 				$keyObj = Zotero_Keys::authenticate($key);
 				if (!$keyObj) {
+					Z_Core::$MC->add($failCacheKey, 0, $keyAuthFailureWindow);
+					Z_Core::$MC->increment($failCacheKey);
 					$this->e403('Invalid key');
 				}
 				$this->apiKey = $key;
