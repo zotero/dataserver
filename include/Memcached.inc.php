@@ -233,7 +233,7 @@ class Z_MemcachedClientLocal {
 			return false;
 		}
 		$t = microtime(true);
-		$retVal = $this->client->increment($key, $value);
+		$retVal = $this->client->decrement($key, $value);
 		$this->requestTime += microtime(true) - $t;
 		return $retVal;
 	}
