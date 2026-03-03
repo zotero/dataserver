@@ -247,6 +247,9 @@ class TTSController extends ApiController {
 		}
 		$synthesisMS = (hrtime(true) - $synthesisStart) / 1e6;
 
+		// Emit synthesis latency to CloudWatch for percentile analysis
+		$this->emitSynthesisLatency($resolved['provider'], $synthesisMS, mb_strlen($text));
+
 		// If the provider returned empty audio (e.g., unspeakable input like punctuation),
 		// substitute a minimal valid silent audio file so clients can play it without errors
 		if (empty($result['audio'])) {
@@ -681,6 +684,46 @@ class TTSController extends ApiController {
 		$dailyMinutes = $this->getDailyMinutesRemaining($userID);
 		if ($estimatedMinutes > $dailyMinutes && !$this->testMode) {
 			$this->e402("daily_limit_exceeded");
+		}
+	}
+
+
+	private function emitSynthesisLatency(string $provider, float $latencyMS, int $textLength): void {
+		try {
+			$metricData = [
+				[
+					'MetricName' => 'SynthesisLatency',
+					'Value' => $latencyMS,
+					'Unit' => 'Milliseconds',
+					'Dimensions' => [
+						[
+							'Name' => 'Provider',
+							'Value' => $provider,
+						],
+					],
+				],
+			];
+			if ($textLength > 0) {
+				$metricData[] = [
+					'MetricName' => 'SynthesisLatencyPerChar',
+					'Value' => $latencyMS / $textLength,
+					'Unit' => 'Milliseconds',
+					'Dimensions' => [
+						[
+							'Name' => 'Provider',
+							'Value' => $provider,
+						],
+					],
+				];
+			}
+			$cw = Z_Core::$AWS->createCloudWatch();
+			$cw->putMetricData([
+				'Namespace' => 'Zotero/TTS',
+				'MetricData' => $metricData,
+			]);
+		}
+		catch (\Exception $e) {
+			error_log("Failed to emit TTS CloudWatch metric: " . $e->getMessage());
 		}
 	}
 
