@@ -288,8 +288,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$this->loadItemData();
 		}
 		
-		$value = ($this->itemData[$fieldID] !== false && $this->itemData[$fieldID] !== null)
-			? $this->itemData[$fieldID] : '';
+		$value = $this->itemData[$fieldID] !== false ? $this->itemData[$fieldID] : '';
 		
         if (!$unformatted) {
 			// Multipart date fields
@@ -323,12 +322,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$participants = array();
 			if ($creators) {
 				foreach ($creators as $creator) {
-					if (($itemTypeID == $itemTypeLetter && $creator->creatorTypeID == $creatorTypeRecipient) ||
-							($itemTypeID == $itemTypeInterview && $creator->creatorTypeID == $creatorTypeInterviewer)) {
+					if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeRecipient) ||
+							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewer)) {
 						$participants[] = $creator;
 					}
-					else if (($itemTypeID == $itemTypeLetter && $creator->creatorTypeID == $creatorTypeAuthor) ||
-							($itemTypeID == $itemTypeInterview && $creator->creatorTypeID == $creatorTypeInterviewee)) {
+					else if (($itemTypeID == $itemTypeLetter && $creator['creatorTypeID'] == $creatorTypeAuthor) ||
+							($itemTypeID == $itemTypeInterview && $creator['creatorTypeID'] == $creatorTypeInterviewee)) {
 						$authors[] = $creator;
 					}
 				}
@@ -339,7 +338,7 @@ class Zotero_Item extends Zotero_DataObject {
 			if ($includeAuthorAndDate) {
 				$names = array();
 				foreach($authors as $author) {
-					$names[] = $author->lastName;
+					$names[] = $author['ref']->lastName;
 				}
 				
 				// TODO: Use same logic as getFirstCreatorSQL() (including "et al.")
@@ -352,7 +351,7 @@ class Zotero_Item extends Zotero_DataObject {
 			if ($participants) {
 				$names = array();
 				foreach ($participants as $participant) {
-					$names[] = $participant->lastName;
+					$names[] = $participant['ref']->lastName;
 				}
 				switch (sizeOf($names)) {
 					case 1:
@@ -438,8 +437,8 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 				
 				$creators = $this->getCreators();
-				if ($creators && $creators[0]->creatorTypeID === $creatorTypeAuthor) {
-					$strParts[] = $creators[0]->lastName;
+				if ($creators && $creators[0]['creatorTypeID'] === $creatorTypeAuthor) {
+					$strParts[] = $creators[0]['ref']->lastName;
 				}
 				
 				$title = '[' . implode(', ', $strParts) . ']';
@@ -594,14 +593,14 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = $this->getCreators();
 			if ($creators) {
 				foreach ($creators as $orderIndex=>$creator) {
-					if (Zotero_CreatorTypes::isCustomType($creator->creatorTypeID)) {
+					if (Zotero_CreatorTypes::isCustomType($creator['creatorTypeID'])) {
 						continue;
 					}
-					if (!Zotero_CreatorTypes::isValidForItemType($creator->creatorTypeID, $itemTypeID)) {
+					if (!Zotero_CreatorTypes::isValidForItemType($creator['creatorTypeID'], $itemTypeID)) {
 						// TODO: port
 						
 						// Reset to contributor (creatorTypeID 2), which exists in all
-						$this->setCreator($orderIndex, $creator, 2);
+						$this->setCreator($orderIndex, $creator['ref'], 2);
 					}
 				}
 			}
@@ -854,18 +853,6 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function isEPUBAttachment() {
-		if (!$this->isFileAttachment()) return false;
-		return $this->attachmentContentType == 'application/epub+zip';
-	}
-	
-	
-	public function isHTMLAttachment() {
-		if (!$this->isFileAttachment()) return false;
-		return $this->attachmentContentType == 'text/html';
-	}
-	
-	
 	public function isEmbeddedImageAttachment() {
 		if (!$this->isAttachment()) return false;
 		$name = $this->attachmentLinkMode;
@@ -876,32 +863,8 @@ class Zotero_Item extends Zotero_DataObject {
 	public function isAnnotation() {
 		return Zotero_ItemTypes::getName($this->getField('itemTypeID')) == 'annotation';
 	}
-
-
-	/**
-	 * Check if this annotation needs an invalidProp warning for unsupported clients
-	 */
-	private function needsInvalidProp($schemaVersion) {
-		if (!$this->isAnnotation() || !$schemaVersion || $schemaVersion >= 29) {
-			return false;
-		}
-		// New annotation types
-		if (in_array($this->annotationType, ['underline', 'text'])) {
-			return true;
-		}
-		$parent = $this->getSource();
-		$parentItem = Zotero_Items::get($this->_libraryID, $parent);
-		if (!$parentItem) {
-			throw new Exception("Parent item $this->_libraryID/$parent not found");
-		}
-		// Annotations on EPUBs or snapshots
-		return in_array(
-			$parentItem->attachmentContentType,
-			['application/epub+zip', 'text/html']
-		);
-	}
-
-
+	
+	
 	private function getCreatorSummary() {
 		if ($this->creatorSummary !== null) {
 			return $this->creatorSummary;
@@ -925,7 +888,6 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$itemTypeID = $this->getField('itemTypeID');
-		
 		$creators = $this->getCreators();
 		
 		$creatorTypeIDsToTry = array(
@@ -944,7 +906,7 @@ class Zotero_Item extends Zotero_DataObject {
 		foreach ($creatorTypeIDsToTry as $creatorTypeID) {
 			$loc = array();
 			foreach ($creators as $orderIndex=>$creator) {
-				if ($creator->creatorTypeID == $creatorTypeID) {
+				if ($creator['creatorTypeID'] == $creatorTypeID) {
 					$loc[] = $orderIndex;
 					
 					if (sizeOf($loc) == 3) {
@@ -958,17 +920,17 @@ class Zotero_Item extends Zotero_DataObject {
 					continue 2;
 				
 				case 1:
-					$creatorSummary = $creators[$loc[0]]->lastName;
+					$creatorSummary = $creators[$loc[0]]['ref']->lastName;
 					break;
 				
 				case 2:
-					$creatorSummary = $creators[$loc[0]]->lastName
+					$creatorSummary = $creators[$loc[0]]['ref']->lastName
 							. $localizedAnd
-							. $creators[$loc[1]]->lastName;
+							. $creators[$loc[1]]['ref']->lastName;
 					break;
 				
 				case 3:
-					$creatorSummary = $creators[$loc[0]]->lastName . $etAl;
+					$creatorSummary = $creators[$loc[0]]['ref']->lastName . $etAl;
 					break;
 			}
 			
@@ -1260,14 +1222,63 @@ class Zotero_Item extends Zotero_DataObject {
 				if (!empty($this->changed['creators'])) {
 					$indexes = array_keys($this->changed['creators']);
 					
-					$creatorsArray = [];
+					// TODO: group queries
+					
+					$sql = "INSERT INTO itemCreators
+								(itemID, creatorID, creatorTypeID, orderIndex) VALUES ";
+					$placeholders = array();
+					$sqlValues = array();
+					
+					$cacheRows = array();
+					
 					foreach ($indexes as $orderIndex) {
+						Z_Core::debug('Adding creator in position ' . $orderIndex, 4);
 						$creator = $this->getCreator($orderIndex);
-						$creatorsArray[] = $creator;
+						
+						if (!$creator) {
+							continue;
+						}
+						
+						if ($creator['ref']->hasChanged()) {
+							Z_Core::debug("Auto-saving changed creator {$creator['ref']->id}");
+							try {
+								$creator['ref']->save();
+							}
+							catch (Exception $e) {
+								// TODO: Provide the item in question
+								/*if (strpos($e->getCode() == Z_ERROR_CREATOR_TOO_LONG)) {
+									$msg = $e->getMessage();
+									$msg = str_replace(
+										"with this name and shorten it.",
+										"with this name, or paste '$key' into the quick search bar "
+										. "in the Zotero toolbar, and shorten the name."
+									);
+									throw new Exception($msg, Z_ERROR_CREATOR_TOO_LONG);
+								}*/
+								throw $e;
+							}
+						}
+						
+						$placeholders[] = "(?, ?, ?, ?)";
+						array_push(
+							$sqlValues,
+							$itemID,
+							$creator['ref']->id,
+							$creator['creatorTypeID'],
+							$orderIndex
+						);
+						
+						$cacheRows[] = array(
+							'creatorID' => $creator['ref']->id,
+							'creatorTypeID' => $creator['creatorTypeID'],
+							'orderIndex' => $orderIndex
+						);
 					}
 					
-					Zotero_Creators::bulkInsert($this->libraryID, $itemID, $creatorsArray);
-
+					if ($sqlValues) {
+						$sql = $sql . implode(',', $placeholders);
+						Zotero_DB::query($sql, $sqlValues, $shardID);
+					}
 				}
 				
 				
@@ -1369,9 +1380,9 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Attachment
 				if ($this->isAttachment()) {
-					$sql = "INSERT INTO itemAttachments "
-						. "(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash) "
-						. "VALUES (?,?,?,?,?,?,?,?)";
+					$sql = "INSERT INTO itemAttachments
+							(itemID, sourceItemID, linkMode, mimeType, charsetID, path, storageModTime, storageHash)
+							VALUES (?,?,?,?,?,?,?,?)";
 					$isEmbeddedImage = $this->attachmentLinkMode == 'embedded_image';
 					
 					$parent = $this->getSource();
@@ -1450,27 +1461,15 @@ class Zotero_Item extends Zotero_DataObject {
 							Z_ERROR_INVALID_INPUT
 						);
 					}
-					// Note, highlight, and underline supported for PDFs, EPUBs, and snapshots
-					if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
-						if (!in_array($parentItem->attachmentContentType, ['application/pdf', 'application/epub+zip', 'text/html'])) {
-							throw new Exception(
-								// TEMP
-								//"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
-								"Parent item $parentItem->libraryKey of $this->annotationType annotation must be a PDF attachment",
-								Z_ERROR_INVALID_INPUT
-							);
-						}
-					}
-					// For other annotation types, only PDFs
-					else if ($parentItem->attachmentContentType != 'application/pdf') {
+					if ($parentItem->attachmentContentType != 'application/pdf') {
 						throw new Exception(
-							"Parent attachment $parentItem->libraryKey of $this->annotationType annotation must be a PDF",
+							"Parent item $parentItem->libraryKey of annotation must be a PDF",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
-					if (!empty($this->annotationText) && !in_array($this->annotationType, ['highlight', 'underline'])) {
+					if (!empty($this->annotationText) && $this->annotationType != 'highlight') {
 						throw new Exception(
-							"'annotationText' can only be set for highlight and underline annotations",
+							"'annotationText' can only be set for highlight annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
@@ -1573,7 +1572,21 @@ class Zotero_Item extends Zotero_DataObject {
 					if ($this->isEmbeddedImageAttachment()) {
 						throw new Exception("Embedded image attachments cannot have tags");
 					}
-					Zotero_Tags::bulkInsert($this->libraryID, $itemID, $this->tags);
+					
+					foreach ($this->tags as $tag) {
+						$tagID = Zotero_Tags::getID($this->libraryID, $tag->name, $tag->type);
+						if ($tagID) {
+							$tagObj = Zotero_Tags::get($this->_libraryID, $tagID);
+						}
+						else {
+							$tagObj = new Zotero_Tag;
+							$tagObj->libraryID = $this->_libraryID;
+							$tagObj->name = $tag->name;
+							$tagObj->type = (int) $tag->type ? $tag->type : 0;
+						}
+						$tagObj->addItem($this->_key);
+						$tagObj->save();
+					}
 				}
  				
 				// Related items
@@ -1751,15 +1764,45 @@ class Zotero_Item extends Zotero_DataObject {
 				//
 				if (!empty($this->changed['creators'])) {
 					$indexes = array_keys($this->changed['creators']);
-
-					$toAdd = [];
-					foreach ($indexes as $orderIndex) {
-						$creator = $this->getCreator($orderIndex);
-						$toAdd[] = $creator;
-					}
-					Zotero_Creators::bulkDelete($this->libraryID, $this->_id, $indexes);
-					Zotero_Creators::bulkInsert($this->libraryID, $this->_id, $toAdd);
 					
+					$sql = "INSERT INTO itemCreators
+								(itemID, creatorID, creatorTypeID, orderIndex) VALUES ";
+					$placeholders = array();
+					$sqlValues = array();
+					
+					$cacheRows = array();
+					
+					foreach ($indexes as $orderIndex) {
+						Z_Core::debug('Creator in position ' . $orderIndex . ' has changed', 4);
+						$creator = $this->getCreator($orderIndex);
+						
+						$sql2 = 'DELETE FROM itemCreators WHERE itemID=? AND orderIndex=?';
+						Zotero_DB::query($sql2, array($this->_id, $orderIndex), $shardID);
+						
+						if (!$creator) {
+							continue;
+						}
+						
+						if ($creator['ref']->hasChanged()) {
+							Z_Core::debug("Auto-saving changed creator {$creator['ref']->id}");
+							$creator['ref']->save();
+						}
+						
+						
+						$placeholders[] = "(?, ?, ?, ?)";
+						array_push(
+							$sqlValues,
+							$this->_id,
+							$creator['ref']->id,
+							$creator['creatorTypeID'],
+							$orderIndex
+						);
+					}
+					
+					if ($sqlValues) {
+						$sql = $sql . implode(',', $placeholders);
+						Zotero_DB::query($sql, $sqlValues, $shardID);
+					}
 				}
 				
 				// Deleted item
@@ -1811,25 +1854,12 @@ class Zotero_Item extends Zotero_DataObject {
 								Z_ERROR_ITEM_NOT_FOUND
 							);
 						}
-						if (in_array($this->annotationType, ["note", "highlight", "underline"])) {
-							if (!$parentItem->isPDFAttachment() && !$parentItem->isEPUBAttachment() && !$parentItem->isHTMLAttachment()) {
-								throw new Exception(
-									// TEMP
-									//"Parent item of $this->annotationType annotation must be a PDF, EPUB, or HTML attachment",
-									"Parent item of $this->annotationType annotation must be a PDF attachment",
-									Z_ERROR_INVALID_INPUT
-								);
-							}
+						if (!$parentItem->isPDFAttachment()) {
+							throw new Exception(
+								"Parent item of annotation must be a PDF attachment",
+								Z_ERROR_INVALID_INPUT
+							);
 						}
-						else {
-							if (!$parentItem->isPDFAttachment()) {
-								throw new Exception(
-									"Parent item of $this->annotationType annotation must be a PDF attachment",
-									Z_ERROR_INVALID_INPUT
-								);
-							}
-						}
-	
 					}
 					
 					// Don't allow parent change for embedded-image attachment
@@ -1971,9 +2001,9 @@ class Zotero_Item extends Zotero_DataObject {
 				
 				// Annotation
 				if (!empty($this->changed['annotationData'])) {
-					if (!empty($this->annotationText) && !in_array($this->annotationType, ['highlight', 'underline'])) {
+					if (!empty($this->annotationText) && $this->annotationType != 'highlight') {
 						throw new Exception(
-							"'annotationText' can only be set for highlight and underline annotations",
+							"'annotationText' can only be set for highlight annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}
@@ -2206,8 +2236,28 @@ class Zotero_Item extends Zotero_DataObject {
 					$toAdd = array_udiff($newTags, $oldTags, $cmp);
 					$toRemove = array_udiff($oldTags, $newTags, $cmp);
 					
-					Zotero_Tags::bulkInsert($this->_libraryID, $this->_id,  $toAdd);
-					Zotero_Tags::bulkDelete($this->_libraryID, $this->_id, $toRemove);
+					foreach ($toAdd as $tag) {
+						$name = $tag->name;
+						$type = $tag->type;
+						
+						$tagID = Zotero_Tags::getID($this->_libraryID, $name, $type);
+						if (!$tagID) {
+							$tag = new Zotero_Tag;
+							$tag->libraryID = $this->_libraryID;
+							$tag->name = $name;
+							$tag->type = $type;
+							$tagID = $tag->save();
+						}
+						
+						$tag = Zotero_Tags::get($this->_libraryID, $tagID);
+						$tag->addItem($this->_key);
+						$tag->save();
+					}
+					
+					foreach ($toRemove as $tag) {
+						$tag->removeItem($this->_key);
+						$tag->save();
+					}
 				}
 				
 				// Related items
@@ -2383,14 +2433,14 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 	
 	
-	public function setCreator($orderIndex, Zotero_Creator $creator) {
+	public function setCreator($orderIndex, Zotero_Creator $creator, $creatorTypeID) {
 		if ($this->id && !$this->loaded['creators']) {
 			$this->loadCreators();
 		}
 		else {
 			$this->loaded['creators'] = true;
 		}
-		$creatorTypeID = $creator->creatorTypeID;
+		
 		if (!is_integer($orderIndex)) {
 			throw new Exception("orderIndex must be an integer");
 		}
@@ -2415,13 +2465,19 @@ class Zotero_Item extends Zotero_DataObject {
 			$creatorTypeID = Zotero_CreatorTypes::getPrimaryIDForType($this->itemTypeID);
 		}
 		
-		if (!isset($this->creators[$orderIndex]) || !$this->creators[$orderIndex]->equals($creator)) {
-			$this->creators[$orderIndex] = $creator;
-			$this->creators[$orderIndex]->creatorTypeID = $creatorTypeID;
-			$this->changed['creators'][$orderIndex] = true;
-			return true;
+		// If creator already exists at this position, cancel
+		if (isset($this->creators[$orderIndex])
+				&& $this->creators[$orderIndex]['ref']->id == $creator->id
+				&& $this->creators[$orderIndex]['creatorTypeID'] == $creatorTypeID
+				&& !$creator->hasChanged()) {
+			Z_Core::debug("Creator in position $orderIndex hasn't changed", 4);
+			return false;
 		}
-		return false;
+		
+		$this->creators[$orderIndex]['ref'] = $creator;
+		$this->creators[$orderIndex]['creatorTypeID'] = $creatorTypeID;
+		$this->changed['creators'][$orderIndex] = true;
+		return true;
 	}
 	
 	
@@ -3409,7 +3465,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$sql = "SELECT $field FROM itemAnnotations WHERE itemID=?";
 		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 		$value = Zotero_DB::valueQueryFromStatement($stmt, $this->id);
-		if ($value === false) {
+		if (!$value) {
 			$value = '';
 		}
 		
@@ -3441,13 +3497,11 @@ class Zotero_Item extends Zotero_DataObject {
 					case 'note':
 					case 'image':
 					case 'ink':
-					case 'underline':
-					case 'text':
 						break;
 					
 					default:
 						throw new Exception(
-							"annotationType must be 'highlight', 'note', 'image', 'text', or 'ink'",
+							"annotationType must be 'highlight', 'note', 'image', or 'ink'",
 							Z_ERROR_INVALID_INPUT
 						);
 				}
@@ -3463,21 +3517,8 @@ class Zotero_Item extends Zotero_DataObject {
 				break;
 			
 			case 'sortIndex':
-				$parentItem = Zotero_Items::get($this->_libraryID, $this->getSource());
-				if ($parentItem->isPDFAttachment()) {
-					if (!preg_match('/^\d{5}\|\d{6}\|\d{5}$/', $val)) {
-						throw new Exception("Invalid sortIndex '$val'", Z_ERROR_INVALID_INPUT);
-					}
-				}
-				else if ($parentItem->isEPUBAttachment()) {
-					if (!preg_match('/^\d{5}\|\d{8}$/', $val)) {
-						throw new Exception("Invalid sortIndex '$val' for EPUB annotation", Z_ERROR_INVALID_INPUT);
-					}
-				}
-				else if ($parentItem->isHTMLAttachment()) {
-					if (!preg_match('/^\d{7,8}$/', $val)) {
-						throw new Exception("Invalid sortIndex '$val' for HTML annotation", Z_ERROR_INVALID_INPUT);
-					}
+				if (!preg_match('/^\d{5}\|\d{6}\|\d{5}$/', $val)) {
+					throw new Exception("Invalid sortIndex '$val'", Z_ERROR_INVALID_INPUT);
 				}
 				break;
 			
@@ -3488,6 +3529,9 @@ class Zotero_Item extends Zotero_DataObject {
 			case 'position':
 				if (!is_string($val)) {
 					throw new Exception("$fieldFull must be a string", Z_ERROR_INVALID_INPUT);
+				}
+				if (!$val) {
+					$val = '';
 				}
 				// Check annotationText length
 				if ($field == 'text') {
@@ -3664,11 +3708,28 @@ class Zotero_Item extends Zotero_DataObject {
 	 *
 	 * @return	array			Array of Zotero.Tag objects
 	 */
-	public function getTags() {
-		if ($this->id && !$this->loaded['tags']) {
-			$this->loadTags();
+	public function getTags($asIDs=false) {
+		if (!$this->id) {
+			return array();
 		}
-		return $this->tags;
+		
+		$sql = "SELECT tagID FROM tags JOIN itemTags USING (tagID)
+				WHERE itemID=? ORDER BY name";
+		$tagIDs = Zotero_DB::columnQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
+		if (!$tagIDs) {
+			return array();
+		}
+		
+		if ($asIDs) {
+			return $tagIDs;
+		}
+		
+		$tagObjs = array();
+		foreach ($tagIDs as $tagID) {
+			$tag = Zotero_Tags::get($this->libraryID, $tagID, true);
+			$tagObjs[] = $tag;
+		}
+		return $tagObjs;
 	}
 	
 	
@@ -3681,7 +3742,7 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$this->loaded['tags']) {
 			$this->loadTags();
 		}
-
+		
 		// Ignore empty tags
 		$newTags = array_filter($newTags, function ($tag) {
 			if (is_string($tag)) {
@@ -3695,49 +3756,21 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$this->storePreviousData('tags');
-
-		$existingTagNames = array_map(function($tag) {
-			return $tag->name;
-		}, $this->tags);
-		$foundNames = [];
-		$tagArray = [];
-		$changed = false;
+		$this->tags = [];
 		foreach ($newTags as $newTag) {
+			$obj = new stdClass;
 			// Allow the passed array to contain either strings or objects
 			if (is_string($newTag)) {
-				$name = trim($newTag);
-				$type = 0;
+				$obj->name = trim($newTag);
+				$obj->type = 0;
 			}
 			else {
-				$name = trim($newTag->tag);
-				$type = (int) isset($newTag->type) ? $newTag->type : 0;
+				$obj->name = trim($newTag->tag);
+				$obj->type = (int) isset($newTag->type) ? $newTag->type : 0;
 			}
-			$skip = false;
-			foreach($this->tags as $existingTag) {
-				if ($existingTag->name == $name && $existingTag->type == $type) {
-					$skip = true;
-					$foundNames[] = $existingTag->name;
-					break;
-				}
-			}
-			if ($skip) {
-				continue;
-			}
-			$version = Zotero_Libraries::getUpdatedVersion($this->libraryID);
-			$tagArray[] = new Zotero_Tag(null, $this->libraryID, $name, $type, $version);
-			$changed = true;
+			$this->tags[] = $obj;
 		}
-		$this->tags = array_merge($this->tags, $tagArray);
-		if ($changed) {
-			$this->changed['tags'] = $changed;
-		}
-		$toRemove = array_diff($existingTagNames, $foundNames);
-		if (sizeof($this->tags) !== sizeof($newTags)) {
-			$this->tags = array_filter($this->tags, function($existingTag) use ($toRemove) {
-				return !in_array($existingTag->name, $toRemove);
-			});
-			$this->changed['tags'] = true;
-		}
+		$this->changed['tags'] = true;
 	}
 	
 	
@@ -3821,12 +3854,12 @@ class Zotero_Item extends Zotero_DataObject {
 			$displayText = '';
 			foreach ($creators as $creator) {
 				// Two fields
-				if ($creator->fieldMode == 0) {
-					$displayText = $creator->firstName . ' ' . $creator->lastName;
+				if ($creator['ref']->fieldMode == 0) {
+					$displayText = $creator['ref']->firstName . ' ' . $creator['ref']->lastName;
 				}
 				// Single field
-				else if ($creator->fieldMode == 1) {
-					$displayText = $creator->lastName;
+				else if ($creator['ref']->fieldMode == 1) {
+					$displayText = $creator['ref']->lastName;
 				}
 				else {
 					// TODO
@@ -3835,7 +3868,7 @@ class Zotero_Item extends Zotero_DataObject {
 				Zotero_Atom::addHTMLRow(
 					$html,
 					"creator",
-					Zotero_CreatorTypes::getLocalizedString($creator->creatorTypeID),
+					Zotero_CreatorTypes::getLocalizedString($creator['creatorTypeID']),
 					trim($displayText)
 				);
 			}
@@ -4110,16 +4143,12 @@ class Zotero_Item extends Zotero_DataObject {
 			'include',
 			'style',
 			'css',
-			'locale',
 			'linkwrap',
-			'publications',
+			'publications'
 		];
 		$cachedParams = Z_Array::filterKeys($requestParams, $allowedParams);
-		$effectiveSchemaVersion = \Zotero\Schema::getEffectiveVersion(
-			$requestParams['schemaVersion'] ?? null
-		);
-
-		$cacheVersion = 7;
+		
+		$cacheVersion = 1;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
@@ -4130,10 +4159,6 @@ class Zotero_Item extends Zotero_DataObject {
 				. ($libraryType == 'group' ? Zotero_URI::getItemURI($this, true) : '')
 			)
 			. "_" . $requestParams['v']
-			// For schema changes (new/reordered fields)
-			. "_" . \Zotero\Schema::getVersion()
-			// For client-requested schema version (field visibility)
-			. "_" . $effectiveSchemaVersion
 			// For code-based changes
 			. "_" . $cacheVersion
 			// For data-based changes
@@ -4147,60 +4172,18 @@ class Zotero_Item extends Zotero_DataObject {
 				: "");
 		
 		$cached = Z_Core::$MC->get($cacheKey);
-		if ($cached) {
+		if (false && $cached) {
 			if ($isRegularItem
 					|| $this->isNote()
 					|| $this->isPDFAttachment()) {
 				$cached['meta']->numChildren = $numChildren;
 			}
-
-			// Deleting a collection removes items from it without bumping their
-			// versions, so always refresh
-			if (isset($cached['data']['collections'])) {
-				$cached['data']['collections'] = $this->getCollections(true);
-			}
-
-			// Relations are bidirectional -- adding a relation to item B makes it
-			// visible on item A without bumping A's version -- so always refresh
-			if (isset($cached['data']['relations'])) {
-				$cached['data']['relations'] = $this->getRelations();
-			}
-
-			// invalidProp is excluded from the cache since it depends on the raw
-			// schemaVersion, not effectiveSchemaVersion
-			if ($this->needsInvalidProp($requestParams['schemaVersion'])) {
-				$cached['data']['invalidProp'] = 1;
-			}
-
-			// Username can change without item version bumping, so refresh
-			// the alternate link
-			if (isset($cached['links']['alternate'])) {
-				$cached['links']['alternate']['href'] = Zotero_URI::getItemURI($this, true);
-			}
-
-			// Update mutable user profile data (username, name) on cached copy,
-			// while preserving IDs for mismatch detection
-			if (!empty($cached['meta']->createdByUser)) {
-				$freshUser = Zotero_Users::toJSON($cached['meta']->createdByUser['id']);
-				$cached['meta']->createdByUser['username'] = $freshUser['username'];
-				$cached['meta']->createdByUser['name'] = $freshUser['name'];
-				$cached['meta']->createdByUser['links'] = $freshUser['links'];
-			}
-			if (!empty($cached['meta']->lastModifiedByUser)) {
-				$freshUser = Zotero_Users::toJSON($cached['meta']->lastModifiedByUser['id']);
-				$cached['meta']->lastModifiedByUser['username'] = $freshUser['username'];
-				$cached['meta']->lastModifiedByUser['name'] = $freshUser['name'];
-				$cached['meta']->lastModifiedByUser['links'] = $freshUser['links'];
-			}
-
+			
 			StatsD::timing("api.items.itemToResponseJSON.cached", (microtime(true) - $t) * 1000);
 			StatsD::increment("memcached.items.itemToResponseJSON.hit");
-
-			// When serving from cache, return early unless we're doing a periodic comparison
-			if (!empty(Z_CONFIG::$CACHE_ENABLED_ITEM_RESPONSE_JSON)
-					&& !Z_Core::probability(10)) {
-				// Keep in sync with 'library' assignment below
-				$cached['library'] = Zotero_Libraries::toJSON($this->libraryID);
+			
+			// Skip the cache every 10 times for now, to ensure cache sanity
+			if (!Z_Core::probability(10)) {
 				return $cached;
 			}
 		}
@@ -4209,7 +4192,7 @@ class Zotero_Item extends Zotero_DataObject {
 		$json = [
 			'key' => $this->key,
 			'version' => $version,
-			'library' => new stdClass()
+			'library' => Zotero_Libraries::toJSON($this->libraryID)
 		];
 		
 		$url = Zotero_API::getItemURI($this);
@@ -4376,75 +4359,29 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 		}
 		
-		// Compare cached vs fresh to validate cache correctness.
+		// TEMP
 		if ($cached) {
-			$cachedCmp = $cached;
-			$uncachedCmp = $json;
-			// Strip invalidProp from both copies before comparing, since it's excluded from the
-			// cache and re-added on cache hit.
-			unset($cachedCmp['data']['invalidProp']);
-			unset($uncachedCmp['data']['invalidProp']);
-			$cachedStr = Zotero_Utilities::formatJSON($cachedCmp);
-			$uncachedStr = Zotero_Utilities::formatJSON($uncachedCmp);
+			$cachedStr = Zotero_Utilities::formatJSON($cached);
+			$uncachedStr = Zotero_Utilities::formatJSON($json);
 			if ($cachedStr != $uncachedStr) {
-				error_log("Cached JSON item entry does not match for "
-					. $this->libraryID . "/" . $this->key);
-				// Find first differing line
-				$cachedLines = explode("\n", $cachedStr);
-				$uncachedLines = explode("\n", $uncachedStr);
-				$maxLines = max(count($cachedLines), count($uncachedLines));
-				for ($i = 0; $i < $maxLines; $i++) {
-					$cl = $cachedLines[$i] ?? '<missing>';
-					$ul = $uncachedLines[$i] ?? '<missing>';
-					if ($cl !== $ul) {
-						error_log("  First diff at line $i:");
-						// Show a few lines before the diff for context
-						for ($j = max(0, $i - 3); $j < $i; $j++) {
-							error_log("     Before:  " . $cachedLines[$j]);
-						}
-						error_log("    Cached:   " . $cl);
-						error_log("    Uncached: " . $ul);
-						// Show a few more lines of context
-						for ($j = $i + 1; $j < min($i + 4, $maxLines); $j++) {
-							$cl2 = $cachedLines[$j] ?? '<missing>';
-							$ul2 = $uncachedLines[$j] ?? '<missing>';
-							$marker = ($cl2 !== $ul2) ? '!' : ' ';
-							error_log("   $marker Cached:   " . $cl2);
-							error_log("   $marker Uncached: " . $ul2);
-						}
-						break;
-					}
-				}
+				error_log("Cached JSON item entry does not match");
+				error_log("  Cached: " . $cachedStr);
+				error_log("Uncached: " . $uncachedStr);
+				
+				//Z_Core::$MC->set($cacheKey, $uncached, 3600); // 1 hour for now
 			}
 		}
-
-		// Strip invalidProp before caching -- it depends on the raw schemaVersion,
-		// which isn't part of the cache key
-		$hadInvalidProp = isset($json['data']['invalidProp']);
-		unset($json['data']['invalidProp']);
-
-		Z_Core::$MC->set($cacheKey, $json, 86400);
-		if (!$cached) {
+		else {
+			/*Z_Core::$MC->set($cacheKey, $json, 10);
 			StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
-			StatsD::increment("memcached.items.itemToResponseJSON.miss");
+			StatsD::increment("memcached.items.itemToResponseJSON.miss");*/
 		}
-
-		if ($hadInvalidProp) {
-			$json['data']['invalidProp'] = 1;
-		}
-
-		// Keep in sync with 'library' assignment in early return above
-		$json['library'] = Zotero_Libraries::toJSON($this->libraryID);
-
+		
 		return $json;
 	}
 	
 	
 	public function toJSON($asArray=false, $requestParams=array(), $includeEmpty=false, $unformattedFields=false) {
-		$schemaVersion = $requestParams['schemaVersion'] ?? null;
-		$effectiveSchemaVersion = \Zotero\Schema::getEffectiveVersion($schemaVersion);
-		$isCurrentSchemaVersion = \Zotero\Schema::getVersion() == $effectiveSchemaVersion;
-		
 		$isPublications = !empty($requestParams['publications']);
 		
 		if ($this->_id || $this->_key) {
@@ -4505,16 +4442,16 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = $this->getCreators();
 			foreach ($creators as $creator) {
 				$c = array();
-				$c['creatorType'] = Zotero_CreatorTypes::getName($creator->creatorTypeID);
+				$c['creatorType'] = Zotero_CreatorTypes::getName($creator['creatorTypeID']);
 				
 				// Single-field mode
-				if ($creator->fieldMode == 1) {
-					$c['name'] = $creator->lastName;
+				if ($creator['ref']->fieldMode == 1) {
+					$c['name'] = $creator['ref']->lastName;
 				}
 				// Two-field mode
 				else {
-					$c['firstName'] = $creator->firstName;
-					$c['lastName'] = $creator->lastName;
+					$c['firstName'] = $creator['ref']->firstName;
+					$c['lastName'] = $creator['ref']->lastName;
 				}
 				$arr['creators'][] = $c;
 			}
@@ -4540,22 +4477,8 @@ class Zotero_Item extends Zotero_DataObject {
 				$value = $this->getField($field);
 			}
 			
-			$valueIsEmpty = $value === false || $value === null || $value === "";
-			if ($valueIsEmpty) {
-				if (!$includeEmpty) {
-					continue;
-				}
-				// If request is for an older schema version, don't include empty fields if not in
-				// that version. Otherwise, all write requests and requests for items that don't
-				// even use new fields would trigger unknown-field errors.
-				if (!$isCurrentSchemaVersion) {
-					$valid = Zotero_ItemFields::isValidForType(
-						$field, $this->itemTypeID, $effectiveSchemaVersion
-					);
-					if (!$valid) {
-						continue;
-					}
-				}
+			if (!$includeEmpty && ($value === false || $value === null && $value === "")) {
+				continue;
 			}
 			
 			$fieldName = Zotero_ItemFields::getName($field);
@@ -4624,16 +4547,12 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		if ($this->isAnnotation()) {
-			if ($this->needsInvalidProp($schemaVersion)) {
-				$arr['invalidProp'] = 1;
-			}
-
 			$props = ['type', 'authorName', 'text', 'comment', 'color', 'pageLabel', 'sortIndex', 'position'];
 			foreach ($props as $prop) {
 				if ($prop == 'authorName' && $this->annotationAuthorName === '') {
 					continue;
 				}
-				if ($prop == 'text' && !in_array($this->annotationType, ['highlight', 'underline'])) {
+				if ($prop == 'text' && $this->annotationType != 'highlight') {
 					continue;
 				}
 				$fullProp = 'annotation' . ucwords($prop);
@@ -4749,16 +4668,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		$itemTypeFields = Zotero_ItemFields::getItemTypeFields($this->itemTypeID);
-
-		// Initialize fields in schema order so that field ordering in toJSON() is consistent
-		// regardless of whether data was loaded from DB (fieldID order) or set during a write
-		// (schema order from setType())
-		if ($itemTypeFields) {
-			foreach ($itemTypeFields as $fieldID) {
-				$this->itemData[$fieldID] = null;
-			}
-		}
-
+		
 		if ($fields) {
 			foreach ($fields as $field) {
 				$this->setField($field['fieldID'], $field['value'], true, true);
@@ -4806,8 +4716,7 @@ class Zotero_Item extends Zotero_DataObject {
 	
 	protected function loadCreators($reload = false) {
 		if ($this->loaded['creators'] && !$reload) return;
-		$cache_used = false;
-
+		
 		if (!$this->id) {
 			trigger_error('Item ID not set for item before attempting to load creators', E_USER_ERROR);
 		}
@@ -4830,16 +4739,14 @@ class Zotero_Item extends Zotero_DataObject {
 			$creators = false;
 		}
 		if ($creators === false) {
-			$sql = "SELECT * FROM itemCreators WHERE itemID=? ORDER BY orderIndex";
+			$sql = "SELECT creatorID, creatorTypeID, orderIndex FROM itemCreators
+					WHERE itemID=? ORDER BY orderIndex";
 			$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($this->libraryID));
 			$creators = Zotero_DB::queryFromStatement($stmt, $this->id);
 			
 			if ($this->cacheEnabled) {
 				Z_Core::$MC->set($cacheKey, $creators ? $creators : array());
 			}
-		}
-		else {
-			$cache_used = true;
 		}
 		
 		$this->creators = [];
@@ -4849,21 +4756,17 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$creators) {
 			return;
 		}
-
-		if ($cache_used) {
-			// Check if the cached data is still valid - without creatorID
-			// $creatorsNotFound = Zotero_Creators::idsDoNotExist($this->libraryID, $creators);
-
-			// foreach($creatorsNotFound as $missingCreator) {
-			// 	Z_Core::$MC->delete($cacheKey);
-			// 	throw new Exception("Creator {$creator['creatorID']} not found");
-			// }
-		}
-
+		
 		foreach ($creators as $creator) {
-			$creatorObj = new Zotero_Creator($this->_libraryID, $creator['firstName'], $creator['lastName'], $creator['fieldMode'], $creator['creatorTypeID'], $creator['orderIndex']);
-
-			$this->creators[$creator['orderIndex']] = $creatorObj;
+			$creatorObj = Zotero_Creators::get($this->libraryID, $creator['creatorID'], true);
+			if (!$creatorObj) {
+				Z_Core::$MC->delete($cacheKey);
+				throw new Exception("Creator {$creator['creatorID']} not found");
+			}
+			$this->creators[$creator['orderIndex']] = array(
+				'creatorTypeID' => $creator['creatorTypeID'],
+				'ref' => $creatorObj
+			);
 		}
 	}
 	
@@ -4886,7 +4789,6 @@ class Zotero_Item extends Zotero_DataObject {
 		if (!$this->collections) {
 			$this->collections = [];
 		}
-		sort($this->collections);
 		$this->loaded['collections'] = true;
 		$this->clearChanged('collections');
 	}
@@ -4901,14 +4803,14 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		Z_Core::debug("Loading tags for item $this->id");
 		
-		$sql = "SELECT * FROM itemTags WHERE itemID=?";
-		$tags = Zotero_DB::query(
+		$sql = "SELECT tagID FROM itemTags JOIN tags USING (tagID) WHERE itemID=?";
+		$tagIDs = Zotero_DB::columnQuery(
 			$sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID)
 		);
 		$this->tags = [];
-		if ($tags) {
-			foreach ($tags as $tag) {
-				$this->tags[] = new Zotero_Tag($tag['tagID'], $this->libraryID, $tag['name'], $tag['type'], $tag['version']);
+		if ($tagIDs) {
+			foreach ($tagIDs as $tagID) {
+				$this->tags[] = Zotero_Tags::get($this->libraryID, $tagID, true);
 			}
 		}
 		$this->loaded['tags'] = true;
