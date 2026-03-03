@@ -56,11 +56,15 @@ describe('TTS', function () {
 	});
 
 	/**
-	 * Helper to build a /tts/speak URL with the test key and given params.
+	 * Helper to POST to /tts/speak with the test key and given params.
 	 */
-	function speakURL(params) {
-		let query = new URLSearchParams({ test: testKey, ...params });
-		return `tts/speak?${query}`;
+	function speak(params) {
+		let body = JSON.stringify({ test: testKey, ...params });
+		return API.post(
+			'tts/speak',
+			body,
+			[['Content-Type', 'application/json']]
+		);
 	}
 
 	/**
@@ -86,7 +90,7 @@ describe('TTS', function () {
 		it('should synthesize and return 302 with Location header', async function () {
 			let voice = voices['en-US'][0];
 			let text = randomText();
-			let response = await API.get(speakURL({ voice, text }));
+			let response = await speak({ voice, text });
 			assert302(response);
 			let location = response.getHeader('location');
 			assert.isOk(location, 'Expected Location header');
@@ -96,7 +100,7 @@ describe('TTS', function () {
 		it('should return valid audio at redirect URL', async function () {
 			let voice = voices['en-US'][0];
 			let text = randomText();
-			let response = await API.get(speakURL({ voice, text }));
+			let response = await speak({ voice, text });
 			assert302(response);
 			let location = response.getHeader('location');
 
@@ -112,11 +116,11 @@ describe('TTS', function () {
 		it('should return 302 on cache hit with same Location', async function () {
 			let voice = voices['en-US'][0];
 			let text = randomText();
-			let response1 = await API.get(speakURL({ voice, text }));
+			let response1 = await speak({ voice, text });
 			assert302(response1);
 			let location1 = response1.getHeader('location');
 
-			let response2 = await API.get(speakURL({ voice, text }));
+			let response2 = await speak({ voice, text });
 			assert302(response2);
 			let location2 = response2.getHeader('location');
 
@@ -126,47 +130,51 @@ describe('TTS', function () {
 
 	describe('/speak -- error handling', function () {
 		it('should return 400 without voice param', async function () {
-			let response = await API.get(speakURL({ text: 'Hello' }));
+			let response = await speak({ text: 'Hello' });
 			assert400(response);
 		});
 
 		it('should return 400 without text param', async function () {
 			let voice = voices['en-US'][0];
-			let response = await API.get(speakURL({ voice }));
+			let response = await speak({ voice });
 			assert400(response);
 		});
 
 		it('should return 400 with invalid voice ID', async function () {
-			let response = await API.get(speakURL({ voice: 'zz_invalid', text: 'Hello' }));
+			let response = await speak({ voice: 'zz_invalid', text: 'Hello' });
 			assert400(response);
 		});
 
 		it('should return 403 with wrong test key', async function () {
 			let voice = voices['en-US'][0];
-			let query = new URLSearchParams({
+			let body = JSON.stringify({
 				test: 'wrong_key',
 				voice,
 				text: 'Hello',
 			});
-			let response = await API.get(`tts/speak?${query}`);
+			let response = await API.post(
+				'tts/speak',
+				body,
+				[['Content-Type', 'application/json']]
+			);
 			assert403(response);
 		});
 
-		it('should return 400 without API key', async function () {
+		it('should return 403 without API key', async function () {
 			API.useAPIKey('');
 			let voice = voices['en-US'][0];
-			let response = await API.get(speakURL({ voice, text: 'Hello' }));
-			assert400(response);
+			let response = await speak({ voice, text: 'Hello' });
+			assert403(response);
 		});
 	});
 
 	describe('/speak -- voices and locales', function () {
 		it('should synthesize with multiple en-US voices', async function () {
 			for (let voice of voices['en-US']) {
-				let response = await API.get(speakURL({
+				let response = await speak({
 					voice,
 					text: randomText(),
-				}));
+				});
 				assert302(response);
 				assert.isOk(response.getHeader('location'));
 			}
@@ -184,10 +192,10 @@ describe('TTS', function () {
 				if (!voices[locale]) {
 					this.skip();
 				}
-				let response = await API.get(speakURL({
+				let response = await speak({
 					voice: voices[locale][0],
 					text: randomText(prefix),
-				}));
+				});
 				assert302(response);
 				assert.isOk(response.getHeader('location'));
 			});

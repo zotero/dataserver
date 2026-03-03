@@ -131,9 +131,9 @@ class TTSController extends ApiController {
 
 
 	public function speak() {
-		$this->allowMethods(['GET']);
+		$this->allowMethods(['GET', 'POST']);
 
-		// Arena mode -- disabled if ArenaConfig.inc.php is absent
+		// Arena mode (GET only) -- disabled if ArenaConfig.inc.php is absent
 		if ($_GET['arena'] ?? null) {
 			$arenaConfig = self::getArenaConfig();
 			if (!$arenaConfig || $_GET['arena'] !== $arenaConfig['token']) {
@@ -143,10 +143,18 @@ class TTSController extends ApiController {
 			return;
 		}
 
+		// For POST, read params from JSON body; for GET, use query string
+		if ($this->method == 'POST') {
+			$params = json_decode($this->body, true) ?? [];
+		}
+		else {
+			$params = $_GET;
+		}
+
 		// Test mode -- bypasses quota enforcement
-		if ($_GET['test'] ?? null) {
+		if ($params['test'] ?? null) {
 			$testKey = self::getTestKey();
-			if (!$testKey || $_GET['test'] !== $testKey) {
+			if (!$testKey || $params['test'] !== $testKey) {
 				$this->e403();
 			}
 			$this->testMode = true;
@@ -156,9 +164,9 @@ class TTSController extends ApiController {
 			$this->e400("API key not provided");
 		}
 
-		$hexID = $_GET['voice'] ?? '';
-		$text = $_GET['text'] ?? '';
-		$prompt = $_GET['prompt'] ?? null;
+		$hexID = $params['voice'] ?? '';
+		$text = $params['text'] ?? '';
+		$prompt = $params['prompt'] ?? null;
 
 		if (empty($hexID)) {
 			$this->e400("'voice' not provided");
