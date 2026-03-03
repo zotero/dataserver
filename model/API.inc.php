@@ -1332,6 +1332,11 @@ class Zotero_API {
 			// Separate into boolean OR parts
 			$parts = preg_split("/\s+\|\|\s+/", $val);
 			
+			// Replace \|| with || to allow for tags with literal '||'.
+			$parts = array_map(function ($part) {
+				return str_replace("\||", "||", $part);
+			}, $parts);
+
 			$val = array(
 				'negation' => $negation,
 				'values' => $parts
