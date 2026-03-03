@@ -193,6 +193,7 @@ Zotero_DB::addCallback("begin", array("Zotero_Notifier", "begin"));
 Zotero_DB::addCallback("commit", array("Zotero_Notifier", "commit"));
 Zotero_DB::addCallback("callback", array("Zotero_Notifier", "reset"));
 Zotero_NotifierObserver::init();
+Zotero_ItemFeederObserver::init();
 
 // Memcached
 require('Memcached.inc.php');
