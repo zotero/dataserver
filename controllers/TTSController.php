@@ -792,6 +792,9 @@ class TTSController extends ApiController {
 		if (isset($meta['cacheHit'])) {
 			$item['cacheHit'] = ['BOOL' => $meta['cacheHit']];
 		}
+		if (!empty($meta['synthesisMS'])) {
+			$item['synthesisMS'] = ['N' => (string) round($meta['synthesisMS'])];
+		}
 		$ddb->putItem([
 			'TableName' => $tableName,
 			'Item' => $item,
