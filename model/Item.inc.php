@@ -4485,8 +4485,11 @@ class Zotero_Item extends Zotero_DataObject {
 		
 		// Compare cached vs fresh to validate cache correctness.
 		if ($cached) {
+			// Extract and strip diagnostic info before comparison
+			$cachedBy = $cached['_cachedBy'] ?? null;
 			$cachedCmp = $cached;
 			$uncachedCmp = $json;
+			unset($cachedCmp['_cachedBy']);
 			// Strip invalidProp from both copies before comparing, since it's excluded from the
 			// cache and re-added on cache hit.
 			unset($cachedCmp['data']['invalidProp']);
@@ -4494,8 +4497,16 @@ class Zotero_Item extends Zotero_DataObject {
 			$cachedStr = Zotero_Utilities::formatJSON($cachedCmp);
 			$uncachedStr = Zotero_Utilities::formatJSON($uncachedCmp);
 			if ($cachedStr != $uncachedStr) {
+				$cachedByStr = $cachedBy
+					? " [cachedBy={$cachedBy['method']} {$cachedBy['uri']}"
+						. " " . date('H:i:s', (int)$cachedBy['time']) . "]"
+					: " [cachedBy=?]";
 				error_log("Cached JSON item entry does not match for "
-					. $this->libraryID . "/" . $this->key);
+					. $this->libraryID . "/" . $this->key
+					. " [v_cached=" . ($cached['version'] ?? '?')
+					. " v_uncached=" . ($json['version'] ?? '?') . "]"
+					. $cachedByStr
+					. " [currentMethod=" . ($_SERVER['REQUEST_METHOD'] ?? '?') . "]");
 				// Find first differing line
 				$cachedLines = explode("\n", $cachedStr);
 				$uncachedLines = explode("\n", $uncachedStr);
@@ -4530,7 +4541,14 @@ class Zotero_Item extends Zotero_DataObject {
 		$hadInvalidProp = isset($json['data']['invalidProp']);
 		unset($json['data']['invalidProp']);
 
+		// TEMP: Store diagnostic info in the cached entry for mismatch debugging
+		$json['_cachedBy'] = [
+			'method' => $_SERVER['REQUEST_METHOD'] ?? '?',
+			'time' => microtime(true),
+			'uri' => $_SERVER['REQUEST_URI'] ?? '?',
+		];
 		Z_Core::$MC->set($cacheKey, $json, 86400);
+		unset($json['_cachedBy']);
 		if (!$cached) {
 			StatsD::timing("api.items.itemToResponseJSON.uncached", (microtime(true) - $t) * 1000);
 			StatsD::increment("memcached.items.itemToResponseJSON.miss");
