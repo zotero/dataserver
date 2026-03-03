@@ -897,18 +897,40 @@ class TTSController extends ApiController {
 				'text' => $meta['text'],
 				'lang' => $lang,
 			], JSON_UNESCAPED_UNICODE));
-			$ddb->updateItem([
-				'TableName' => $tableName,
-				'Key' => [
-					'PK' => ['S' => 'TEXT_STATS'],
-					'SK' => ['S' => "$monthlyKey#$lang#$provider#$textHash"],
-				],
-				'UpdateExpression' => 'SET updatedAt = :now ADD voicesSeen :one',
-				'ExpressionAttributeValues' => [
-					':now' => ['S' => $now],
-					':one' => ['N' => '1'],
-				],
-			]);
+			try {
+				$ddb->putItem([
+					'TableName' => $tableName,
+					'Item' => [
+						'PK' => ['S' => 'TEXT_SEEN'],
+						'SK' => ['S' => "$monthlyKey#$lang#$provider#$textHash"],
+					],
+					'ConditionExpression' => 'attribute_not_exists(PK)',
+				]);
+			}
+			catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+				if ($e->getAwsErrorCode() === 'ConditionalCheckFailedException') {
+					// Text already synthesized for a different voice -- track as duplicate
+					$ddb->updateItem([
+						'TableName' => $tableName,
+						'Key' => [
+							'PK' => ['S' => 'DAILY_STATS'],
+							'SK' => ['S' => $dailyKey],
+						],
+						'UpdateExpression' => 'ADD #dup :one, #dupDur :dur',
+						'ExpressionAttributeNames' => [
+							'#dup' => "{$provider}DuplicateSyntheses",
+							'#dupDur' => "{$provider}DuplicateDurationSeconds",
+						],
+						'ExpressionAttributeValues' => [
+							':one' => ['N' => '1'],
+							':dur' => ['N' => (string) $durationSeconds],
+						],
+					]);
+				}
+				else {
+					throw $e;
+				}
+			}
 		}
 	}
 
