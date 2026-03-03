@@ -34,6 +34,8 @@ $router->map('/users/i:objectUserID/publications/items/:objectKey/file/view/url'
 $router->map('/groups/i:objectGroupID/items/:objectKey/file', ['controller' => 'Items', 'extra' => ['file' => true]]);
 $router->map('/groups/i:objectGroupID/items/:objectKey/file/view', ['controller' => 'Items', 'extra' => ['file' => true, 'view' => true]]);
 $router->map('/groups/i:objectGroupID/items/:objectKey/file/view/url', ['controller' => 'Items', 'extra' => ['file' => true, 'viewurl' => true]]);
+$router->map('/users/i:objectUserID/items/:objectKey/children', ['controller' => 'Items', 'extra' => ['subset' => 'children', 'getOnly' => true]]);
+$router->map('/groups/i:objectGroupID/items/:objectKey/children', ['controller' => 'Items', 'extra' => ['subset' => 'children', 'getOnly' => true]]);
 
 // Full-text content
 $router->map('/users/i:objectUserID/items/:objectKey/fulltext', array('controller' => 'FullText', 'action' => 'itemContent'));

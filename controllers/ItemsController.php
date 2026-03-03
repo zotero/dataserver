@@ -415,6 +415,9 @@ class ItemsController extends ApiController {
 					$this->endTiming('search');
 				}
 				else if ($this->subset == 'children') {
+					if ($this->getOnly) {
+						$this->allowMethods(array('GET'));
+					}
 					$item = Zotero_Items::getByLibraryAndKey($this->objectLibraryID, $this->objectKey);
 					if (!$item) {
 						$this->e404("Item not found");
