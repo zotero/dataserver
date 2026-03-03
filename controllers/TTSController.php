@@ -181,6 +181,11 @@ class TTSController extends ApiController {
 		$tier = $resolved['tier'];
 		$creditRate = $resolved['creditsPerMinute'];
 
+		// Provider-specific text adjustments (e.g., pronunciation fixes)
+		if (method_exists($resolved['class'], 'fixPronunciation')) {
+			$text = $resolved['class']::fixPronunciation($text);
+		}
+
 		$cacheKey = $this->computeCacheKey(
 			$resolved['voiceID'], $text, $prompt, $lang,
 			$resolved['cacheVersion'], $resolved['audioFormat']
