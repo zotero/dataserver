@@ -4507,30 +4507,28 @@ class Zotero_Item extends Zotero_DataObject {
 					. " v_uncached=" . ($json['version'] ?? '?') . "]"
 					. $cachedByStr
 					. " [currentMethod=" . ($_SERVER['REQUEST_METHOD'] ?? '?') . "]");
-				// Find first differing line
+				// Log all differing lines
 				$cachedLines = explode("\n", $cachedStr);
 				$uncachedLines = explode("\n", $uncachedStr);
 				$maxLines = max(count($cachedLines), count($uncachedLines));
+				$diffCount = 0;
 				for ($i = 0; $i < $maxLines; $i++) {
 					$cl = $cachedLines[$i] ?? '<missing>';
 					$ul = $uncachedLines[$i] ?? '<missing>';
 					if ($cl !== $ul) {
-						error_log("  First diff at line $i:");
-						// Show a few lines before the diff for context
-						for ($j = max(0, $i - 3); $j < $i; $j++) {
-							error_log("     Before:  " . $cachedLines[$j]);
+						if ($diffCount == 0) {
+							// Show context before first diff
+							for ($j = max(0, $i - 3); $j < $i; $j++) {
+								error_log("         " . $cachedLines[$j]);
+							}
 						}
-						error_log("    Cached:   " . $cl);
-						error_log("    Uncached: " . $ul);
-						// Show a few more lines of context
-						for ($j = $i + 1; $j < min($i + 4, $maxLines); $j++) {
-							$cl2 = $cachedLines[$j] ?? '<missing>';
-							$ul2 = $uncachedLines[$j] ?? '<missing>';
-							$marker = ($cl2 !== $ul2) ? '!' : ' ';
-							error_log("   $marker Cached:   " . $cl2);
-							error_log("   $marker Uncached: " . $ul2);
+						error_log("  cached:  " . $cl);
+						error_log("  fresh:   " . $ul);
+						$diffCount++;
+						if ($diffCount >= 30) {
+							error_log("  ... (truncated)");
+							break;
 						}
-						break;
 					}
 				}
 			}
