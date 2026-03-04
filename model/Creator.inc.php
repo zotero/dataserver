@@ -328,6 +328,10 @@ class Zotero_Creator {
 		$this->changed = array();
 		
 		if (!$row) {
+			// TEMP: diagnostic logging for cache mismatch investigation
+			error_log("Creator::load() no data for creator $this->id in library $this->libraryID"
+				. " method=" . ($_SERVER['REQUEST_METHOD'] ?? '?')
+				. " uri=" . ($_SERVER['REQUEST_URI'] ?? '?'));
 			return;
 		}
 		

@@ -189,6 +189,12 @@ class Zotero_ClassicDataObjects {
 		}
 		
 		if (isset(self::$primaryDataByID[$type][$libraryID][$id])) {
+			// TEMP: log if returning a cached false for a creator
+			if ($type == 'creator' && self::$primaryDataByID[$type][$libraryID][$id] === false) {
+				error_log("getPrimaryDataByID returning cached false for creator $id"
+					. " in library $libraryID"
+					. " method=" . ($_SERVER['REQUEST_METHOD'] ?? '?'));
+			}
 			return self::$primaryDataByID[$type][$libraryID][$id];
 		}
 		
@@ -196,7 +202,14 @@ class Zotero_ClassicDataObjects {
 		$row = Zotero_DB::rowQuery(
 			$sql, array($libraryID, $id), Zotero_Shards::getByLibraryID($libraryID)
 		);
-		
+
+		// TEMP: log if DB query returns no row for a creator
+		if ($type == 'creator' && !$row) {
+			error_log("getPrimaryDataByID DB query returned no row for creator $id"
+				. " in library $libraryID"
+				. " method=" . ($_SERVER['REQUEST_METHOD'] ?? '?'));
+		}
+
 		self::cachePrimaryData($row, $libraryID, false, $id);
 		
 		return $row;
