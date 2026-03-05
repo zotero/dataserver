@@ -49,6 +49,14 @@ describe('Versioning', function () {
 		await testMultiObjectLastModifiedVersion('search');
 	});
 
+	it('should reject all but one concurrent multi-object write', async function () {
+		await testConcurrentMultiObjectWrite('collection');
+		await API.userClear(config.get('userID'));
+		await testConcurrentMultiObjectWrite('item');
+		await API.userClear(config.get('userID'));
+		await testConcurrentMultiObjectWrite('search');
+	});
+
 	// PHP: testMultiObject304NotModified
 	it('should return 304 not modified', async function () {
 		await testMultiObject304NotModified('collection');
@@ -523,6 +531,19 @@ describe('Versioning', function () {
 				break;
 		}
 
+		// POST with old version should fail
+		response = await API.userPost(
+			config.get('userID'),
+			objectTypePlural,
+			JSON.stringify([json]),
+			[
+				'Content-Type: application/json',
+				`If-Unmodified-Since-Version: ${version - 1}`
+			]
+		);
+		assert412(response);
+
+		// POST with current version should succeed
 		response = await API.userPost(
 			config.get('userID'),
 			objectTypePlural,
@@ -741,5 +762,63 @@ describe('Versioning', function () {
 			]
 		);
 		assert412(response);
+	}
+
+	// Send N concurrent POSTs with the same If-Unmodified-Since-Version.
+	// Exactly one should succeed (200) and the rest should get 412.
+	async function testConcurrentMultiObjectWrite(objectType) {
+		let objectTypePlural = API.getPluralObjectType(objectType);
+
+		// Establish a library version > 0
+		await API.createDataObject(objectType);
+
+		let response = await API.userGet(
+			config.get('userID'),
+			`${objectTypePlural}?limit=1`
+		);
+		let version = response.getHeader('Last-Modified-Version');
+
+		let requests = [];
+		let numRequests = 4;
+		for (let i = 0; i < numRequests; i++) {
+			let json;
+			switch (objectType) {
+				case 'collection':
+					json = { name: `Concurrent ${i}` };
+					break;
+				case 'item':
+					json = await API.getItemTemplate('book');
+					json.title = `Concurrent ${i}`;
+					break;
+				case 'search':
+					json = {
+						name: `Concurrent ${i}`,
+						conditions: [{ condition: 'title', operator: 'contains', value: 'test' }]
+					};
+					break;
+			}
+
+			requests.push(
+				API.userPost(
+					config.get('userID'),
+					objectTypePlural,
+					JSON.stringify([json]),
+					[
+						'Content-Type: application/json',
+						`If-Unmodified-Since-Version: ${version}`
+					]
+				)
+			);
+		}
+
+		let responses = await Promise.all(requests);
+		let successes = responses.filter(r => r.getStatus() === 200);
+		let conflicts = responses.filter(r => r.getStatus() === 412);
+
+		assert.equal(successes.length, 1,
+			`Expected exactly 1 success, got ${successes.length} `
+			+ `(statuses: ${responses.map(r => r.getStatus()).join(', ')})`);
+		assert.equal(conflicts.length, numRequests - 1,
+			`Expected ${numRequests - 1} 412s, got ${conflicts.length}`);
 	}
 });

@@ -55,8 +55,11 @@ class FullTextController extends ApiController {
 			
 			// Make sure library hasn't been modified
 			$this->checkLibraryIfUnmodifiedSinceVersion(true);
-			
-			Zotero_Libraries::updateVersionAndTimestamp($this->objectLibraryID);
+
+			Zotero_Libraries::updateVersionAndTimestamp(
+				$this->objectLibraryID,
+				$_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION']
+			);
 			$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
 			
 			$this->queryParams['format'] = 'writereport';

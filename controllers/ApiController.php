@@ -986,6 +986,10 @@ class ApiController extends Controller {
 	 * If-Unmodified-Since-Version and make sure the library
 	 * hasn't been modified
 	 *
+	 * Note: This is a fast-path check. The version constraint is also enforced
+	 * atomically in Zotero_Libraries::updateVersionAndTimestamp() to prevent
+	 * TOCTOU races from concurrent requests.
+	 *
 	 * @param boolean $required Return 428 if header is missing
 	 * @return boolean True if library version was checked, false if not
 	 */

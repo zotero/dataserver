@@ -50,7 +50,10 @@ class SettingsController extends ApiController {
 				$libraryTimestampChecked = $this->checkLibraryIfUnmodifiedSinceVersion();
 			}
 			
-			Zotero_Libraries::updateVersionAndTimestamp($this->objectLibraryID);
+			Zotero_Libraries::updateVersionAndTimestamp(
+				$this->objectLibraryID,
+				!empty($libraryTimestampChecked) ? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
+			);
 		}
 		
 		// Single setting
