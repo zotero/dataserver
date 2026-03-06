@@ -932,6 +932,35 @@ class TTSController extends ApiController {
 			'ExpressionAttributeValues' => $dailyValues,
 		]);
 
+		// Daily unique users
+		try {
+			$ddb->putItem([
+				'TableName' => $tableName,
+				'Item' => [
+					'PK' => ['S' => 'DAILY_FIRST'],
+					'SK' => ['S' => "$dailyKey#$userID"],
+				],
+				'ConditionExpression' => 'attribute_not_exists(PK)',
+			]);
+			// New user for today -- increment unique user count
+			$ddb->updateItem([
+				'TableName' => $tableName,
+				'Key' => [
+					'PK' => ['S' => 'DAILY_STATS'],
+					'SK' => ['S' => $dailyKey],
+				],
+				'UpdateExpression' => 'ADD uniqueUsers :one',
+				'ExpressionAttributeValues' => [
+					':one' => ['N' => '1'],
+				],
+			]);
+		}
+		catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+			if ($e->getAwsErrorCode() !== 'ConditionalCheckFailedException') {
+				throw $e;
+			}
+		}
+
 		// Per-user monthly usage by provider (for setting credit limits)
 		if ($provider) {
 			$ddb->updateItem([
