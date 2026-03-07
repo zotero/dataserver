@@ -357,7 +357,11 @@ trait Zotero_DataObjects {
 				}
 			}
 			catch (Exception $e) {
+				error_log("Rolling back $savepointName due to: " . $e->getMessage());
 				if ($useSavepoints) {
+					// If rollbackToSavepoint throws (e.g., because a deadlock caused MySQL
+					// to implicitly roll back the transaction), let it propagate -- the
+					// entire batch must be aborted since all previous writes are gone.
 					Zotero_DB::rollbackToSavepoint($savepointName);
 				}
 				else {
