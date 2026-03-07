@@ -91,17 +91,22 @@ class Zotero_FullText {
 		self::validateMultiObjectJSON($json);
 		
 		$results = new Zotero_Results($requestParams);
-		
-		if (Zotero_DB::transactionInProgress()) {
-			throw new Exception(
-				"Transaction cannot be open when starting multi-object update"
-			);
-		}
-		
+
+		// Use explicit savepoints for per-item isolation when an outer transaction is open
+		// (e.g., from the controller wrapping the version bump + writes), so individual
+		// failures don't roll back the whole batch.
+		$useSavepoints = Zotero_DB::transactionInProgress();
+
 		$i = 0;
 		foreach ($json as $index => $jsonObject) {
-			Zotero_DB::beginTransaction();
-			
+			$savepointName = "ft_$i";
+			if ($useSavepoints) {
+				Zotero_DB::savepoint($savepointName);
+			}
+			else {
+				Zotero_DB::beginTransaction();
+			}
+
 			try {
 				if (!is_object($jsonObject)) {
 					throw new Exception(
@@ -123,15 +128,25 @@ class Zotero_FullText {
 					);
 				}
 				self::indexItem($item, $jsonObject);
-				Zotero_DB::commit();
+				if ($useSavepoints) {
+					Zotero_DB::releaseSavepoint($savepointName);
+				}
+				else {
+					Zotero_DB::commit();
+				}
 				$obj = [
 					'key' => $jsonObject->key
 				];
 				$results->addSuccessful($i, $obj);
 			}
 			catch (Exception $e) {
-				Zotero_DB::rollback();
-				
+				if ($useSavepoints) {
+					Zotero_DB::rollbackToSavepoint($savepointName);
+				}
+				else {
+					Zotero_DB::rollback();
+				}
+
 				// If item key given, include that
 				$resultKey = isset($jsonObject->key) ? $jsonObject->key : '';
 				$results->addFailure($i, $resultKey, $e);

@@ -50,6 +50,7 @@ class Zotero_DB {
 	private $transactionTimestampMS;
 	private $transactionTimestampUnix;
 	private $transactionConnections = [];
+	private $savepointConnections = [];
 	
 	private $readSnapshotActive = false;
 	private $readSnapshotConns = [];
@@ -392,7 +393,9 @@ class Zotero_DB {
 		while ($conn = array_pop($instance->transactionConnections)) {
 			$instance->commitReal($conn);
 		}
-		
+
+		$instance->savepointConnections = [];
+
 		foreach ($instance->callbacks['commit'] as $callback) {
 			call_user_func($callback);
 		}
@@ -419,16 +422,74 @@ class Zotero_DB {
 			self::rollback();
 			return;
 		}
-		
+
+		// If nested, just decrement -- the caller's savepoint (if any) handles isolation
+		if ($instance->transactionLevel > 1) {
+			Z_Core::debug("Transaction in progress -- nesting level decreased to "
+				. ($instance->transactionLevel - 1) . " by rollback");
+			$instance->transactionLevel--;
+			return;
+		}
+
 		while ($conn = array_pop($instance->transactionConnections)) {
 			$instance->rollBackReal($conn);
 		}
 		
 		$instance->transactionLevel = 0;
-		
+		$instance->savepointConnections = [];
+
 		foreach ($instance->callbacks['rollback'] as $callback) {
 			call_user_func($callback);
 		}
+	}
+
+
+	/**
+	 * Create a named savepoint within the current transaction.
+	 *
+	 * Use for partial-rollback isolation (e.g., per-object writes in a batch where
+	 * individual failures shouldn't roll back the whole transaction).
+	 */
+	public static function savepoint($name) {
+		$instance = self::getInstance();
+		if (!$instance->transactionLevel) {
+			throw new Exception("Transaction not open");
+		}
+		foreach ($instance->transactionConnections as $conn) {
+			$conn->link->getConnection()->query("SAVEPOINT $name");
+		}
+		// Track which connections have this savepoint so new connections can catch up
+		$instance->savepointConnections[$name] = $instance->transactionConnections;
+	}
+
+
+	/**
+	 * Release a named savepoint, keeping its changes in the transaction.
+	 */
+	public static function releaseSavepoint($name) {
+		$instance = self::getInstance();
+		if (!isset($instance->savepointConnections[$name])) {
+			throw new Exception("Savepoint '$name' not found");
+		}
+		foreach ($instance->savepointConnections[$name] as $conn) {
+			$conn->link->getConnection()->query("RELEASE SAVEPOINT $name");
+		}
+		unset($instance->savepointConnections[$name]);
+	}
+
+
+	/**
+	 * Roll back to a named savepoint, undoing changes since it was created.
+	 */
+	public static function rollbackToSavepoint($name) {
+		$instance = self::getInstance();
+		if (!isset($instance->savepointConnections[$name])) {
+			throw new Exception("Savepoint '$name' not found");
+		}
+		foreach ($instance->savepointConnections[$name] as $conn) {
+			$conn->link->getConnection()->query("ROLLBACK TO SAVEPOINT $name");
+		}
+		unset($instance->savepointConnections[$name]);
 	}
 	
 	
@@ -1141,6 +1202,12 @@ class Zotero_DB {
 			$conn->link->beginTransaction();
 			$conn->transactionStarted = true;
 			$this->transactionConnections[] = $conn;
+
+			// Create any active named savepoints on the new connection
+			foreach ($this->savepointConnections as $name => $conns) {
+				$conn->link->getConnection()->query("SAVEPOINT $name");
+				$this->savepointConnections[$name][] = $conn;
+			}
 		}
 	}
 	

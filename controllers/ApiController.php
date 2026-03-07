@@ -68,6 +68,7 @@ class ApiController extends Controller {
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
 	protected $isLegacySchemaClient = false;
+	protected $writeTransactionStarted = false;
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -781,8 +782,22 @@ class ApiController extends Controller {
 	protected function isWriteMethod() {
 		return in_array($this->method, array('POST', 'PUT', 'PATCH', 'DELETE'));
 	}
-	
-	
+
+
+	/**
+	 * Bump the library version inside a transaction so the version change and subsequent
+	 * object writes are atomically visible, preventing GETs from seeing the new library
+	 * version before object data is written. Committed in end().
+	 */
+	protected function updateVersionAndTimestamp($ifUnmodifiedSinceVersion = null) {
+		Zotero_DB::beginTransaction();
+		$this->writeTransactionStarted = true;
+		Zotero_Libraries::updateVersionAndTimestamp(
+			$this->objectLibraryID, $ifUnmodifiedSinceVersion
+		);
+	}
+
+
 	protected function handleObjectWrite($objectType, $obj=null) {
 		if (!is_object($obj) && !is_null($obj)) {
 			throw new Exception('$obj must be a data object or null');
@@ -1123,6 +1138,7 @@ class ApiController extends Controller {
 				$this->etag = null;
 			}
 			Zotero_DB::rollback(true);
+			$this->writeTransactionStarted = false;
 		}
 		
 		if (!empty($arguments[0])) {
@@ -1191,7 +1207,13 @@ class ApiController extends Controller {
 		
 		// Commit read snapshot started in header.inc.php for consistent reads on replicas
 		Zotero_DB::commitReadSnapshot();
-		
+
+		// Commit the write transaction opened by updateVersionAndTimestamp()
+		if ($this->writeTransactionStarted && Zotero_DB::transactionInProgress()) {
+			Zotero_DB::commit();
+			$this->writeTransactionStarted = false;
+		}
+
 		// If a transaction is still open, return a 500 (without logging a warning, since this is
 		// also checked in a shutdown handler)
 		if ($this->checkDBTransactionState(true)) {

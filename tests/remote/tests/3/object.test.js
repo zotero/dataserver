@@ -435,21 +435,23 @@ describe('Object', function () {
 
 			switch (objectType) {
 				case 'collection':
-					json1 = { name: 'Test' };
+					json1 = { name: 'First Collection' };
 					json2 = { name: tooLong };
-					json3 = { name: 'Test' };
+					json3 = { name: 'Third Collection' };
 					break;
 				case 'item':
 					json1 = await API.getItemTemplate('book');
 					json2 = await API.getItemTemplate('book');
 					json3 = await API.getItemTemplate('book');
+					json1.title = 'First Item';
 					json2.title = tooLong;
+					json3.title = 'Third Item';
 					break;
 				case 'search': {
 					let conditions = [{ condition: 'title', operator: 'contains', value: 'value' }];
-					json1 = { name: 'Test', conditions: conditions };
+					json1 = { name: 'First Search', conditions: conditions };
 					json2 = { name: tooLong, conditions: conditions };
-					json3 = { name: 'Test', conditions: conditions };
+					json3 = { name: 'Third Search', conditions: conditions };
 					break;
 				}
 			}
@@ -464,6 +466,26 @@ describe('Object', function () {
 			assert200ForObject(response, false, 0);
 			assert413ForObject(response, false, 1);
 			assert200ForObject(response, false, 2);
+
+			// Verify successful objects were actually written with correct data
+			let result = API.getJSONFromResponse(response);
+			let key0 = result.success[0];
+			let key2 = result.success[2];
+			let getMethod = 'get' + objectType.charAt(0).toUpperCase() + objectType.slice(1);
+			let data0 = await API[getMethod](key0, 'json');
+			let data2 = await API[getMethod](key2, 'json');
+			assert.equal(data0.key, key0);
+			assert.equal(data2.key, key2);
+			if (objectType === 'item') {
+				assert.equal(data0.data.title, 'First Item');
+				assert.equal(data2.data.title, 'Third Item');
+			}
+			else {
+				let name1 = objectType === 'collection' ? 'First Collection' : 'First Search';
+				let name3 = objectType === 'collection' ? 'Third Collection' : 'Third Search';
+				assert.equal(data0.data.name, name1);
+				assert.equal(data2.data.name, name3);
+			}
 		}
 	});
 
@@ -508,6 +530,121 @@ describe('Object', function () {
 			assert.property(result.unchanged, '0');
 			assert413ForObject(response, false, 1);
 			assert200ForObject(response, false, 2);
+
+			// Verify unchanged and successful objects are readable with correct data
+			let key0 = result.unchanged[0];
+			let key2 = result.success[2];
+			let getMethod = 'get' + objectType.charAt(0).toUpperCase() + objectType.slice(1);
+			let data0 = await API[getMethod](key0, 'json');
+			let data2 = await API[getMethod](key2, 'json');
+			assert.equal(data0.key, key0);
+			assert.equal(data2.key, key2);
+			if (objectType === 'item') {
+				assert.equal(data0.data.title, 'Title');
+			}
+			else {
+				assert.equal(data0.data.name, objectType === 'collection' ? 'Test' : 'Name');
+			}
+		}
+	});
+
+	it('should not leave data from failed objects in a partial write', async function () {
+		for (let objectType of ['collection', 'item', 'search']) {
+			await API.userClear(config.get('userID'));
+			let objectTypePlural = API.getPluralObjectType(objectType);
+			let json1, json2, json3;
+			let tooLong = '1234567890'.repeat(6554);
+
+			switch (objectType) {
+				case 'collection':
+					json1 = { name: 'Good Collection' };
+					json2 = { name: tooLong };
+					json3 = { name: 'Another Good Collection' };
+					break;
+				case 'item':
+					json1 = await API.getItemTemplate('book');
+					json2 = await API.getItemTemplate('book');
+					json3 = await API.getItemTemplate('book');
+					json1.title = 'Good Item';
+					json2.title = tooLong;
+					json3.title = 'Another Good Item';
+					break;
+				case 'search': {
+					let conditions = [{ condition: 'title', operator: 'contains', value: 'value' }];
+					json1 = { name: 'Good Search', conditions };
+					json2 = { name: tooLong, conditions };
+					json3 = { name: 'Another Good Search', conditions };
+					break;
+				}
+			}
+
+			let response = await API.userPost(
+				config.get('userID'),
+				objectTypePlural,
+				JSON.stringify([json1, json2, json3]),
+				['Content-Type: application/json']
+			);
+			assert200(response);
+			assert200ForObject(response, false, 0);
+			assert413ForObject(response, false, 1);
+			assert200ForObject(response, false, 2);
+
+			// The total number of objects in the library should be 2, not 3
+			response = await API.userGet(
+				config.get('userID'),
+				objectTypePlural
+			);
+			assert200(response);
+			assertTotalResults(response, 2);
+		}
+	});
+
+	it('should return consistent library version after partial write', async function () {
+		for (let objectType of ['collection', 'item', 'search']) {
+			await API.userClear(config.get('userID'));
+			let objectTypePlural = API.getPluralObjectType(objectType);
+			let tooLong = '1234567890'.repeat(6554);
+			let json1, json2;
+
+			switch (objectType) {
+				case 'collection':
+					json1 = { name: 'Test' };
+					json2 = { name: tooLong };
+					break;
+				case 'item':
+					json1 = await API.getItemTemplate('book');
+					json2 = await API.getItemTemplate('book');
+					json2.title = tooLong;
+					break;
+				case 'search': {
+					let conditions = [{ condition: 'title', operator: 'contains', value: 'value' }];
+					json1 = { name: 'Test', conditions };
+					json2 = { name: tooLong, conditions };
+					break;
+				}
+			}
+
+			let response = await API.userPost(
+				config.get('userID'),
+				objectTypePlural,
+				JSON.stringify([json1, json2]),
+				['Content-Type: application/json']
+			);
+			assert200(response);
+			let writeVersion = parseInt(response.getHeader('Last-Modified-Version'));
+
+			// A subsequent GET should see the same library version
+			response = await API.userGet(
+				config.get('userID'),
+				objectTypePlural
+			);
+			assert200(response);
+			let readVersion = parseInt(response.getHeader('Last-Modified-Version'));
+			assert.equal(readVersion, writeVersion,
+				`Library version from GET (${readVersion}) should match POST (${writeVersion}) for ${objectType}`);
+
+			// The successful object should be at that version
+			assertTotalResults(response, 1);
 		}
 	});
 

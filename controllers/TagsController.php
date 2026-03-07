@@ -43,8 +43,7 @@ class TagsController extends ApiController {
 			// Make sure library hasn't been modified
 			$this->checkLibraryIfUnmodifiedSinceVersion(true);
 
-			Zotero_Libraries::updateVersionAndTimestamp(
-				$this->objectLibraryID,
+			$this->updateVersionAndTimestamp(
 				$_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION']
 			);
 		}

@@ -45,8 +45,7 @@ class ItemsController extends ApiController {
 			// to avoid conflicts in the client the timestamp can't change
 			// when the client updates file metadata
 			if (!$this->fileMode) {
-				Zotero_Libraries::updateVersionAndTimestamp(
-					$this->objectLibraryID,
+				$this->updateVersionAndTimestamp(
 					!empty($libraryTimestampChecked) ? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
 				);
 			}

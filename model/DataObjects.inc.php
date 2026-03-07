@@ -297,12 +297,6 @@ trait Zotero_DataObjects {
 		
 		$results = new Zotero_Results($requestParams);
 		
-		if ($requestParams['v'] >= 2 && Zotero_DB::transactionInProgress()) {
-			throw new Exception(
-				"Transaction cannot be open when starting multi-object update"
-			);
-		}
-		
 		// If single collection object, stuff in array
 		if ($requestParams['v'] < 2 && $type == 'collection' && !isset($json->collections)) {
 			$json = [$json];
@@ -310,12 +304,23 @@ trait Zotero_DataObjects {
 		else if ($requestParams['v'] < 3) {
 			$json = $json->$types;
 		}
-		
+
+		// Use explicit savepoints for per-object isolation when an outer transaction is open
+		// (e.g., from the controller wrapping the version bump + writes), so individual
+		// failures don't roll back the whole batch.
+		$useSavepoints = Zotero_DB::transactionInProgress();
+
 		$i = 0;
 		$loggableErrors = [];
 		foreach ($json as $prop => $jsonObject) {
-			Zotero_DB::beginTransaction();
-			
+			$savepointName = "obj_$i";
+			if ($useSavepoints) {
+				Zotero_DB::savepoint($savepointName);
+			}
+			else {
+				Zotero_DB::beginTransaction();
+			}
+
 			try {
 				if (!is_object($jsonObject)) {
 					throw new Exception(
@@ -337,8 +342,13 @@ trait Zotero_DataObjects {
 						$obj, $jsonObject, $requestParams, $userID, $requireVersion, true
 					);
 				}
-				Zotero_DB::commit();
-				
+				if ($useSavepoints) {
+					Zotero_DB::releaseSavepoint($savepointName);
+				}
+				else {
+					Zotero_DB::commit();
+				}
+
 				if ($changed) {
 					$results->addSuccessful($i, $obj->toResponseJSON($requestParams, $permissions));
 				}
@@ -347,8 +357,13 @@ trait Zotero_DataObjects {
 				}
 			}
 			catch (Exception $e) {
-				Zotero_DB::rollback();
-				
+				if ($useSavepoints) {
+					Zotero_DB::rollbackToSavepoint($savepointName);
+				}
+				else {
+					Zotero_DB::rollback();
+				}
+
 				if ($requestParams['v'] < 2) {
 					throw ($e);
 				}
