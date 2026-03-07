@@ -455,7 +455,10 @@ class Zotero_DB {
 		if (!$instance->transactionLevel) {
 			throw new Exception("Transaction not open");
 		}
+		$connCount = count($instance->transactionConnections);
+		error_log("Creating savepoint $name on $connCount connections (level $instance->transactionLevel)");
 		foreach ($instance->transactionConnections as $conn) {
+			error_log("  SAVEPOINT $name on shard $conn->shardID");
 			$conn->link->getConnection()->query("SAVEPOINT $name");
 		}
 		// Track which connections have this savepoint so new connections can catch up
@@ -471,7 +474,10 @@ class Zotero_DB {
 		if (!isset($instance->savepointConnections[$name])) {
 			throw new Exception("Savepoint '$name' not found");
 		}
+		$connCount = count($instance->savepointConnections[$name]);
+		error_log("Releasing savepoint $name on $connCount connections");
 		foreach ($instance->savepointConnections[$name] as $conn) {
+			error_log("  RELEASE SAVEPOINT $name on shard $conn->shardID");
 			$conn->link->getConnection()->query("RELEASE SAVEPOINT $name");
 		}
 		unset($instance->savepointConnections[$name]);
@@ -480,14 +486,30 @@ class Zotero_DB {
 
 	/**
 	 * Roll back to a named savepoint, undoing changes since it was created.
+	 *
+	 * If the savepoint no longer exists in MySQL (e.g., because a deadlock caused an implicit
+	 * transaction rollback), this throws an exception that should abort the entire batch,
+	 * since all previous writes in the transaction are gone too.
 	 */
 	public static function rollbackToSavepoint($name) {
 		$instance = self::getInstance();
 		if (!isset($instance->savepointConnections[$name])) {
 			throw new Exception("Savepoint '$name' not found");
 		}
-		foreach ($instance->savepointConnections[$name] as $conn) {
-			$conn->link->getConnection()->query("ROLLBACK TO SAVEPOINT $name");
+		$connCount = count($instance->savepointConnections[$name]);
+		error_log("Rolling back to savepoint $name on $connCount connections");
+		try {
+			foreach ($instance->savepointConnections[$name] as $conn) {
+				error_log("  ROLLBACK TO SAVEPOINT $name on shard $conn->shardID");
+				$conn->link->getConnection()->query("ROLLBACK TO SAVEPOINT $name");
+			}
+		}
+		catch (mysqli_sql_exception $e) {
+			// If MySQL says the savepoint doesn't exist, the transaction was likely
+			// rolled back implicitly (e.g., deadlock). Clean up and rethrow so the
+			// entire batch is aborted.
+			$instance->savepointConnections = [];
+			throw $e;
 		}
 		unset($instance->savepointConnections[$name]);
 	}
@@ -1205,6 +1227,7 @@ class Zotero_DB {
 
 			// Create any active named savepoints on the new connection
 			foreach ($this->savepointConnections as $name => $conns) {
+				error_log("  Creating savepoint $name on new shard $conn->shardID connection");
 				$conn->link->getConnection()->query("SAVEPOINT $name");
 				$this->savepointConnections[$name][] = $conn;
 			}
