@@ -2420,6 +2420,7 @@ class Zotero_Item extends Zotero_DataObject {
 									continue;
 								}
 								$relatedItem->updateVersion($userID);
+								Zotero_API::addSideEffectKey($relatedItem->key);
 							}
 						}
 					}

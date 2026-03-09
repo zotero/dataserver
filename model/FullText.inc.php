@@ -87,7 +87,7 @@ class Zotero_FullText {
 	}
 	
 	public static function updateMultipleFromJSON($json, $requestParams, $libraryID, $userID,
-			Zotero_Permissions $permissions) {
+			Zotero_Permissions $permissions, $ifUnmodifiedSinceVersion=null) {
 		self::validateMultiObjectJSON($json);
 		
 		$results = new Zotero_Results($requestParams);
@@ -101,7 +101,24 @@ class Zotero_FullText {
 		$i = 0;
 		foreach ($json as $index => $jsonObject) {
 			Zotero_DB::beginTransaction();
-			
+
+			// Bump the library version inside each item's transaction so the
+			// version and data are committed atomically. The first item gets
+			// the If-Unmodified-Since-Version check; subsequent items bump
+			// unconditionally.
+			try {
+				Zotero_Libraries::updateVersionAndTimestamp(
+					$libraryID, $i === 0 ? $ifUnmodifiedSinceVersion : null
+				);
+			}
+			catch (HTTPException $e) {
+				if ($e->getCode() === 412) {
+					Zotero_DB::rollback();
+					throw $e;
+				}
+				throw $e;
+			}
+
 			try {
 				if (!is_object($jsonObject)) {
 					throw new Exception(
@@ -131,7 +148,9 @@ class Zotero_FullText {
 			}
 			catch (Exception $e) {
 				Zotero_DB::rollback();
-				
+				// Clear stale cached version after rollback
+				Zotero_Libraries::refreshUpdatedVersion($libraryID);
+
 				// If item key given, include that
 				$resultKey = isset($jsonObject->key) ? $jsonObject->key : '';
 				$results->addFailure($i, $resultKey, $e);

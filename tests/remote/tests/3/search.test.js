@@ -195,9 +195,9 @@ describe('Searches', function () {
 		// Check data in write response
 		assert.equal(json.successful[0].key, json.successful[0].data.key);
 		assert.equal(json.successful[1].key, json.successful[1].data.key);
-		assert.equal(json.successful[0].version, libraryVersion);
+		assert.equal(json.successful[0].version, libraryVersion - 1);
 		assert.equal(json.successful[1].version, libraryVersion);
-		assert.equal(json.successful[0].data.version, libraryVersion);
+		assert.equal(json.successful[0].data.version, libraryVersion - 1);
 		assert.equal(json.successful[1].data.version, libraryVersion);
 		assert.equal(json.successful[0].data.name, search1NewName);
 		assert.equal(json.successful[1].data.name, search2Name);

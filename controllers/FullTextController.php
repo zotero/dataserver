@@ -56,22 +56,19 @@ class FullTextController extends ApiController {
 			// Make sure library hasn't been modified
 			$this->checkLibraryIfUnmodifiedSinceVersion(true);
 
-			Zotero_Libraries::updateVersionAndTimestamp(
-				$this->objectLibraryID,
-				$_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION']
-			);
-			$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
-			
 			$this->queryParams['format'] = 'writereport';
 			$obj = $this->jsonDecode($this->body);
-			
+
+			// Version is bumped per-item inside updateMultipleFromJSON()
 			$results = Zotero_FullText::updateMultipleFromJSON(
 				$obj,
 				$this->queryParams,
 				$this->objectLibraryID,
 				$this->userID,
-				$this->permissions
+				$this->permissions,
+				$_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION']
 			);
+			$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
 			
 			Zotero_API::multiResponse([
 				'action' => $this->action,

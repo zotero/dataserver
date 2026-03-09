@@ -273,7 +273,8 @@ trait Zotero_DataObjects {
 	
 	
 	public static function updateMultipleFromJSON($json, $requestParams, $libraryID, $userID,
-			Zotero_Permissions $permissions, $requireVersion, $parent=null) {
+			Zotero_Permissions $permissions, $requireVersion, $parent=null,
+			$ifUnmodifiedSinceVersion=null) {
 		$type = self::$objectType;
 		$types = self::$objectTypePlural;
 		$keyProp = $type . "Key";
@@ -310,12 +311,32 @@ trait Zotero_DataObjects {
 		else if ($requestParams['v'] < 3) {
 			$json = $json->$types;
 		}
-		
+
 		$i = 0;
 		$loggableErrors = [];
 		foreach ($json as $prop => $jsonObject) {
 			Zotero_DB::beginTransaction();
-			
+
+			// Bump the library version inside each object's transaction so the
+			// version and data are committed atomically. The first object gets
+			// the If-Unmodified-Since-Version check; subsequent objects bump
+			// unconditionally.
+			$checkVersion = $i === 0 ? $ifUnmodifiedSinceVersion : null;
+			try {
+				Zotero_Libraries::updateVersionAndTimestamp(
+					$libraryID, $checkVersion
+				);
+			}
+			catch (HTTPException $e) {
+				// Re-throw 412 from the atomic version check so it becomes
+				// an HTTP-level 412 response, not a per-object failure
+				if ($e->getCode() === 412) {
+					Zotero_DB::rollback();
+					throw $e;
+				}
+				throw $e;
+			}
+
 			try {
 				if (!is_object($jsonObject)) {
 					throw new Exception(
@@ -348,7 +369,9 @@ trait Zotero_DataObjects {
 			}
 			catch (Exception $e) {
 				Zotero_DB::rollback();
-				
+				// Clear stale cached version after rollback
+				Zotero_Libraries::refreshUpdatedVersion($libraryID);
+
 				if ($requestParams['v'] < 2) {
 					throw ($e);
 				}

@@ -44,10 +44,16 @@ class CollectionsController extends ApiController {
 				$libraryTimestampChecked = $this->checkLibraryIfUnmodifiedSinceVersion();
 			}
 			
-			Zotero_Libraries::updateVersionAndTimestamp(
-				$this->objectLibraryID,
-				!empty($libraryTimestampChecked) ? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
-			);
+			// For multi-object POSTs, the version is bumped per-object inside
+			// updateMultipleFromJSON() so that each object's version and data
+			// are committed atomically. For single-object writes and DELETEs,
+			// bump the version upfront.
+			if ($this->singleObject || $this->method == 'DELETE') {
+				Zotero_Libraries::updateVersionAndTimestamp(
+					$this->objectLibraryID,
+					!empty($libraryTimestampChecked) ? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
+				);
+			}
 		}
 		
 		$collectionIDs = array();
@@ -144,9 +150,12 @@ class CollectionsController extends ApiController {
 							$this->userID,
 							$this->permissions,
 							$libraryTimestampChecked ? 0 : 1,
-							null
+							null,
+							!empty($libraryTimestampChecked)
+								? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
 						);
-						
+						$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
+
 						if ($cacheKey = $this->getWriteTokenCacheKey()) {
 							Z_Core::$MC->set($cacheKey, true, $this->writeTokenCacheTime);
 						}

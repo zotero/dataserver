@@ -224,8 +224,20 @@ class Zotero_Libraries {
 		}
 		return self::getOriginalVersion($libraryID);
 	}
-	
-	
+
+
+	/**
+	 * Refresh the cached updated version for a library by re-reading from the DB.
+	 * Call this after a transaction rollback to avoid stale cached versions.
+	 */
+	public static function refreshUpdatedVersion($libraryID) {
+		$sql = "SELECT version FROM shardLibraries WHERE libraryID=?";
+		self::$updatedVersions[$libraryID] = Zotero_DB::valueQuery(
+			$sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID)
+		);
+	}
+
+
 	public static function updateVersionAndTimestamp($libraryID, $ifUnmodifiedSinceVersion = null) {
 		if (!is_numeric($libraryID)) {
 			throw new Exception("Invalid library ID");

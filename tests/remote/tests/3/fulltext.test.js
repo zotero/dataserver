@@ -200,7 +200,8 @@ describe('Full Text', function () {
 		assert.equal(json.totalPages, originalJSON[0].totalPages);
 		assert.notProperty(json, 'indexedChars');
 		assert.notProperty(json, 'invalidParam');
-		assert.equal(parseInt(response.getHeader('Last-Modified-Version')), libraryVersion);
+		// First item in batch gets libraryVersion - 1 (per-item version bump)
+		assert.equal(parseInt(response.getHeader('Last-Modified-Version')), libraryVersion - 1);
 
 		response = await API.userGet(
 			config.get('userID'),

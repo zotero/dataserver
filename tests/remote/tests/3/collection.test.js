@@ -92,9 +92,9 @@ describe('Collections', function () {
 		// Check data in write response
 		assert.equal(json.successful[0].key, json.successful[0].data.key);
 		assert.equal(json.successful[1].key, json.successful[1].data.key);
-		assert.equal(json.successful[0].version, libraryVersion);
+		assert.equal(json.successful[0].version, libraryVersion - 1);
 		assert.equal(json.successful[1].version, libraryVersion);
-		assert.equal(json.successful[0].data.version, libraryVersion);
+		assert.equal(json.successful[0].data.version, libraryVersion - 1);
 		assert.equal(json.successful[1].data.version, libraryVersion);
 		assert.equal(json.successful[0].data.name, name1);
 		assert.equal(json.successful[1].data.name, name2);
@@ -144,9 +144,9 @@ describe('Collections', function () {
 		// Check data in write response
 		assert.equal(json.successful[0].key, json.successful[0].data.key);
 		assert.equal(json.successful[1].key, json.successful[1].data.key);
-		assert.equal(json.successful[0].version, libraryVersion);
+		assert.equal(json.successful[0].version, libraryVersion - 1);
 		assert.equal(json.successful[1].version, libraryVersion);
-		assert.equal(json.successful[0].data.version, libraryVersion);
+		assert.equal(json.successful[0].data.version, libraryVersion - 1);
 		assert.equal(json.successful[1].data.version, libraryVersion);
 		assert.equal(json.successful[0].data.name, name1);
 		assert.equal(json.successful[1].data.name, name2);
@@ -183,8 +183,8 @@ describe('Collections', function () {
 			['Content-Type: application/json']
 		);
 		assert200(response);
-		// If this behavior changes, remove the pre-increment
-		libraryVersion++;
+		// Per-item version bump: each item bumps the version, even if unchanged
+		libraryVersion += 2;
 		assert.equal(parseInt(response.getHeader('Last-Modified-Version')), libraryVersion);
 		let json = API.getJSONFromResponse(response);
 		assert.lengthOf(Object.keys(json.unchanged), 2);
@@ -222,9 +222,9 @@ describe('Collections', function () {
 		// Check data in write response
 		assert.equal(json.successful[0].key, json.successful[0].data.key);
 		assert.equal(json.successful[1].key, json.successful[1].data.key);
-		assert.equal(json.successful[0].version, libraryVersion);
+		assert.equal(json.successful[0].version, libraryVersion - 1);
 		assert.equal(json.successful[1].version, libraryVersion);
-		assert.equal(json.successful[0].data.version, libraryVersion);
+		assert.equal(json.successful[0].data.version, libraryVersion - 1);
 		assert.equal(json.successful[1].data.version, libraryVersion);
 		assert.equal(json.successful[0].data.name, collection1NewName);
 		assert.equal(json.successful[1].data.name, collection2Name);

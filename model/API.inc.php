@@ -27,6 +27,11 @@
 class Zotero_API {
 	const MAX_BIBLIOGRAPHY_ITEMS = 150;
 	const MAX_OBJECT_KEYS = 100;
+
+	// Keys of objects modified as side effects during the current request
+	// (e.g., reverse relation targets), used by checkJSONObjectVersion()
+	// to distinguish our own side effects from concurrent modifications
+	private static $sideEffectKeys = [];
 	
 	public static $maxWriteCollections = 50;
 	public static $maxWriteItems = 50;
@@ -36,8 +41,14 @@ class Zotero_API {
 	public static $maxTranslateItems = 10;
 	
 	private static $validAPIVersions = [1, 2, 3];
-	
-	
+
+
+	public static function addSideEffectKey($key) {
+		self::$sideEffectKeys[$key] = true;
+	}
+
+
+
 	private static $defaultParams = [
 		'v' => 3,
 		'schemaVersion' => null,
@@ -1254,12 +1265,12 @@ class Zotero_API {
 					Z_ERROR_INVALID_INPUT
 				);
 			}
-			$originalVersion = Zotero_Libraries::getOriginalVersion($object->libraryID);
-			$updatedVersion = Zotero_Libraries::getUpdatedVersion($object->libraryID);
 			// Make sure the object hasn't been modified since the specified version
 			if ($object->version > $json->$versionProp) {
-				// Unless it was modified in this request
-				if ($updatedVersion != $originalVersion && $object->version == $updatedVersion) {
+				// Unless it was modified as a side effect of another object
+				// in this request (e.g., a reverse relation target)
+				if ($objectType != 'setting'
+						&& isset(self::$sideEffectKeys[$object->key])) {
 					return;
 				}
 				throw new HTTPException(ucwords($objectType)

@@ -70,8 +70,9 @@ describe('Items', function () {
 
 		for (let i = 0; i < 3; i++) {
 			assert.equal(responseJSON.successful[i].key, responseJSON.successful[i].data.key);
-			assert.equal(responseJSON.successful[i].version, libraryVersion);
-			assert.equal(responseJSON.successful[i].data.version, libraryVersion);
+			// Each item in a batch gets its own incrementing version
+			assert.equal(responseJSON.successful[i].version, libraryVersion - (2 - i));
+			assert.equal(responseJSON.successful[i].data.version, libraryVersion - (2 - i));
 			assert.equal(data[i].title, responseJSON.successful[i].data.title);
 		}
 		assert.equal(data[2].numPages, responseJSON.successful[2].data.numPages);

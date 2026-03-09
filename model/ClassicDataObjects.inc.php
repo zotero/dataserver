@@ -531,7 +531,11 @@ class Zotero_ClassicDataObjects {
 			$tagName = $obj->name;
 			
 			// Update linked items
-			Zotero_Items::updateVersions($obj->getLinkedItems(), $userID);
+			$linkedItems = $obj->getLinkedItems();
+			Zotero_Items::updateVersions($linkedItems, $userID);
+			foreach ($linkedItems as $linkedItem) {
+				Zotero_API::addSideEffectKey($linkedItem->key);
+			}
 		}
 		
 		if ($type == 'item' && $obj->isAttachment()) {
