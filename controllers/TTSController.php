@@ -856,32 +856,37 @@ class TTSController extends ApiController {
 		$durationSeconds = isset($meta['duration']) ? round($meta['duration'], 2) : 0;
 		$cacheHit = !empty($meta['cacheHit']);
 
-		// Per-voice monthly stats
+		// Daily unique users per voice -- stored as fields on DAILY_STATS
 		if ($voiceID && $lang) {
-			$voiceStatsSK = "$monthlyKey#$lang#$voiceID";
-
-			$voiceStatsSetExpr = 'SET updatedAt = :now, tier = :tier';
-			$voiceStatsValues = [
-				':now' => ['S' => $now],
-				':one' => ['N' => '1'],
-				':dur' => ['N' => (string) $durationSeconds],
-				':tier' => ['S' => $tier],
-			];
-			if ($provider) {
-				$voiceStatsSetExpr .= ', provider = :provider';
-				$voiceStatsValues[':provider'] = ['S' => $provider];
+			try {
+				$ddb->putItem([
+					'TableName' => $tableName,
+					'Item' => [
+						'PK' => ['S' => 'VOICE_DAILY_FIRST'],
+						'SK' => ['S' => "$dailyKey#$lang#$voiceID#$userID"],
+					],
+					'ConditionExpression' => 'attribute_not_exists(PK)',
+				]);
+				$ddb->updateItem([
+					'TableName' => $tableName,
+					'Key' => [
+						'PK' => ['S' => 'DAILY_STATS'],
+						'SK' => ['S' => $dailyKey],
+					],
+					'UpdateExpression' => 'ADD #vu :one',
+					'ExpressionAttributeNames' => [
+						'#vu' => "vu#$lang#$voiceID",
+					],
+					'ExpressionAttributeValues' => [
+						':one' => ['N' => '1'],
+					],
+				]);
 			}
-			$ddb->updateItem([
-				'TableName' => $tableName,
-				'Key' => [
-					'PK' => ['S' => 'VOICE_STATS'],
-					'SK' => ['S' => $voiceStatsSK],
-				],
-				'UpdateExpression' => $voiceStatsSetExpr
-					. " ADD requests :one, totalDurationSeconds :dur",
-				'ExpressionAttributeValues' => $voiceStatsValues,
-			]);
-
+			catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+				if ($e->getAwsErrorCode() !== 'ConditionalCheckFailedException') {
+					throw $e;
+				}
+			}
 		}
 
 		// Per-locale monthly stats
