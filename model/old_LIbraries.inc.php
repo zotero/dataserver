@@ -226,38 +226,17 @@ class Zotero_Libraries {
 	}
 	
 	
-	public static function updateVersionAndTimestamp($libraryID, $ifUnmodifiedSinceVersion = null) {
+	public static function updateVersionAndTimestamp($libraryID) {
 		if (!is_numeric($libraryID)) {
 			throw new Exception("Invalid library ID");
 		}
-
+		
 		$shardID = Zotero_Shards::getByLibraryID($libraryID);
-
+		
 		$originalVersion = self::getOriginalVersion($libraryID);
-
-		if ($ifUnmodifiedSinceVersion !== null) {
-			$sql = "UPDATE shardLibraries SET version=LAST_INSERT_ID(version+1), lastUpdated=NOW() "
-				. "WHERE libraryID=? AND version <= ?";
-			$affected = Zotero_DB::query(
-				$sql, [$libraryID, (int) $ifUnmodifiedSinceVersion], $shardID
-			);
-			if ($affected === 0) {
-				$currentVersion = Zotero_DB::valueQuery(
-					"SELECT version FROM shardLibraries WHERE libraryID=?",
-					$libraryID, $shardID
-				);
-				throw new HTTPException(
-					"Library has been modified since specified version "
-						. "(expected $ifUnmodifiedSinceVersion, found $currentVersion)",
-					412
-				);
-			}
-		}
-		else {
-			$sql = "UPDATE shardLibraries SET version=LAST_INSERT_ID(version+1), lastUpdated=NOW() "
-				. "WHERE libraryID=?";
-			Zotero_DB::query($sql, $libraryID, $shardID);
-		}
+		$sql = "UPDATE shardLibraries SET version=LAST_INSERT_ID(version+1), lastUpdated=NOW() "
+			. "WHERE libraryID=?";
+		Zotero_DB::query($sql, $libraryID, $shardID);
 		$version = Zotero_DB::valueQuery("SELECT LAST_INSERT_ID()", false, $shardID);
 		// Store new version for use by getUpdatedVersion()
 		self::$updatedVersions[$libraryID] = $version;
@@ -394,7 +373,7 @@ class Zotero_Libraries {
 		Zotero_DB::beginTransaction();
 		
 		$tables = array(
-			'collections', 'items', 'relations', 'savedSearches',
+			'collections', 'creators', 'items', 'relations', 'savedSearches', 'tags',
 			'syncDeleteLogIDs', 'syncDeleteLogKeys', 'settings'
 		);
 		
@@ -430,7 +409,7 @@ class Zotero_Libraries {
 				// but will probably almost always do the trick.
 				if ($table == 'collections'
 						// Newer MySQL
-						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth") !== false
+						&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth")
 						// Older MySQL
 						|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
 					$sql = "DELETE FROM collections WHERE libraryID=? "

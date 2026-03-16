@@ -65,7 +65,7 @@ class Zotero_Items {
 	}
 	
 	
-	public static function search($libraryID, $onlyTopLevel = false, array $params = [], ?Zotero_Permissions $permissions = null) {
+	public static function search($libraryID, $onlyTopLevel = false, array $params = [], Zotero_Permissions $permissions = null) {
 		$rnd = "_" . uniqid($libraryID . "_");
 		
 		$results = array('results' => array(), 'total' => 0);
@@ -186,7 +186,8 @@ class Zotero_Items {
 		
 		if (!empty($params['q'])) {
 			// Pull in creators
-			$sql .= "LEFT JOIN itemCreators IC ON (IC.itemID=I.itemID) ";
+			$sql .= "LEFT JOIN itemCreators IC ON (IC.itemID=I.itemID) "
+				. "LEFT JOIN creators C ON (C.creatorID=IC.creatorID) ";
 			
 			// Pull in dates
 			$dateFieldIDs = array_merge(
@@ -418,10 +419,21 @@ class Zotero_Items {
 			$negatives = array();
 			
 			foreach ($tagSets as $set) {
-				$lowercaseTags = array_map('strtolower', $set['values']);
+				$tagIDs = array();
+				
+				foreach ($set['values'] as $tag) {
+					$ids = Zotero_Tags::getIDs($libraryID, $tag, true);
+					if (!$ids) {
+						$ids = array(0);
+					}
+					$tagIDs = array_merge($tagIDs, $ids);
+				}
+				
+				$tagIDs = array_unique($tagIDs);
+				
 				$tmpSQL = "SELECT itemID FROM items JOIN itemTags USING (itemID) "
-						. "WHERE LOWER(itemTags.name) IN (" . implode(',', array_fill(0, sizeOf($set['values']), '?')) . ")";
-				$ids = Zotero_DB::columnQuery($tmpSQL, $lowercaseTags, $shardID);
+						. "WHERE tagID IN (" . implode(',', array_fill(0, sizeOf($tagIDs), '?')) . ")";
+				$ids = Zotero_DB::columnQuery($tmpSQL, $tagIDs, $shardID);
 				
 				if (!$ids) {
 					// If no negative tags, skip this tag set
@@ -435,7 +447,7 @@ class Zotero_Items {
 				
 				$ids = $ids ? $ids : array();
 				$sql2 .= " AND itemID " . ($set['negation'] ? "NOT " : "") . " IN ("
-					. implode(',', array_fill(0, sizeof($ids), '?')) . ")";
+					. implode(',', array_fill(0, sizeOf($ids), '?')) . ")";
 				$sqlParams2 = array_merge($sqlParams2, $ids);
 			}
 			
@@ -1623,7 +1635,7 @@ class Zotero_Items {
 	
 	public static function updateFromJSON(Zotero_Item $item,
 	                                      $json,
-	                                      ?Zotero_Item $parentItem,
+	                                      Zotero_Item $parentItem=null,
 	                                      $requestParams,
 	                                      $userID,
 	                                      $requireVersion=0,
@@ -1664,11 +1676,6 @@ class Zotero_Items {
 			$item->setField("itemTypeID", Zotero_ItemTypes::getID($json->itemType));
 		}
 		
-		// And parentKey, which has to be set for getSource() to be available for other properties
-		if (isset($json->parentItem)) {
-			$item->setSourceKey($json->parentItem);
-		}
-		
 		$dateModifiedProvided = false;
 		// APIv2 and below
 		$changedDateModified = false;
@@ -1683,12 +1690,15 @@ class Zotero_Items {
 				case 'key':
 				case 'version':
 				case 'itemKey':
-				case 'parentItem':
 				case 'itemVersion':
 				case 'itemType':
 				case 'deleted':
 				case 'inPublications':
 					continue 2;
+				
+				case 'parentItem':
+					$item->setSourceKey($val);
+					break;
 				
 				case 'creators':
 					if (!$val && !$item->numCreators()) {
@@ -1696,7 +1706,6 @@ class Zotero_Items {
 					}
 					
 					$orderIndex = -1;
-					$creatorsToAdd = [];
 					foreach ($val as $newCreatorData) {
 						// JSON uses 'name' and 'firstName'/'lastName',
 						// so switch to just 'firstName'/'lastName'
@@ -1719,12 +1728,49 @@ class Zotero_Items {
 						$orderIndex++;
 						
 						$newCreatorTypeID = Zotero_CreatorTypes::getID($newCreatorData->creatorType);
-
-						// Make creator object
-						$newCreator = new Zotero_Creator($item->libraryID, $newCreatorData->firstName, $newCreatorData->lastName, $newCreatorData->fieldMode, $newCreatorTypeID, $orderIndex);
-						$item->setCreator($orderIndex, $newCreator);
+						
+						// Same creator in this position
+						$existingCreator = $item->getCreator($orderIndex);
+						if ($existingCreator && $existingCreator['ref']->equals($newCreatorData)) {
+							// Just change the creatorTypeID
+							if ($existingCreator['creatorTypeID'] != $newCreatorTypeID) {
+								$item->setCreator($orderIndex, $existingCreator['ref'], $newCreatorTypeID);
+							}
+							continue;
+						}
+						
+						// Same creator in a different position, so use that
+						$existingCreators = $item->getCreators();
+						for ($i=0,$len=sizeOf($existingCreators); $i<$len; $i++) {
+							if ($existingCreators[$i]['ref']->equals($newCreatorData)) {
+								$item->setCreator($orderIndex, $existingCreators[$i]['ref'], $newCreatorTypeID);
+								continue;
+							}
+						}
+						
+						// Make a fake creator to use for the data lookup
+						$newCreator = new Zotero_Creator;
+						$newCreator->libraryID = $item->libraryID;
+						foreach ($newCreatorData as $key=>$val) {
+							if ($key == 'creatorType') {
+								continue;
+							}
+							$newCreator->$key = $val;
+						}
+						
+						// Look for an equivalent creator in this library
+						$candidates = Zotero_Creators::getCreatorsWithData($item->libraryID, $newCreator, true);
+						if ($candidates) {
+							$c = Zotero_Creators::get($item->libraryID, $candidates[0]);
+							$item->setCreator($orderIndex, $c, $newCreatorTypeID);
+							continue;
+						}
+						
+						// None found, so make a new one
+						$creatorID = $newCreator->save();
+						$newCreator = Zotero_Creators::get($item->libraryID, $creatorID);
+						$item->setCreator($orderIndex, $newCreator, $newCreatorTypeID);
 					}
-
 					
 					// Remove all existing creators above the current index
 					if ($exists && $indexes = array_keys($item->getCreators())) {
@@ -1845,7 +1891,7 @@ class Zotero_Items {
 		// Skip "Date Modified" update if only certain fields were updated (e.g., collections)
 		$skipDateModifiedUpdate = $dateModifiedProvided || !sizeOf(array_diff(
 			$item->getChanged(),
-			['collections', 'deleted', 'inPublications', 'relations']
+			['collections', 'deleted', 'inPublications', 'relations', 'tags']
 		));
 		
 		if ($item->hasChanged() && !$skipDateModifiedUpdate
@@ -1916,7 +1962,7 @@ class Zotero_Items {
 	 * The catch here is that updates can be partial with POST/PATCH, so checks that depend on
 	 * other values have to check values on both the JSON and, if it's an update, the existing item.
 	 */
-	private static function validateJSONItem($json, $libraryID, ?Zotero_Item $item, $isChild, $requestParams, $partialUpdate=false) {
+	private static function validateJSONItem($json, $libraryID, Zotero_Item $item=null, $isChild, $requestParams, $partialUpdate=false) {
 		$isNew = !$item || !$item->version;
 		
 		if (!is_object($json)) {
@@ -2318,7 +2364,7 @@ class Zotero_Items {
 						throw new Exception("Cannot change attachment linkMode", Z_ERROR_INVALID_INPUT);
 					}
 					break;
-
+				
 				case 'contentType':
 				case 'charset':
 				case 'filename':
@@ -2400,11 +2446,10 @@ class Zotero_Items {
 					if ($itemType != 'annotation') {
 						throw new Exception("'$key' is valid only for annotation items", Z_ERROR_INVALID_INPUT);
 					}
-					$itemOrUpdate = $isNew ? $json : $item;
 					if ($key == 'annotationText'
-							&& (!in_array($itemOrUpdate->annotationType, ['highlight', 'underline']))) {
+							&& ($isNew ? $json->annotationType != 'highlight' : $item->annotationType != 'highlight')) {
 						throw new Exception(
-							"'$key' can only be set for highlight and underline annotations",
+							"'$key' can only be set for highlight annotations",
 							Z_ERROR_INVALID_INPUT
 						);
 					}

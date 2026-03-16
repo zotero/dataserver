@@ -593,7 +593,7 @@ class Zotero_Collection extends Zotero_DataObject {
 	 * Returns all tags assigned to items in this collection
 	 */
 	public function getTags($asIDs=false) {
-		$sql = "SELECT tagID FROM itemTags
+		$sql = "SELECT tagID FROM tags JOIN itemTags USING (tagID)
 				JOIN collectionItems USING (itemID) WHERE collectionID=? ORDER BY name";
 		$tagIDs = Zotero_DB::columnQuery($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
 		if (!$tagIDs) {
@@ -604,7 +604,11 @@ class Zotero_Collection extends Zotero_DataObject {
 			return $tagIDs;
 		}
 		
-		$tagObjs = Zotero_Tags::bulkGet($this->libraryID, $tagIDs);
+		$tagObjs = array();
+		foreach ($tagIDs as $tagID) {
+			$tag = Zotero_Tags::get($tagID, true);
+			$tagObjs[] = $tag;
+		}
 		return $tagObjs;
 	}
 	
@@ -614,7 +618,7 @@ class Zotero_Collection extends Zotero_DataObject {
 	 * in this collection
 	 */
 	public function getTagItemCounts() {
-		$sql = "SELECT tagID, COUNT(*) AS numItems FROM itemTags
+		$sql = "SELECT tagID, COUNT(*) AS numItems FROM tags JOIN itemTags USING (tagID)
 				JOIN collectionItems USING (itemID) WHERE collectionID=? GROUP BY tagID";
 		$rows = Zotero_DB::query($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
 		if (!$rows) {

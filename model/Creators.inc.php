@@ -24,21 +24,11 @@
     ***** END LICENSE BLOCK *****
 */
 
-class Zotero_Creators extends Zotero_ClassicDataObjects {
+class Zotero_Creators {
 	public static $creatorSummarySortLength = 50;
 	
 	protected static $ZDO_object = 'creator';
 	
-	protected static $primaryFields = array(
-		'id' => 'creatorID',
-		'libraryID' => '',
-		'key' => '',
-		'dateAdded' => '',
-		'dateModified' => '',
-		'firstName' => '',
-		'lastName' => '',
-		'fieldMode' => ''
-	);
 	private static $fields = array(
 		'firstName', 'lastName', 'fieldMode'
 	);
@@ -47,94 +37,36 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 	private static $maxLastNameLength = 255;
 	
 	private static $creatorsByID = array();
-	private static $primaryDataByCreatorID = array();
 	private static $primaryDataByLibraryAndKey = array();
 	
-	
-	public static function get($libraryID, $creatorID, $skipCheck=false) {
-		if (!$libraryID) {
-			throw new Exception("Library ID not set");
-		}
-		
-		if (!$creatorID) {
-			throw new Exception("Creator ID not set");
-		}
-		
-		if (!empty(self::$creatorsByID[$creatorID])) {
-			return self::$creatorsByID[$creatorID];
-		}
-		
-		if (!$skipCheck) {
-			$sql = 'SELECT COUNT(*) FROM creators WHERE creatorID=?';
-			$result = Zotero_DB::valueQuery($sql, $creatorID, Zotero_Shards::getByLibraryID($libraryID));
-			if (!$result) {
-				return false;
-			}
-		}
-		
-		$creator = new Zotero_Creator;
-		$creator->libraryID = $libraryID;
-		$creator->id = $creatorID;
-		
-		self::$creatorsByID[$creatorID] = $creator;
-		return self::$creatorsByID[$creatorID];
+	public static function bulkDelete($libraryID, $itemID, $creatorOrdersArray) {
+		$placeholders = implode(', ', array_fill(0, sizeOf($creatorOrdersArray), '?'));
+		$sql = "DELETE FROM itemCreators WHERE itemID=? AND orderIndex IN ($placeholders)";
+		Zotero_DB::query($sql, array_merge([$itemID], $creatorOrdersArray), Zotero_Shards::getByLibraryID($libraryID));
 	}
-	
-	
-	public static function getCreatorsWithData($libraryID, $creator, $sortByItemCountDesc=false) {
-		$sql = "SELECT creatorID, firstName, lastName FROM creators ";
-		if ($sortByItemCountDesc) {
-			$sql .= "LEFT JOIN itemCreators USING (creatorID) ";
-		}
-		$sql .= "WHERE libraryID=? AND firstName = ? "
-			. "AND lastName = ? AND fieldMode=?";
-		if ($sortByItemCountDesc) {
-			$sql .= " GROUP BY creatorID ORDER BY IFNULL(COUNT(*), 0) DESC";
-		}
-		$rows = Zotero_DB::query(
-			$sql,
-			array(
-				$libraryID,
+
+	public static function bulkInsert($libraryID, $itemID, $creators) {
+		$placeholdersArray = array();
+		$paramList = array();
+		foreach ($creators as $creator) {
+			$placeholdersArray[] = "(?, ?, ?, ?, ?, ?)";
+			$paramList = array_merge($paramList, [
+				$itemID,
 				$creator->firstName,
 				$creator->lastName,
-				$creator->fieldMode
-			),
-			Zotero_Shards::getByLibraryID($libraryID)
-		);
-		
-		// Case-sensitive filter, since the DB columns use a case-insensitive collation and we want
-		// it to use an index
-		$rows = array_filter($rows, function ($row) use ($creator) {
-			return $row['lastName'] == $creator->lastName && $row['firstName'] == $creator->firstName;
-		});
-		
-		return array_column($rows, 'creatorID');
+				$creator->fieldMode,
+				$creator->creatorTypeID,
+				$creator->orderIndex,
+			 ]);
+		}
+		$placeholdersStr = implode(", ", $placeholdersArray);
+		$sql = "INSERT INTO itemCreators (itemID, firstName, lastName, fieldMode, creatorTypeID, orderIndex) VALUES $placeholdersStr";
+
+		$stmt = Zotero_DB::getStatement($sql, true, Zotero_Shards::getByLibraryID($libraryID));
+		Zotero_DB::queryFromStatement($stmt, $paramList);
 	}
 	
 	
-/*
-	public static function updateLinkedItems($creatorID, $dateModified) {
-		Zotero_DB::beginTransaction();
-		
-		// TODO: add to notifier, if we have one
-		//$sql = "SELECT itemID FROM itemCreators WHERE creatorID=?";
-		//$changedItemIDs = Zotero_DB::columnQuery($sql, $creatorID);
-		
-		// This is very slow in MySQL 5.1.33 -- should be faster in MySQL 6
-		//$sql = "UPDATE items SET dateModified=?, serverDateModified=? WHERE itemID IN
-		//		(SELECT itemID FROM itemCreators WHERE creatorID=?)";
-		
-		$sql = "UPDATE items JOIN itemCreators USING (itemID) SET items.dateModified=?,
-					items.serverDateModified=?, serverDateModifiedMS=? WHERE creatorID=?";
-		$timestamp = Zotero_DB::getTransactionTimestamp();
-		$timestampMS = Zotero_DB::getTransactionTimestampMS();
-		Zotero_DB::query(
-			$sql,
-			array($dateModified, $timestamp, $timestampMS, $creatorID)
-		);
-		Zotero_DB::commit();
-	}
-*/	
 	
 	public static function cache(Zotero_Creator $creator) {
 		if (isset(self::$creatorsByID[$creator->id])) {
@@ -142,6 +74,17 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 		}
 		
 		self::$creatorsByID[$creator->id] = $creator;
+	}
+
+	public static function editCheck($obj, $userID=false) {
+		if (!$userID) {
+			return true;
+		}
+		
+		if (!Zotero_Libraries::userCanEdit($obj->libraryID, $userID, $obj)) {
+			throw new Exception("Cannot edit " . self::$objectType
+				. " in library $obj->libraryID", Z_ERROR_LIBRARY_ACCESS_DENIED);
+		}
 	}
 	
 	
@@ -197,8 +140,6 @@ class Zotero_Creators extends Zotero_ClassicDataObjects {
 			$dataObj->lastName = $xml->getElementsByTagName('lastName')->item(0)->nodeValue;
 		}
 		
-		$birthYear = $xml->getElementsByTagName('birthYear')->item(0);
-		$dataObj->birthYear = $birthYear ? $birthYear->nodeValue : null;
 		
 		return $dataObj;
 	}

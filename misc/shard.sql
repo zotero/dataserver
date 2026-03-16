@@ -330,7 +330,7 @@ CREATE TABLE `syncDeleteLogIDs` (
 
 CREATE TABLE `syncDeleteLogKeys` (
   `libraryID` int(10) unsigned NOT NULL,
-  `objectType` enum('collection','creator','item','relation','search','setting','tag','tagName') NOT NULL,
+  `objectType` enum('collection','item','relation','search','setting','tag','tagName') NOT NULL,
   `key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `version` int(10) unsigned NOT NULL DEFAULT '1',
