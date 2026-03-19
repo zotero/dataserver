@@ -34,26 +34,32 @@ class GroupsController extends ApiController {
 		// Add a group
 		//
 		if ($this->method == 'POST') {
-			if (!$this->permissions->isSuper()) {
+			// Allow super-user or any authenticated user
+			if (!$this->permissions->isSuper() && !$this->userID) {
 				$this->e403();
 			}
-			
+
 			if ($groupID) {
 				$this->e400("POST requests cannot end with a groupID (did you mean PUT?)");
 			}
-			
+
 			try {
 				$group = @new SimpleXMLElement($this->body);
 			}
 			catch (Exception $e) {
 				$this->e400("$this->method data is not valid XML");
 			}
-			
+
 			if ((int) $group['id']) {
 				$this->e400("POST requests cannot contain a groupID in '" . $this->body . "'");
 			}
-			
+
 			$fields = $this->getFieldsFromGroupXML($group);
+
+			// Non-super users can only create groups they own
+			if (!$this->permissions->isSuper()) {
+				$fields['ownerUserID'] = $this->userID;
+			}
 			
 			Zotero_DB::beginTransaction();
 			
@@ -93,35 +99,40 @@ class GroupsController extends ApiController {
 		// Update a group
 		//
 		if ($this->method == 'PUT') {
-			if (!$this->permissions->isSuper()) {
-				$this->e403();
-			}
-			
 			if (!$groupID) {
 				$this->e400("PUT requests must end with a groupID (did you mean POST?)");
 			}
-			
+
 			try {
 				$group = @new SimpleXMLElement($this->body);
 			}
 			catch (Exception $e) {
 				$this->e400("$this->method data is not valid XML");
 			}
-			
+
 			$fields = $this->getFieldsFromGroupXML($group);
-			
+
 			// Group id is optional, but, if it's there, make sure it matches
 			$id = (string) $group['id'];
 			if ($id && $id != $groupID) {
 				$this->e400("Group ID $id does not match group ID $groupID from URI");
 			}
-			
+
 			Zotero_DB::beginTransaction();
-			
+
 			try {
 				$group = Zotero_Groups::get($groupID);
 				if (!$group) {
 					$this->e404("Group $groupID does not exist");
+				}
+
+				// Allow super-user or group owner
+				if (!$this->permissions->isSuper()) {
+					if (!$this->userID || $group->ownerUserID != $this->userID) {
+						$this->e403();
+					}
+					// Non-super users cannot change ownership
+					$fields['ownerUserID'] = $group->ownerUserID;
 				}
 				foreach ($fields as $field=>$val) {
 					$group->$field = $val;
@@ -295,21 +306,23 @@ class GroupsController extends ApiController {
 	
 	
 	public function groupUsers() {
-		// For now, only allow root and user access
-		if (!$this->permissions->isSuper()) {
-			$this->e403();
-		}
-		
 		if (!is_numeric($this->scopeObjectID)) {
 			$this->e400("Invalid group ID", Z_ERROR_INVALID_INPUT);
 		}
-		
+
 		$groupID = $this->scopeObjectID;
 		$userID = $this->objectID;
-		
+
 		$group = Zotero_Groups::get($groupID);
 		if (!$group) {
 			$this->e404("Group $groupID does not exist");
+		}
+
+		// Allow super-user or group owner
+		if (!$this->permissions->isSuper()) {
+			if (!$this->userID || $group->ownerUserID != $this->userID) {
+				$this->e403();
+			}
 		}
 		
 		// Add multiple users to group
