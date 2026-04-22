@@ -1,0 +1,56 @@
+<?php
+/**
+ * Request rate/concurrency limits consumed by ApiController::limits()
+ *
+ * The controller decides which bucket key applies based on the request (auth
+ * state, resource, method, query params); this file controls the numbers.
+ *
+ * Copy to rate_limits.inc.php and tune. The real file is gitignored so tuning
+ * changes don't show up in history. If it doesn't exist, this file is loaded
+ * as-is.
+ *
+ * Any bucket key not explicitly listed in $RATES / $CONCURRENCY falls back to
+ * the DEFAULT_* constants below. The defaults are deliberately generous (and
+ * logOnly) so that unconfigured or newly-added bucket keys fail open -- set
+ * per-bucket values in the arrays to enforce.
+ */
+class Z_CONFIG_RATE_LIMITS {
+	// Safety-net fallback for any bucket key not configured in $RATES / $CONCURRENCY below
+	const DEFAULT_RATE = ['replenishRate' => 20, 'capacity' => 100, 'logOnly' => true];
+	const DEFAULT_CONCURRENCY = ['capacity' => 50, 'ttl' => 120, 'logOnly' => true];
+
+	// Clients on these lists always get real enforcement, even against
+	// buckets configured as logOnly. Use to force-enforce against known
+	// abusive IPs / user IDs while keeping a bucket observe-only generally.
+	public static $ENFORCE_IPS = [];
+	public static $ENFORCE_USER_IDS = [];
+
+	// Per-bucket rate limits. Keys correspond to bucket types selected in
+	// ApiController::limits():
+	//   user_mappings, user_writes, user_tag_searches, user_searches,
+	//   user_citation, user_default, anon_mappings, anon_citation,
+	//   anon_default
+	//
+	// Each entry:
+	//   replenishRate: tokens added per second
+	//   capacity:      max tokens (burst size)
+	//   logOnly:       (optional) true to log over-limit requests without
+	//                  rejecting them. Defaults to false (enforce).
+	//
+	// Buckets not listed here use DEFAULT_RATE.
+	public static $RATES = [];
+
+	// Per-bucket concurrent-request limits. Keys:
+	//   user_writes, user_citation, user_default, anon_citation,
+	//   anon_default
+	//
+	// Each entry:
+	//   capacity: max in-flight requests
+	//   ttl:      seconds a slot is held before auto-release (request
+	//             timeout ceiling)
+	//   logOnly:  (optional) same semantics as above
+	//
+	// Buckets not listed here use DEFAULT_CONCURRENCY.
+	public static $CONCURRENCY = [];
+}
+?>

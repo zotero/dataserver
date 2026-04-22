@@ -84,6 +84,13 @@ spl_autoload_register('zotero_autoload');
 
 // Read in configuration variables
 require('config/config.inc.php');
+// Fall back to the sample's fail-open defaults if rate limits aren't configured
+if (file_exists(__DIR__ . '/config/rate_limits.inc.php')) {
+	require('config/rate_limits.inc.php');
+}
+else {
+	require('config/rate_limits.inc.php-sample');
+}
 
 if (Z_Core::isCommandLine()) {
 	$_SERVER['DOCUMENT_ROOT'] = realpath(dirname(dirname(__FILE__))) . '/';
