@@ -29,7 +29,7 @@ class Z_CONFIG_RATE_LIMITS {
 	// ApiController::limits():
 	//   user_mappings, user_writes, user_tag_searches, user_searches,
 	//   user_citation, user_default, anon_mappings, anon_citation,
-	//   anon_default
+	//   anon_default, errors_anon, errors_user
 	//
 	// Each entry:
 	//   replenishRate: tokens added per second

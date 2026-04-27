@@ -56,6 +56,35 @@ class Z_RequestLimiter {
 		
 		return { allowed, new_tokens }';
 	
+	// Like RATE_LIMITER_LUA but check-only: refills based on elapsed time
+	// and reports whether at least one token would be available, without
+	// consuming. Used when consumption is conditional on the response
+	// (e.g., debit only on 4xx). Doesn't persist refilled state, so the
+	// next consume call recomputes refill from the same last_refreshed.
+	const RATE_LIMITER_PEEK_LUA = '
+		local tokens_key = KEYS[1]
+		local timestamp_key = KEYS[2]
+
+		local rate = tonumber(ARGV[1])
+		local capacity = tonumber(ARGV[2])
+		local now = tonumber(ARGV[3])
+
+		local last_tokens = tonumber(redis.call("get", tokens_key))
+		if last_tokens == nil then
+			last_tokens = capacity
+		end
+
+		local last_refreshed = tonumber(redis.call("get", timestamp_key))
+		if last_refreshed == nil then
+			last_refreshed = 0
+		end
+
+		local delta = math.max(0, now-last_refreshed)
+		local filled_tokens = math.min(capacity, last_tokens+(delta*rate))
+		local allowed = filled_tokens >= 1
+
+		return { allowed, filled_tokens }';
+
 	// Lua script is based on https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
 	const CONCURRENCY_LIMITER_LUA = '
 		local key = KEYS[1]
@@ -116,6 +145,33 @@ class Z_RequestLimiter {
 		return !!$res[0];
 	}
 	
+	/**
+	 * Check whether at least one token is currently available in the
+	 * bucket without consuming. Refill is computed from elapsed time but
+	 * not persisted, so a subsequent checkBucketRate() consume sees the
+	 * same starting state.
+	 *
+	 * @param $params {bucket, capacity, replenishRate}
+	 * @return bool|null (true - tokens available, false - empty, null - error)
+	 */
+	public static function peekBucketRate($params) {
+		if (!isset($params['bucket'], $params['capacity'], $params['replenishRate'])) {
+			Z_Core::logError('Warning: Misconfigured request rate limit');
+			return null;
+		}
+		$prefix = self::REDIS_PREFIX . 'rrl:' . $params['bucket'];
+		$keys = [$prefix . '.tk', $prefix . '.ts'];
+		$args = [$params['replenishRate'], $params['capacity'], time()];
+		try {
+			$res = self::evalLua(self::RATE_LIMITER_PEEK_LUA, $keys, $args);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("Warning: " . $e);
+			return null;
+		}
+		return !!$res[0];
+	}
+
 	/**
 	 * Call this function before the actual request logic
 	 * @param $params {bucket, capacity, ttl}

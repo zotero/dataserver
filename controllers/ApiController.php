@@ -68,6 +68,7 @@ class ApiController extends Controller {
 	protected $libraryVersionOnFailure = false;
 	protected $headers = [];
 	protected $isLegacySchemaClient = false;
+	protected $errorRateLimit;
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -103,6 +104,7 @@ class ApiController extends Controller {
 		}
 		
 		register_shutdown_function(array($this, 'finishConcurrentRequest'));
+		register_shutdown_function(array($this, 'recordErrorForLimiter'));
 		register_shutdown_function(array($this, 'checkDBTransactionState'));
 		register_shutdown_function(array($this, 'logTotalRequestTime'));
 		register_shutdown_function(array($this, 'checkForFatalError'));
@@ -675,6 +677,24 @@ class ApiController extends Controller {
 			return;
 		}
 
+		// Error rate limit: peek (don't consume) at request entry. The
+		// actual debit happens in recordErrorForLimiter() if the response
+		// is 4xx.
+		if (!empty($limits['errors'])) {
+			$this->errorRateLimit = $limits['errors'];
+			if (Z_RequestLimiter::peekBucketRate($limits['errors']) === false) {
+				StatsD::increment('api.request.limit.errors.rejected', 1);
+				Z_Core::logError(($limits['errors']['logOnly'] ? '(WARN) ' : '')
+					. 'Error rate limit exceeded for ' . $limits['errors']['bucket']
+					. ' for ' . $this->method . ' to ' . $_SERVER['REQUEST_URI']
+					. ' (' . ($_SERVER['HTTP_USER_AGENT'] ?? '') . ')');
+				if (!$limits['errors']['logOnly']) {
+					header('Retry-After: ' . (int) ($limits['errors']['capacity'] / $limits['errors']['replenishRate']));
+					$this->e429('Too many invalid requests');
+				}
+			}
+		}
+
 		// Initialize rate limiter
 		if (!empty($limits['rate'])) {
 			if (Z_RequestLimiter::checkBucketRate($limits['rate']) === false) {
@@ -813,6 +833,18 @@ class ApiController extends Controller {
 				$limits['concurrency'] = $this->buildConcurrencyLimit(
 					'anon_default', $ip, $forceEnforce);
 			}
+		}
+
+		// Error budget: separate bucket consumed only by 4xx responses
+		// (see recordErrorForLimiter()). Lets us catch clients stuck in
+		// invalid-request loops.
+		if (!empty($this->userID)) {
+			$limits['errors'] = $this->buildRateLimit(
+				'errors_user', 'errors-user-' . $this->userID, $forceEnforce);
+		}
+		else {
+			$limits['errors'] = $this->buildRateLimit(
+				'errors_anon', 'errors-anon-' . $ip, $forceEnforce);
 		}
 		return $limits;
 	}
@@ -1554,6 +1586,26 @@ class ApiController extends Controller {
 		if (Z_RequestLimiter::isConcurrentRequestActive()) {
 			Z_RequestLimiter::finishConcurrentRequest();
 		}
+	}
+
+	/**
+	 * Debit the error rate-limit bucket if the response was a countable 4xx
+	 *
+	 * Counts: 400, 401, 403 always; 404 only for anonymous requests
+	 * (authed Zotero clients legitimately hit /items/KEY/file 404s during file sync
+	 * and 412 on conflicts)
+	 */
+	public function recordErrorForLimiter() {
+		if (!$this->errorRateLimit) {
+			return;
+		}
+		$status = $this->responseCode;
+		$countable = in_array($status, [400, 401, 403], true)
+			|| ($status === 404 && empty($this->userID));
+		if (!$countable) {
+			return;
+		}
+		Z_RequestLimiter::checkBucketRate($this->errorRateLimit);
 	}
 	
 	public function checkDBTransactionState($noLog = false) {
