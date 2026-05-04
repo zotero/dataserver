@@ -1129,7 +1129,18 @@ class TTSController extends ApiController {
 		file_put_contents($tmpFile, $audioData);
 		$info = $getID3->analyze($tmpFile);
 		unlink($tmpFile);
-		return $info['playtime_seconds'] ?? 0;
+		$duration = (float) ($info['playtime_seconds'] ?? 0);
+		// getID3 occasionally returns a wildly inflated playtime, which would
+		// otherwise poison aggregate stats and burn the user's quota. Cap at
+		// 10 minutes -- a 5000-byte input (the per-call limit) is at most ~6
+		// minutes of audio at slow speech rates, so anything beyond this
+		// ceiling is garbage. On overflow, fall through to the text-length
+		// estimate for billing.
+		if ($duration > 600) {
+			error_log("getAudioDuration: implausible playtime_seconds=$duration, returning 0");
+			return 0;
+		}
+		return $duration;
 	}
 
 
