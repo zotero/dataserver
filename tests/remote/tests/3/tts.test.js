@@ -21,6 +21,10 @@ describe('TTS', function () {
 	let testKey;
 	// Populated from /tts/voices in before() -- keyed by locale
 	let voices = {};
+	// One default en-US voice from each provider entry in /tts/voices, in the
+	// order they appear under standard then premium. Used by the timestamps
+	// tests, which iterate every provider rather than naming any of them.
+	let perProviderVoices = [];
 
 	before(async function () {
 		testKey = config.get('ttsTestKey');
@@ -49,6 +53,12 @@ describe('TTS', function () {
 		}
 		assert.isAbove(Object.keys(voices).length, 0, 'Expected at least one locale with voices');
 		assert.property(voices, 'en-US', 'Expected en-US voices');
+
+		// One default en-US voice per provider entry for the timestamps tests.
+		for (let p of [...(json.standard || []), ...(json.premium || [])]) {
+			let voice = p?.locales?.['en-US']?.default?.[0];
+			if (voice) perProviderVoices.push(voice);
+		}
 	});
 
 	beforeEach(function () {
@@ -200,5 +210,117 @@ describe('TTS', function () {
 				assert.isOk(response.getHeader('location'));
 			});
 		}
+	});
+
+	describe('/speak -- timestamps', function () {
+		// Validate the shape of a single timestamps entry.
+		function assertEntryShape(t, sourceText) {
+			assert.isNumber(t.start);
+			assert.isNumber(t.end);
+			assert.isAtLeast(t.end, t.start);
+			assert.isNumber(t.charStart);
+			assert.isNumber(t.charEnd);
+			assert.isAtLeast(t.charStart, 0);
+			assert.isAbove(t.charEnd, t.charStart);
+			assert.isAtMost(t.charEnd, sourceText.length);
+			assert.notProperty(t, 'word', 'Server response should not include `word`');
+		}
+
+		// Run the same JSON-shape check against every provider.
+		for (let i = 0; i < 3; i++) {
+			it(`should return JSON with audioURL for provider #${i}`, async function () {
+				if (!perProviderVoices[i]) this.skip();
+				let voice = perProviderVoices[i];
+				let text = randomText();
+				let response = await speak({ voice, text, timestamps: 1 });
+				assert200(response);
+				assert.match(response.getHeader('Content-Type'), /^application\/json/);
+				let json = JSON.parse(response.getBody());
+				assert.property(json, 'audioURL');
+				assert.match(json.audioURL, /^https?:\/\//);
+				// `timestamps` may be absent (provider can't produce alignment)
+				// or a (possibly empty) array; both are valid.
+				if (json.timestamps !== undefined) {
+					assert.isArray(json.timestamps);
+					let prevStart = -Infinity;
+					for (let t of json.timestamps) {
+						assertEntryShape(t, text);
+						assert.isAtLeast(t.start, prevStart, 'starts must be non-decreasing');
+						prevStart = t.start;
+					}
+				}
+			});
+		}
+
+		it('at least one provider should produce timestamps', async function () {
+			if (perProviderVoices.length === 0) this.skip();
+			let saw = false;
+			for (let voice of perProviderVoices) {
+				let text = randomText();
+				let response = await speak({ voice, text, timestamps: 1 });
+				assert200(response);
+				let json = JSON.parse(response.getBody());
+				if (Array.isArray(json.timestamps) && json.timestamps.length > 0) {
+					saw = true;
+					break;
+				}
+			}
+			assert.isTrue(saw, 'Expected at least one provider to return non-empty timestamps');
+		});
+
+		it('should preserve existing 302 behavior when flag is omitted', async function () {
+			let voice = perProviderVoices[0] || voices['en-US'][0];
+			let text = randomText();
+			let response = await speak({ voice, text });
+			assert302(response);
+			assert.isOk(response.getHeader('location'));
+		});
+
+		it('should hit cache and return identical timestamps on repeat call', async function () {
+			// Find a provider that returns timestamps (skip if none).
+			let voice = null;
+			let firstJSON = null;
+			let text = randomText();
+			for (let v of perProviderVoices) {
+				let response = await speak({ voice: v, text, timestamps: 1 });
+				assert200(response);
+				let json = JSON.parse(response.getBody());
+				if (Array.isArray(json.timestamps) && json.timestamps.length > 0) {
+					voice = v;
+					firstJSON = json;
+					break;
+				}
+			}
+			if (!voice) this.skip();
+			let response2 = await speak({ voice, text, timestamps: 1 });
+			assert200(response2);
+			let secondJSON = JSON.parse(response2.getBody());
+			assert.equal(secondJSON.audioURL, firstJSON.audioURL);
+			assert.deepEqual(secondJSON.timestamps, firstJSON.timestamps);
+		});
+
+		it('should populate sibling on no-flag synth so later flag request hits cache', async function () {
+			// Seed the cache without the flag, then request with it. If the
+			// provider supports timestamps, the second call must be a cache
+			// hit (same audioURL) AND return non-empty timestamps from the
+			// sibling written during the seed call.
+			let seeded = false;
+			for (let v of perProviderVoices) {
+				let text = randomText();
+				let r1 = await speak({ voice: v, text });
+				assert302(r1);
+				let firstURL = r1.getHeader('location');
+
+				let r2 = await speak({ voice: v, text, timestamps: 1 });
+				assert200(r2);
+				let json = JSON.parse(r2.getBody());
+				assert.equal(json.audioURL, firstURL, 'Cache hit must reuse the same audio URL');
+				if (Array.isArray(json.timestamps) && json.timestamps.length > 0) {
+					seeded = true;
+					break;
+				}
+			}
+			assert.isTrue(seeded, 'Expected at least one provider to populate sibling on first synth');
+		});
 	});
 });

@@ -124,7 +124,11 @@ class TTSController extends ApiController {
 			throw $e;
 		}
 		$duration = $this->getAudioDuration($result['audio']);
-		$this->uploadToS3Cache($cacheKey, $result['audio'], $result['mimeType'], $duration);
+		$timestamps = null;
+		if ($resolved['class']::SUPPORTS_WORD_TIMESTAMPS && isset($result['timestamps'])) {
+			$timestamps = $resolved['class']::coalesceAlignment($result['timestamps'], $text);
+		}
+		$this->uploadToS3Cache($cacheKey, $result['audio'], $result['mimeType'], $duration, $timestamps);
 
 		header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
 	}
@@ -169,6 +173,7 @@ class TTSController extends ApiController {
 		$hexID = $params['voice'] ?? '';
 		$text = $params['text'] ?? '';
 		$prompt = $params['prompt'] ?? null;
+		$timestampsRequested = !empty($params['timestamps']);
 
 		if (empty($hexID)) {
 			$this->e400("'voice' not provided");
@@ -191,9 +196,22 @@ class TTSController extends ApiController {
 		$tier = $resolved['tier'];
 		$creditRate = $resolved['creditsPerMinute'];
 
-		// Provider-specific text adjustments (e.g., pronunciation fixes)
+		$providerSupportsTimestamps = (bool) $resolved['class']::SUPPORTS_WORD_TIMESTAMPS;
+		// Only emit a 'timestamps' key in the JSON response when the provider
+		// can produce alignment. Other providers just get audioURL.
+		$emitTimestampsKey = $timestampsRequested && $providerSupportsTimestamps;
+
+		// Provider-specific text adjustments (e.g., pronunciation fixes).
+		// The provider returns the transformed text plus a segment list that
+		// records each substitution, so the alignment for the transformed
+		// text can later be coalesced back onto the original-text words.
+		// Keep $originalText for char-offset computation in the response.
+		$originalText = $text;
+		$segments = null;
 		if (method_exists($resolved['class'], 'fixPronunciation')) {
-			$text = $resolved['class']::fixPronunciation($text, $lang);
+			$fixed = $resolved['class']::fixPronunciation($text, $lang);
+			$text = $fixed['text'];
+			$segments = $fixed['segments'];
 		}
 
 		$cacheKey = $this->computeCacheKey(
@@ -201,9 +219,24 @@ class TTSController extends ApiController {
 			$resolved['cacheVersion'], $resolved['audioFormat']
 		);
 
-		// Check S3 cache
+		// Check S3 cache. When timestamps are requested and the provider
+		// supports them, also fetch the sibling alignment object; treat a
+		// missing sibling as a miss (shouldn't occur post-deploy due to the
+		// CACHE_VERSION bump, but handle for safety).
 		$cached = $this->checkS3Cache($cacheKey);
+		$cachedTimestamps = null;
+		$haveCacheHit = false;
 		if ($cached) {
+			if ($emitTimestampsKey) {
+				$cachedTimestamps = $this->fetchTimestampsSibling($cacheKey);
+				$haveCacheHit = $cachedTimestamps !== null;
+			}
+			else {
+				$haveCacheHit = true;
+			}
+		}
+
+		if ($haveCacheHit) {
 			// Cache hit -- use stored duration for exact credit cost
 			$duration = $cached['duration'];
 			$creditCost = $duration * $creditRate / 60;
@@ -214,7 +247,7 @@ class TTSController extends ApiController {
 			$this->logUsage($this->userID, $tier, $creditCost, [
 				'voiceID' => $resolved['voiceID'],
 				'provider' => $resolved['provider'],
-	
+
 				'creditsPerMinute' => $creditRate,
 				'duration' => $duration,
 				'lang' => $lang,
@@ -226,7 +259,12 @@ class TTSController extends ApiController {
 			if ($maxAge > 0) {
 				header("Cache-Control: private, max-age=$maxAge, immutable");
 			}
-			header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
+			if ($timestampsRequested) {
+				$this->emitTimestampsResponse($cacheKey, $cachedTimestamps, $emitTimestampsKey);
+			}
+			else {
+				header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
+			}
 			return;
 		}
 
@@ -268,8 +306,22 @@ class TTSController extends ApiController {
 			$creditCost = $estimatedCreditCost;
 		}
 
-		// Upload to S3 and log usage
-		$this->uploadToS3Cache($cacheKey, $result['audio'], $result['mimeType'], $audioDuration);
+		// Convert provider alignment to the public {start,end,charStart,charEnd}
+		// shape with offsets into $originalText, coalescing any substituted
+		// spans (pp., ISBN, DOI, ranges) back onto their original substrings.
+		$timestamps = null;
+		if ($providerSupportsTimestamps && isset($result['timestamps'])) {
+			$timestamps = $resolved['class']::coalesceAlignment(
+				$result['timestamps'], $originalText, $segments
+			);
+		}
+
+		// Upload audio + timestamps sibling. The sibling is written for every
+		// supporting-provider synthesis (independent of $timestampsRequested)
+		// so cache entries stay self-consistent.
+		$this->uploadToS3Cache(
+			$cacheKey, $result['audio'], $result['mimeType'], $audioDuration, $timestamps
+		);
 		$this->logUsage($this->userID, $tier, $creditCost, [
 			'voiceID' => $resolved['voiceID'],
 			'provider' => $resolved['provider'],
@@ -284,7 +336,29 @@ class TTSController extends ApiController {
 		]);
 
 		header("Cache-Control: private, max-age=" . (self::AUDIO_CACHE_DAYS * 86400) . ", immutable");
-		header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
+		if ($timestampsRequested) {
+			$this->emitTimestampsResponse($cacheKey, $timestamps, $emitTimestampsKey);
+		}
+		else {
+			header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
+		}
+	}
+
+
+	/**
+	 * Emit the JSON response shape used when the client passed `timestamps=1`.
+	 * Always includes `audioURL`. Includes `timestamps` only when the provider
+	 * is capable of alignment ($emitKey true) -- present even if the array is
+	 * empty (so callers can distinguish "no support" from "supported but no
+	 * words"); omitted entirely for providers without alignment support.
+	 */
+	private function emitTimestampsResponse(string $cacheKey, ?array $timestamps, bool $emitKey): void {
+		header("Content-Type: application/json");
+		$body = ['audioURL' => $this->getCloudFrontURL($cacheKey)];
+		if ($emitKey) {
+			$body['timestamps'] = $timestamps ?? [];
+		}
+		echo json_encode($body, JSON_UNESCAPED_UNICODE);
 	}
 
 
@@ -337,7 +411,11 @@ class TTSController extends ApiController {
 			throw $e;
 		}
 		$audioDuration = $this->getAudioDuration($result['audio']);
-		$this->uploadToS3Cache($cacheKey, $result['audio'], $result['mimeType'], $audioDuration);
+		$timestamps = null;
+		if ($resolved['class']::SUPPORTS_WORD_TIMESTAMPS && isset($result['timestamps'])) {
+			$timestamps = $resolved['class']::coalesceAlignment($result['timestamps'], $text);
+		}
+		$this->uploadToS3Cache($cacheKey, $result['audio'], $result['mimeType'], $audioDuration, $timestamps);
 
 		header("Cache-Control: private, max-age=" . (self::AUDIO_CACHE_DAYS * 86400) . ", immutable");
 		header("Location: " . $this->getCloudFrontURL($cacheKey), true, 302);
@@ -1146,9 +1224,13 @@ class TTSController extends ApiController {
 
 
 	/**
-	 * Upload synthesized audio to S3 with duration metadata.
+	 * Upload synthesized audio to S3 with duration metadata. If $timestamps
+	 * is non-null, also write a sibling JSON object at <key>.timestamps.json
+	 * so that subsequent /speak?timestamps=1 requests get a clean cache hit.
 	 */
-	private function uploadToS3Cache(string $key, string $audioData, string $mimeType, float $duration): void {
+	private function uploadToS3Cache(
+		string $key, string $audioData, string $mimeType, float $duration, ?array $timestamps = null
+	): void {
 		$s3Client = Z_Core::$AWS->createS3();
 		$s3Client->putObject([
 			'Bucket' => Z_CONFIG::$S3_BUCKET_TTS,
@@ -1159,6 +1241,40 @@ class TTSController extends ApiController {
 				'duration' => (string) $duration,
 			],
 		]);
+		if ($timestamps !== null) {
+			$s3Client->putObject([
+				'Bucket' => Z_CONFIG::$S3_BUCKET_TTS,
+				'Key' => $key . '.timestamps.json',
+				'Body' => json_encode($timestamps, JSON_UNESCAPED_UNICODE),
+				'ContentType' => 'application/json',
+			]);
+		}
+	}
+
+
+	/**
+	 * Fetch the alignment sibling for a cached audio key. Returns the decoded
+	 * timestamps array on hit, or null if absent. We GET directly (rather than
+	 * HEAD-then-GET) since the body is needed to embed in the JSON response
+	 * anyway.
+	 */
+	private function fetchTimestampsSibling(string $audioKey): ?array {
+		$s3Client = Z_Core::$AWS->createS3();
+		try {
+			$result = $s3Client->getObject([
+				'Bucket' => Z_CONFIG::$S3_BUCKET_TTS,
+				'Key' => $audioKey . '.timestamps.json',
+			]);
+			$body = (string) $result['Body'];
+			$decoded = json_decode($body, true);
+			return is_array($decoded) ? $decoded : null;
+		}
+		catch (\Aws\S3\Exception\S3Exception $e) {
+			if ($e->getAwsErrorCode() == 'NoSuchKey' || $e->getAwsErrorCode() == 'NotFound') {
+				return null;
+			}
+			throw $e;
+		}
 	}
 
 
