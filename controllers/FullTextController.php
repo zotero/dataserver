@@ -166,9 +166,9 @@ class FullTextController extends ApiController {
 			$this->e403();
 		}
 
-		$isDeindexed = Zotero_Libraries::checkEsIndexStatus($this->objectLibraryID);
+		$isDeindexed = Zotero_Libraries::getFullTextIndexStatus($this->objectLibraryID);
 
-		// GET - return indexing status of ES: indexing, indexed, deindexed
+		// GET - return indexing status: indexing, indexed, deindexed
 		if ($this->method == "GET") {
 			// Current count of records in ES
 			$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
@@ -188,16 +188,16 @@ class FullTextController extends ApiController {
 			$this->end();
 		}
 
-		// POST - request reindexing if the library was removed from ES
+		// POST - request reindexing if the library was removed from the index
 		if (!$isDeindexed) {
-            $this->e400("Request was already submitted or the library was not removed from ElasticSearch");
-        }
+			$this->e400("Request was already submitted or the library was not removed from the index");
+		}
 
 		// Send event to reindexing queue
 		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID]));
 
 		// Update DB
-		Zotero_Libraries::setEsIndexStatus($this->objectLibraryID, 0); 
+		Zotero_Libraries::setFullTextIndexStatus($this->objectLibraryID, 0);
 		$this->end();
 	}
 

@@ -59,20 +59,19 @@ class Zotero_Libraries {
 			"SELECT itemTypeID FROM itemTypes "
 			. "WHERE itemTypeName IN ('attachment') "
 		);
-		$sql = "SELECT COUNT(*) as count FROM items INNER JOIN itemAttachments USING (itemID)" 
+		$sql = "SELECT COUNT(*) as count FROM items INNER JOIN itemAttachments USING (itemID)"
 				. "WHERE NOT(linkMode='LINKED_URL') AND libraryID=? AND itemTypeID IN (" . implode(",", $attachmentIds) . ")";
 		$count = Zotero_DB::query($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
 		return $count[0]['count'];
 	}
 
-	public static function checkEsIndexStatus($libraryID) {
-		$sql = "SELECT deindexed_from_es FROM libraries WHERE libraryID=?";
-		$isDeleted = Zotero_DB::query($sql, $libraryID);
-		return $isDeleted[0]['deindexed_from_es'] == 1;
+	public static function getFullTextIndexStatus($libraryID) {
+		$sql = "SELECT fullTextDeindexed FROM libraries WHERE libraryID=?";
+		return !!Zotero_DB::valueQuery($sql, $libraryID);
 	}
 
-	public static function setEsIndexStatus($libraryID, $deindexed) {
-		$sql = "UPDATE libraries SET deindexed_from_es=? WHERE libraryID=?";
+	public static function setFullTextIndexStatus($libraryID, $deindexed) {
+		$sql = "UPDATE libraries SET fullTextDeindexed=? WHERE libraryID=?";
 		Zotero_DB::query($sql, [$deindexed, $libraryID]);
 	}
 	

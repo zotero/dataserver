@@ -185,7 +185,7 @@ CREATE TABLE `libraries` (
   `version` int(10) unsigned NOT NULL DEFAULT '0',
   `shardID` smallint(5) unsigned NOT NULL,
   `hasData` TINYINT( 1 ) NOT NULL DEFAULT '0',
-  `deindexed_from_es` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `fullTextDeindexed` tinyint(1) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`libraryID`),
   KEY `shardID` (`shardID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
