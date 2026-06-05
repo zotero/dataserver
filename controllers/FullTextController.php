@@ -170,19 +170,19 @@ class FullTextController extends ApiController {
 
 		// GET - return indexing status: indexing, indexed, deindexed
 		if ($this->method == "GET") {
-			// Current count of records in ES
-			$esCount = Zotero_FullText::countInLibrary($this->objectLibraryID);
-			// Expected count of records in ES
-			$expectedCount = Zotero_Libraries::countIndexableAttachments($this->objectLibraryID);
+			// Number of documents currently in Elasticsearch
+			$indexedCount = Zotero_FullText::countIndexedInLibrary($this->objectLibraryID);
+			// Number of stored full-text content rows Elasticsearch should mirror
+			$expectedCount = Zotero_FullText::countStoredInLibrary($this->objectLibraryID);
 
-			if ($esCount === $expectedCount) {
+			if ($indexedCount === $expectedCount) {
 				$result = ["reindexingStatus" => "indexed"];
 			}
 			else if ($isDeindexed) {
 				$result = ["reindexingStatus" => "deindexed"];
 			}
 			else {
-				$result = ["reindexingStatus" => "indexing", "indexedCount" => $esCount, "expectedCount" => $expectedCount];
+				$result = ["reindexingStatus" => "indexing", "indexedCount" => $indexedCount, "expectedCount" => $expectedCount];
 			}
 			echo Zotero_Utilities::formatJSON($result);
 			$this->end();

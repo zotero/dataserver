@@ -54,17 +54,6 @@ class Zotero_Libraries {
 		return !!Zotero_DB::valueQuery($sql, $libraryID);
 	}
 
-	public static function countIndexableAttachments($libraryID) {
-		$attachmentIds = Zotero_DB::columnQuery(
-			"SELECT itemTypeID FROM itemTypes "
-			. "WHERE itemTypeName IN ('attachment') "
-		);
-		$sql = "SELECT COUNT(*) as count FROM items INNER JOIN itemAttachments USING (itemID)"
-				. "WHERE NOT(linkMode='LINKED_URL') AND libraryID=? AND itemTypeID IN (" . implode(",", $attachmentIds) . ")";
-		$count = Zotero_DB::query($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
-		return $count[0]['count'];
-	}
-
 	public static function getFullTextIndexStatus($libraryID) {
 		$sql = "SELECT fullTextDeindexed FROM libraries WHERE libraryID=?";
 		return !!Zotero_DB::valueQuery($sql, $libraryID);
