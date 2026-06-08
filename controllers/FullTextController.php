@@ -158,46 +158,54 @@ class FullTextController extends ApiController {
 		$this->end();
 	}
 
-	public function reindex() {
-		$this->allowMethods(['POST', 'GET']);
+	public function index() {
+		$this->allowMethods(['GET']);
 
-		// General library access
+		// Check for general library access
 		if (!$this->permissions->canAccess($this->objectLibraryID)) {
 			$this->e403();
 		}
 
-		$isDeindexed = Zotero_Libraries::getFullTextIndexStatus($this->objectLibraryID);
+		// Number of documents currently in Elasticsearch
+		$indexedCount = Zotero_FullText::countIndexedInLibrary($this->objectLibraryID);
+		// Number of stored full-text content rows Elasticsearch should mirror
+		$expectedCount = Zotero_FullText::countStoredInLibrary($this->objectLibraryID);
 
-		// GET - return indexing status: indexing, indexed, deindexed
-		if ($this->method == "GET") {
-			// Number of documents currently in Elasticsearch
-			$indexedCount = Zotero_FullText::countIndexedInLibrary($this->objectLibraryID);
-			// Number of stored full-text content rows Elasticsearch should mirror
-			$expectedCount = Zotero_FullText::countStoredInLibrary($this->objectLibraryID);
+		if ($indexedCount === $expectedCount) {
+			$result = ["status" => "indexed"];
+		}
+		else if (Zotero_Libraries::isFullTextDeindexed($this->objectLibraryID)) {
+			$result = ["status" => "deindexed"];
+		}
+		// Fewer documents in Elasticsearch than stored content; the cause (in progress,
+		// stalled, failed) isn't observable here, so report only that it's incomplete
+		else {
+			$result = ["status" => "incomplete", "indexedCount" => $indexedCount, "expectedCount" => $expectedCount];
+		}
+		echo Zotero_Utilities::formatJSON($result);
 
-			if ($indexedCount === $expectedCount) {
-				$result = ["reindexingStatus" => "indexed"];
-			}
-			else if ($isDeindexed) {
-				$result = ["reindexingStatus" => "deindexed"];
-			}
-			else {
-				$result = ["reindexingStatus" => "indexing", "indexedCount" => $indexedCount, "expectedCount" => $expectedCount];
-			}
-			echo Zotero_Utilities::formatJSON($result);
-			$this->end();
+		$this->end();
+	}
+
+	public function reindex() {
+		$this->allowMethods(['POST']);
+
+		// Reindexing is a library-management operation, so require write access
+		if (!$this->permissions->canWrite($this->objectLibraryID)) {
+			$this->e403("Write access denied");
 		}
 
-		// POST - request reindexing if the library was removed from the index
-		if (!$isDeindexed) {
-			$this->e400("Request was already submitted or the library was not removed from the index");
+		// Only allow reindexing if the library was removed from the index
+		if (!Zotero_Libraries::isFullTextDeindexed($this->objectLibraryID)) {
+			$this->e400("Library is not deindexed");
 		}
 
 		// Send event to reindexing queue
 		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID]));
 
 		// Update DB
-		Zotero_Libraries::setFullTextIndexStatus($this->objectLibraryID, 0);
+		Zotero_Libraries::setFullTextDeindexed($this->objectLibraryID, false);
+
 		$this->end();
 	}
 
