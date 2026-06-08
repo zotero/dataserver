@@ -53,6 +53,16 @@ class Zotero_Libraries {
 		$sql = "SELECT COUNT(*) FROM libraries WHERE libraryID=?";
 		return !!Zotero_DB::valueQuery($sql, $libraryID);
 	}
+
+	public static function isFullTextDeindexed($libraryID) {
+		$sql = "SELECT fullTextDeindexed FROM libraries WHERE libraryID=?";
+		return !!Zotero_DB::valueQuery($sql, $libraryID);
+	}
+
+	public static function setFullTextDeindexed($libraryID, $deindexed) {
+		$sql = "UPDATE libraries SET fullTextDeindexed=? WHERE libraryID=?";
+		Zotero_DB::query($sql, [$deindexed, $libraryID]);
+	}
 	
 	
 	public static function getName($libraryID) {

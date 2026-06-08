@@ -405,6 +405,67 @@ describe('Full Text', function () {
 		assert.notProperty(json, 'indexedPages');
 	});
 
+	it('should report a library with no full-text content as indexed', async function () {
+		this.timeout(60000);
+
+		await API.userClear(config.get('userID'));
+		// Let any prior Elasticsearch deletions settle
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		// Create an attachment but never upload full-text content for it
+		let key = await API.createItem('book', {}, 'key');
+		await API.createAttachmentItem('imported_url', [], key, 'key');
+
+		// Nothing has been indexed and nothing is pending, so the library is fully indexed.
+		let response = await API.userGet(
+			config.get('userID'),
+			'fulltext/index'
+		);
+		assert200(response);
+		assertContentType(response, 'application/json');
+		let json = JSON.parse(response.getBody());
+		assert.equal(json.status, 'indexed');
+	});
+
+	it('should report a library as indexed once all uploaded content is in the index', async function () {
+		this.timeout(60000);
+
+		await API.userClear(config.get('userID'));
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		let key = await API.createItem('book', {}, 'key');
+		let withContentKey = await API.createAttachmentItem('imported_url', [], key, 'key');
+		// A second attachment that never gets full-text content
+		await API.createAttachmentItem('imported_url', [], key, 'key');
+
+		// Upload full-text content for only one of the two attachments
+		let response = await API.userPut(
+			config.get('userID'),
+			`items/${withContentKey}/fulltext`,
+			JSON.stringify({
+				content: 'Here is some unique full-text content',
+				indexedPages: 1,
+				totalPages: 1
+			}),
+			['Content-Type: application/json']
+		);
+		assert204(response);
+
+		// Wait for indexing via Lambda
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		// One attachment has content and is indexed; the other has none. The indexed doc
+		// count matches the uploaded full-text count, so the library is fully indexed.
+		response = await API.userGet(
+			config.get('userID'),
+			'fulltext/index'
+		);
+		assert200(response);
+		assertContentType(response, 'application/json');
+		let json = JSON.parse(response.getBody());
+		assert.equal(json.status, 'indexed');
+	});
+
 	async function testSinceContent(param) {
 		await API.userClear(config.get('userID'));
 

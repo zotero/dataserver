@@ -278,6 +278,37 @@ class Zotero_FullText {
 		}
 		return $keys;
 	}
+
+	/**
+	 * Number of stored full-text content rows for a library -- the source of truth that
+	 * Elasticsearch is expected to mirror once (re)indexing is complete
+	 */
+	public static function countStoredInLibrary($libraryID) {
+		$sql = "SELECT COUNT(*) FROM itemFulltext WHERE libraryID=?";
+		return Zotero_DB::valueQuery($sql, $libraryID, Zotero_Shards::getByLibraryID($libraryID));
+	}
+
+	/**
+	 * Number of full-text documents currently in Elasticsearch for a library
+	 */
+	public static function countIndexedInLibrary($libraryID) {
+		$params = [
+			'index' => self::$elasticsearchType . "_index",
+			'body'  => [
+				'query' => [
+					'bool' => [
+						'filter' => [
+							'term' => [
+								'libraryID' => $libraryID
+							]
+						]
+					]
+				]
+			]
+		];
+		$resp = Z_Core::$ES->count($params);
+		return $resp['count'];
+	}
 	
 	public static function deleteItemContent(Zotero_Item $item) {
 		$libraryID = $item->libraryID;

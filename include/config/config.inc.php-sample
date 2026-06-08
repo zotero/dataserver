@@ -98,5 +98,7 @@ class Z_CONFIG {
 	public static $CACHE_VERSION_RESPONSE_JSON_COLLECTION = 1;
 	public static $CACHE_VERSION_RESPONSE_JSON_ITEM = 1;
 	public static $CACHE_ENABLED_ITEM_RESPONSE_JSON = true;
+
+	public static $REINDEX_QUEUE_URL = "";
 }
 ?>
