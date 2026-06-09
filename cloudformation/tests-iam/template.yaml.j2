@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM policy for the dataserver-tests user (remote integration test suite)
+
+# What the remote test suite's IAM user ({{ iam_user }}) is allowed to touch:
+#   - S3 PutObject/DeleteObject on the test file-storage bucket (file upload/cleanup tests).
+#   - DynamoDB GetItem/UpdateItem on the full-text indexing table, so tests can simulate the
+#     external producer that sets a library's deindexed flag and verify the reindex flow.
+
+Resources:
+  DataserverTestsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: {{ policy_name }}
+      Users:
+        - {{ iam_user }}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: {{ s3_bucket_arn }}/*
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+            Resource: {{ table_arn }}

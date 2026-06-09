@@ -54,14 +54,42 @@ class Zotero_Libraries {
 		return !!Zotero_DB::valueQuery($sql, $libraryID);
 	}
 
+	/**
+	 * Per-library full-text "deindexed" state lives in the shared DynamoDB table
+	 * (Z_CONFIG::$FULLTEXT_INDEXING_TABLE), since the full-text indexer Lambda gates
+	 * indexing on it and can't reach the MySQL master. An absent item or absent/false
+	 * attribute means not deindexed; only deindexed=true means deindexed.
+	 */
 	public static function isFullTextDeindexed($libraryID) {
-		$sql = "SELECT fullTextDeindexed FROM libraries WHERE libraryID=?";
-		return !!Zotero_DB::valueQuery($sql, $libraryID);
+		$ddb = Z_Core::$AWS->createDynamoDb();
+		$result = $ddb->getItem([
+			'TableName' => Z_CONFIG::$FULLTEXT_INDEXING_TABLE,
+			'Key' => [
+				'pk' => ['S' => "LIBRARY#$libraryID"],
+				'sk' => ['S' => "STATE"]
+			],
+			'ProjectionExpression' => 'deindexed',
+			'ConsistentRead' => true
+		]);
+		return isset($result['Item']['deindexed']['BOOL'])
+			&& $result['Item']['deindexed']['BOOL'] === true;
 	}
 
 	public static function setFullTextDeindexed($libraryID, $deindexed) {
-		$sql = "UPDATE libraries SET fullTextDeindexed=? WHERE libraryID=?";
-		Zotero_DB::query($sql, [$deindexed, $libraryID]);
+		$ddb = Z_Core::$AWS->createDynamoDb();
+		// UpdateItem (not PutItem) so other attributes on the STATE item -- e.g. the
+		// reindex checkpoint -- survive. Clearing sets deindexed=false; never delete.
+		$ddb->updateItem([
+			'TableName' => Z_CONFIG::$FULLTEXT_INDEXING_TABLE,
+			'Key' => [
+				'pk' => ['S' => "LIBRARY#$libraryID"],
+				'sk' => ['S' => "STATE"]
+			],
+			'UpdateExpression' => 'SET deindexed = :v',
+			'ExpressionAttributeValues' => [
+				':v' => ['BOOL' => (bool) $deindexed]
+			]
+		]);
 	}
 	
 	

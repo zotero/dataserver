@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM policy granting the dataserver role access to full-text indexing resources
+
+# The FullTextIndexing DynamoDB table and the reindex SQS queue are created and owned by
+# the full-text-indexer SAM stack, so this stack defines only the dataserver-side access
+# policy and references them by ARN ({{ table_arn }}, {{ queue_arn }}). dataserver needs:
+#   - DynamoDB GetItem (read the deindexed flag) + UpdateItem (clear it on reindex) --
+#     not full CRUD, and never DeleteItem.
+#   - SQS SendMessage to enqueue reindex requests on POST /fulltext/reindex.
+
+Resources:
+  FullTextIndexingPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: {{ policy_name }}
+      Roles:
+        - {{ iam_role }}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+            Resource: {{ table_arn }}
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: {{ queue_arn }}

@@ -18,6 +18,7 @@ import {
 	assertContentType
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
+import { setFullTextDeindexed, getFullTextDeindexed } from '../../dynamodb-helper.js';
 
 describe('Full Text', function () {
 	this.timeout(30000);
@@ -464,6 +465,93 @@ describe('Full Text', function () {
 		assertContentType(response, 'application/json');
 		let json = JSON.parse(response.getBody());
 		assert.equal(json.status, 'indexed');
+	});
+
+	it('should reject a reindex request for a library that is not deindexed', async function () {
+		// Ensure the library is not in the deindexed state. The server reads the flag from
+		// DynamoDB; this exercises that read path (and the dataserver role's IAM) through
+		// the API without the test ever needing the server to set the flag itself.
+		await setFullTextDeindexed(config.get('libraryID'), false);
+
+		let response = await API.userPost(
+			config.get('userID'),
+			'fulltext/reindex',
+			' '
+		);
+		assert400(response);
+		assert.include(response.getBody(), 'Library is not deindexed');
+	});
+
+	it('should clear the deindexed flag and accept a reindex request', async function () {
+		let libraryID = config.get('libraryID');
+
+		// Simulate an external producer (indexer/purge) marking the library deindexed --
+		// dataserver itself never sets the flag true, only reads it and clears it.
+		await setFullTextDeindexed(libraryID, true);
+		assert.isTrue(await getFullTextDeindexed(libraryID));
+
+		// Reindexing is allowed only when deindexed; the server reads the flag, clears it
+		// (UpdateItem), and enqueues the libraryID to the reindex queue.
+		let response = await API.userPost(
+			config.get('userID'),
+			'fulltext/reindex',
+			' '
+		);
+		assert200(response);
+
+		// The server cleared the flag in DynamoDB before enqueuing
+		assert.isFalse(await getFullTextDeindexed(libraryID));
+	});
+
+	it('should not index or surface uploaded content while the library is deindexed', async function () {
+		this.timeout(60000);
+
+		await API.userClear(config.get('userID'));
+		// Let any prior Elasticsearch deletions settle
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		let libraryID = config.get('libraryID');
+		// Mark the library deindexed before uploading; the indexer's gate should skip it
+		await setFullTextDeindexed(libraryID, true);
+
+		let key = await API.createItem('book', {}, 'key');
+		let attachmentKey = await API.createAttachmentItem('imported_url', [], key, 'key');
+
+		// Upload full-text content with a distinctive word to search for
+		let response = await API.userPut(
+			config.get('userID'),
+			`items/${attachmentKey}/fulltext`,
+			JSON.stringify({
+				content: 'A wombat should never become searchable while deindexed',
+				indexedPages: 1,
+				totalPages: 1
+			}),
+			['Content-Type: application/json']
+		);
+		assert204(response);
+
+		// Wait the same window the "indexed" tests allow for the Lambda; if the gate works,
+		// nothing is indexed in that time
+		await new Promise(resolve => setTimeout(resolve, 6000));
+
+		// Content is stored (expectedCount=1) but unindexed (indexedCount=0) because the
+		// library is deindexed, so the status endpoint reports "deindexed"
+		response = await API.userGet(config.get('userID'), 'fulltext/index');
+		assert200(response);
+		assertContentType(response, 'application/json');
+		let json = JSON.parse(response.getBody());
+		assert.equal(json.status, 'deindexed');
+
+		// And the uploaded content is not searchable
+		response = await API.userGet(
+			config.get('userID'),
+			'items?q=wombat&qmode=everything&format=keys'
+		);
+		assert200(response);
+		assert.equal(response.getBody().trim(), '');
+
+		// Clear the flag so later tests/runs start clean
+		await setFullTextDeindexed(libraryID, false);
 	});
 
 	async function testSinceContent(param) {

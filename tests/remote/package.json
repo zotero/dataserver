@@ -8,6 +8,7 @@
     "test:item": "mocha 'tests/3/item.test.js' --timeout 30000"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.980.0",
     "@aws-sdk/client-s3": "^3.980.0",
     "@eslint/eslintrc": "^3.3.3",
     "@xmldom/xmldom": "^0.8.11",

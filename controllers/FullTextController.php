@@ -200,11 +200,12 @@ class FullTextController extends ApiController {
 			$this->e400("Library is not deindexed");
 		}
 
+		// Clear the deindexed flag before enqueuing, so the indexer's gate doesn't skip
+		// the refill we're about to request
+		Zotero_Libraries::setFullTextDeindexed($this->objectLibraryID, false);
+
 		// Send event to reindexing queue
 		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID]));
-
-		// Update DB
-		Zotero_Libraries::setFullTextDeindexed($this->objectLibraryID, false);
 
 		$this->end();
 	}

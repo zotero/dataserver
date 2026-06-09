@@ -5,6 +5,7 @@
 	"rootPassword": "",
 	"awsRegion": "us-east-1",
 	"s3Bucket": "",
+	"fullTextIndexingTable": "",
 	"awsAccessKeyID": "",
 	"awsSecretAccessKey": "",
 

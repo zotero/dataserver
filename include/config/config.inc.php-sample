@@ -24,6 +24,9 @@ class Z_CONFIG {
 	public static $S3_BUCKET = '';
 	public static $S3_BUCKET_CACHE = '';
 	public static $S3_BUCKET_FULLTEXT = '';
+	// DynamoDB table holding per-library full-text indexing state (deindexed flag).
+	// Shared with the full-text-indexer and purge scripts.
+	public static $FULLTEXT_INDEXING_TABLE = "FullTextIndexing";
 	public static $S3_BUCKET_ERRORS = '';
 	public static $SNS_ALERT_TOPIC = '';
 
