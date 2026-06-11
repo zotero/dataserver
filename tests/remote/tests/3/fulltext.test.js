@@ -18,7 +18,10 @@ import {
 	assertContentType
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
-import { setFullTextDeindexed, getFullTextDeindexed } from '../../dynamodb-helper.js';
+import {
+	setFullTextDeindexed, getFullTextDeindexed,
+	setFullTextReindexing, getFullTextReindexing
+} from '../../dynamodb-helper.js';
 
 describe('Full Text', function () {
 	this.timeout(30000);
@@ -467,40 +470,87 @@ describe('Full Text', function () {
 		assert.equal(json.status, 'indexed');
 	});
 
-	it('should reject a reindex request for a library that is not deindexed', async function () {
-		// Ensure the library is not in the deindexed state. The server reads the flag from
-		// DynamoDB; this exercises that read path (and the dataserver role's IAM) through
-		// the API without the test ever needing the server to set the flag itself.
+	it("shouldn't trigger a reindex from a full-text search when the library is not deindexed", async function () {
+		// Ensure the library is in the steady state -- not deindexed, no rebuild
+		// underway. The server reads the state from DynamoDB; this exercises that read
+		// path (and the dataserver role's IAM) through the API without the test ever
+		// needing the server to set the state itself.
 		await setFullTextDeindexed(config.get('libraryID'), false);
+		await setFullTextReindexing(config.get('libraryID'), false);
 
-		let response = await API.userPost(
+		let response = await API.userGet(
 			config.get('userID'),
-			'fulltext/reindex',
-			' '
+			'items?q=anything&qmode=everything&format=keys'
 		);
-		assert400(response);
-		assert.include(response.getBody(), 'Library is not deindexed');
+		assert200(response);
+		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
+		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
+		assert.isFalse(await getFullTextDeindexed(config.get('libraryID')));
+		assert.isNull(await getFullTextReindexing(config.get('libraryID')));
 	});
 
-	it('should clear the deindexed flag and accept a reindex request', async function () {
+	it('should trigger a reindex from a full-text search when the library is deindexed', async function () {
 		let libraryID = config.get('libraryID');
 
 		// Simulate an external producer (indexer/purge) marking the library deindexed --
 		// dataserver itself never sets the flag true, only reads it and clears it.
+		await setFullTextReindexing(libraryID, false);
 		await setFullTextDeindexed(libraryID, true);
 		assert.isTrue(await getFullTextDeindexed(libraryID));
 
-		// Reindexing is allowed only when deindexed; the server reads the flag, clears it
-		// (UpdateItem), and enqueues the libraryID to the reindex queue.
-		let response = await API.userPost(
+		// A full-text search in a deindexed library enqueues a rebuild -- the server
+		// clears the flag, stamps 'reindexing' (conditional UpdateItem), and enqueues
+		// the libraryID to the reindex queue, flagging the response so the client knows
+		// the full-text results are missing
+		let response = await API.userGet(
 			config.get('userID'),
-			'fulltext/reindex',
-			' '
+			'items?q=anything&qmode=everything&format=keys'
 		);
 		assert200(response);
+		assert.equal(response.getHeader('Zotero-Full-Text-Deindexed'), '1');
+		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
 
-		// The server cleared the flag in DynamoDB before enqueuing
+		// The server cleared the flag and stamped the rebuild before enqueuing
 		assert.isFalse(await getFullTextDeindexed(libraryID));
+		let reindexing = await getFullTextReindexing(libraryID);
+		assert.isNumber(reindexing);
+
+		// While the rebuild is underway, searches report it without re-triggering
+		response = await API.userGet(
+			config.get('userID'),
+			'items?q=anything&qmode=everything&format=keys'
+		);
+		assert200(response);
+		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
+		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
+		assert.equal(await getFullTextReindexing(libraryID), reindexing);
+
+		// Clean up the rebuild stamp, standing in for the reindexer Lambda
+		await setFullTextReindexing(libraryID, false);
+	});
+
+	it('should re-trigger a stale rebuild from a full-text search', async function () {
+		let libraryID = config.get('libraryID');
+
+		// Simulate a rebuild that was enqueued long enough ago (server cutoff is six
+		// hours) to be presumed dead
+		await setFullTextDeindexed(libraryID, false);
+		let staleTime = Math.round(Date.now() / 1000) - 7 * 60 * 60;
+		await setFullTextReindexing(libraryID, staleTime);
+
+		// The search re-enqueues the rebuild with a fresh stamp and reports it as
+		// in progress
+		let response = await API.userGet(
+			config.get('userID'),
+			'items?q=anything&qmode=everything&format=keys'
+		);
+		assert200(response);
+		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
+		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
+		assert.isAbove(await getFullTextReindexing(libraryID), staleTime);
+
+		// Clean up the rebuild stamp, standing in for the reindexer Lambda
+		await setFullTextReindexing(libraryID, false);
 	});
 
 	it('should not index or surface uploaded content while the library is deindexed', async function () {
@@ -543,7 +593,8 @@ describe('Full Text', function () {
 		assert.equal(json.status, 'deindexed');
 
 		// And the uploaded content is not searchable, with the everything search
-		// flagging the missing full-text results
+		// flagging the missing full-text results and auto-triggering a rebuild,
+		// which clears the flag
 		response = await API.userGet(
 			config.get('userID'),
 			'items?q=wombat&qmode=everything&format=keys'
@@ -551,17 +602,36 @@ describe('Full Text', function () {
 		assert200(response);
 		assert.equal(response.getBody().trim(), '');
 		assert.equal(response.getHeader('Zotero-Full-Text-Deindexed'), '1');
+		assert.isFalse(await getFullTextDeindexed(libraryID));
 
-		// Clear the flag so later tests/runs start clean
-		await setFullTextDeindexed(libraryID, false);
+		// The rebuild is now underway: the status endpoint reports it with progress
+		// counts, and further searches flag it
+		response = await API.userGet(config.get('userID'), 'fulltext/index');
+		assert200(response);
+		json = JSON.parse(response.getBody());
+		assert.equal(json.status, 'reindexing');
+		assert.equal(json.expectedCount, 1);
 
-		// No header once the library is no longer deindexed
 		response = await API.userGet(
 			config.get('userID'),
 			'items?q=wombat&qmode=everything&format=keys'
 		);
 		assert200(response);
 		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
+		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
+
+		// Clear the rebuild stamp, standing in for the reindexer Lambda, so later
+		// tests/runs start clean
+		await setFullTextReindexing(libraryID, false);
+
+		// No headers once the library index state is clear
+		response = await API.userGet(
+			config.get('userID'),
+			'items?q=wombat&qmode=everything&format=keys'
+		);
+		assert200(response);
+		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
+		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
 	});
 
 	async function testSinceContent(param) {

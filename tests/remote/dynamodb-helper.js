@@ -96,3 +96,41 @@ export async function getFullTextDeindexed(libraryID) {
 	}));
 	return resp.Item?.deindexed?.BOOL === true;
 }
+
+/**
+ * Set or clear a library's full-text 'reindexing' timestamp. The server stamps this
+ * (epoch seconds) when a search triggers a rebuild, and the reindexer Lambda removes
+ * it when the refill completes -- these stand in for both so tests can simulate a
+ * rebuild in progress and clean up after a triggered one.
+ */
+export async function setFullTextReindexing(libraryID, time) {
+	let client = getDynamoClient();
+	let params = {
+		TableName: config.get('fullTextIndexingTable'),
+		Key: stateKey(libraryID),
+	};
+	if (time) {
+		params.UpdateExpression = 'SET reindexing = :v';
+		params.ExpressionAttributeValues = {
+			':v': { N: String(time) },
+		};
+	}
+	else {
+		params.UpdateExpression = 'REMOVE reindexing';
+	}
+	await client.send(new UpdateItemCommand(params));
+}
+
+/**
+ * Read a library's full-text 'reindexing' timestamp (absent item/attribute => null)
+ */
+export async function getFullTextReindexing(libraryID) {
+	let client = getDynamoClient();
+	let resp = await client.send(new GetItemCommand({
+		TableName: config.get('fullTextIndexingTable'),
+		Key: stateKey(libraryID),
+		ProjectionExpression: 'reindexing',
+		ConsistentRead: true,
+	}));
+	return resp.Item?.reindexing?.N ? parseInt(resp.Item.reindexing.N) : null;
+}

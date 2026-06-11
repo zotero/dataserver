@@ -55,12 +55,18 @@ class Zotero_Libraries {
 	}
 
 	/**
-	 * Per-library full-text "deindexed" state lives in the shared DynamoDB table
+	 * Per-library full-text index state lives in the shared DynamoDB table
 	 * (Z_CONFIG::$FULLTEXT_INDEXING_TABLE), since the full-text indexer Lambda gates
-	 * indexing on it and can't reach the MySQL master. An absent item or absent/false
-	 * attribute means not deindexed; only deindexed=true means deindexed.
+	 * indexing on it and can't reach the MySQL master.
+	 *
+	 * - 'deindexed' (BOOL): the library's full text was removed from the index by an
+	 *   external producer (the purge script). Absent item or absent/false attribute
+	 *   means not deindexed.
+	 * - 'reindexing' (N, Unix timestamp): when a rebuild was last enqueued. Set here
+	 *   via claimFullTextReindex() and removed by the reindexer Lambda when the
+	 *   refill completes.
 	 */
-	public static function isFullTextDeindexed($libraryID) {
+	public static function getFullTextIndexState($libraryID) {
 		$ddb = Z_Core::$AWS->createDynamoDb();
 		$result = $ddb->getItem([
 			'TableName' => Z_CONFIG::$FULLTEXT_INDEXING_TABLE,
@@ -68,28 +74,61 @@ class Zotero_Libraries {
 				'pk' => ['S' => "LIBRARY#$libraryID"],
 				'sk' => ['S' => "STATE"]
 			],
-			'ProjectionExpression' => 'deindexed',
+			'ProjectionExpression' => 'deindexed, reindexing',
 			'ConsistentRead' => true
 		]);
-		return isset($result['Item']['deindexed']['BOOL'])
-			&& $result['Item']['deindexed']['BOOL'] === true;
+		return [
+			'deindexed' => isset($result['Item']['deindexed']['BOOL'])
+				&& $result['Item']['deindexed']['BOOL'] === true,
+			'reindexing' => isset($result['Item']['reindexing']['N'])
+				? (int) $result['Item']['reindexing']['N'] : null
+		];
 	}
 
-	public static function setFullTextDeindexed($libraryID, $deindexed) {
+	/**
+	 * Atomically claim a full-text rebuild -- clear the deindexed flag and stamp
+	 * 'reindexing' with the current time, so concurrent requests can't enqueue
+	 * duplicate rebuilds. By default the claim succeeds only if the library is
+	 * currently deindexed. To re-claim a stalled rebuild instead, pass the stale
+	 * timestamp, and the claim succeeds only if 'reindexing' still holds that value.
+	 *
+	 * Returns false if another request claimed the rebuild first
+	 */
+	public static function claimFullTextReindex($libraryID, $staleReindexTime = null) {
 		$ddb = Z_Core::$AWS->createDynamoDb();
-		// UpdateItem (not PutItem) so other attributes on the STATE item -- e.g. the
-		// reindex checkpoint -- survive. Clearing sets deindexed=false; never delete.
-		$ddb->updateItem([
+		$params = [
 			'TableName' => Z_CONFIG::$FULLTEXT_INDEXING_TABLE,
 			'Key' => [
 				'pk' => ['S' => "LIBRARY#$libraryID"],
 				'sk' => ['S' => "STATE"]
 			],
-			'UpdateExpression' => 'SET deindexed = :v',
+			// UpdateItem (not PutItem) so other attributes on the STATE item -- e.g.
+			// the reindex checkpoint -- survive. Clearing sets deindexed=false; never
+			// delete.
+			'UpdateExpression' => 'SET deindexed = :false, reindexing = :now',
 			'ExpressionAttributeValues' => [
-				':v' => ['BOOL' => (bool) $deindexed]
+				':false' => ['BOOL' => false],
+				':now' => ['N' => (string) time()]
 			]
-		]);
+		];
+		if ($staleReindexTime !== null) {
+			$params['ConditionExpression'] = 'reindexing = :stale';
+			$params['ExpressionAttributeValues'][':stale'] = ['N' => (string) $staleReindexTime];
+		}
+		else {
+			$params['ConditionExpression'] = 'deindexed = :true';
+			$params['ExpressionAttributeValues'][':true'] = ['BOOL' => true];
+		}
+		try {
+			$ddb->updateItem($params);
+		}
+		catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+			if ($e->getAwsErrorCode() == 'ConditionalCheckFailedException') {
+				return false;
+			}
+			throw $e;
+		}
+		return true;
 	}
 	
 	

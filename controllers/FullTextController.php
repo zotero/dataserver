@@ -166,8 +166,10 @@ class FullTextController extends ApiController {
 			$this->e403();
 		}
 
+		$state = Zotero_Libraries::getFullTextIndexState($this->objectLibraryID);
+
 		// If the library was removed from the index, report that without querying Elasticsearch
-		if (Zotero_Libraries::isFullTextDeindexed($this->objectLibraryID)) {
+		if ($state['deindexed']) {
 			$result = ["status" => "deindexed"];
 		}
 		else {
@@ -176,8 +178,15 @@ class FullTextController extends ApiController {
 			// Number of stored full-text content rows Elasticsearch should mirror
 			$expectedCount = Zotero_FullText::countStoredInLibrary($this->objectLibraryID);
 
+			// Matching counts mean the index is complete, even if a rebuild's
+			// completion hasn't been recorded yet
 			if ($indexedCount === $expectedCount) {
 				$result = ["status" => "indexed"];
+			}
+			// A rebuild triggered from a search is underway -- report it with the
+			// counts so clients can show progress
+			else if (Zotero_FullText::isReindexing($state['reindexing'])) {
+				$result = ["status" => "reindexing", "indexedCount" => $indexedCount, "expectedCount" => $expectedCount];
 			}
 			// Fewer documents in Elasticsearch than stored content; the cause (in progress,
 			// stalled, failed) isn't observable here, so report only that it's incomplete
@@ -186,29 +195,6 @@ class FullTextController extends ApiController {
 			}
 		}
 		echo Zotero_Utilities::formatJSON($result);
-
-		$this->end();
-	}
-
-	public function reindex() {
-		$this->allowMethods(['POST']);
-
-		// Reindexing is a library-management operation, so require write access
-		if (!$this->permissions->canWrite($this->objectLibraryID)) {
-			$this->e403("Write access denied");
-		}
-
-		// Only allow reindexing if the library was removed from the index
-		if (!Zotero_Libraries::isFullTextDeindexed($this->objectLibraryID)) {
-			$this->e400("Library is not deindexed");
-		}
-
-		// Clear the deindexed flag before enqueuing, so the indexer's gate doesn't skip
-		// the refill we're about to request
-		Zotero_Libraries::setFullTextDeindexed($this->objectLibraryID, false);
-
-		// Send event to reindexing queue
-		Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $this->objectLibraryID]));
 
 		$this->end();
 	}

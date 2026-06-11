@@ -310,7 +310,58 @@ class Zotero_FullText {
 		$resp = Z_Core::$ES->count($params);
 		return $resp['count'];
 	}
-	
+
+	// How long an enqueued rebuild is presumed to still be running. If 'reindexing' is
+	// older than this, assume the refill stalled (or its completion was never recorded)
+	// and let the next search re-enqueue it.
+	const REINDEXING_STALE_AGE = 21600; // 6 hours
+
+	/**
+	 * Whether a rebuild enqueued at the given time is presumed to still be running
+	 */
+	public static function isReindexing($reindexingTime) {
+		return $reindexingTime !== null
+			&& time() - $reindexingTime < self::REINDEXING_STALE_AGE;
+	}
+
+	/**
+	 * If the library's full text was removed from the index, clear the deindexed
+	 * flag and enqueue a rebuild from stored content.
+	 *
+	 * Returns 'deindexed' if this request triggered a rebuild, 'reindexing' if a
+	 * rebuild is underway, or false if the index is intact
+	 */
+	public static function reindexLibraryIfDeindexed($libraryID) {
+		$state = Zotero_Libraries::getFullTextIndexState($libraryID);
+
+		if ($state['deindexed']) {
+			// Clearing the deindexed flag before enqueuing keeps the indexer's gate
+			// from skipping the refill we're about to request. The claim is
+			// conditional on the flag still being set, so concurrent searches can't
+			// enqueue duplicate rebuilds.
+			if (Zotero_Libraries::claimFullTextReindex($libraryID)) {
+				Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $libraryID]));
+				return 'deindexed';
+			}
+			// Another request claimed the rebuild first
+			return 'reindexing';
+		}
+
+		if ($state['reindexing'] !== null) {
+			if (self::isReindexing($state['reindexing'])) {
+				return 'reindexing';
+			}
+			// The rebuild stalled or its completion was never recorded -- re-enqueue,
+			// conditionally on the stale timestamp so only one request does
+			if (Zotero_Libraries::claimFullTextReindex($libraryID, $state['reindexing'])) {
+				Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $libraryID]));
+			}
+			return 'reindexing';
+		}
+
+		return false;
+	}
+
 	public static function deleteItemContent(Zotero_Item $item) {
 		$libraryID = $item->libraryID;
 		$key = $item->key;
