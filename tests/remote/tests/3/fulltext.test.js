@@ -542,16 +542,26 @@ describe('Full Text', function () {
 		let json = JSON.parse(response.getBody());
 		assert.equal(json.status, 'deindexed');
 
-		// And the uploaded content is not searchable
+		// And the uploaded content is not searchable, with the everything search
+		// flagging the missing full-text results
 		response = await API.userGet(
 			config.get('userID'),
 			'items?q=wombat&qmode=everything&format=keys'
 		);
 		assert200(response);
 		assert.equal(response.getBody().trim(), '');
+		assert.equal(response.getHeader('Zotero-Full-Text-Deindexed'), '1');
 
 		// Clear the flag so later tests/runs start clean
 		await setFullTextDeindexed(libraryID, false);
+
+		// No header once the library is no longer deindexed
+		response = await API.userGet(
+			config.get('userID'),
+			'items?q=wombat&qmode=everything&format=keys'
+		);
+		assert200(response);
+		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 	});
 
 	async function testSinceContent(param) {
