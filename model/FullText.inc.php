@@ -266,10 +266,6 @@ class Zotero_FullText {
 			]
 		];
 		
-		if (php_sapi_name() == "cli") {
-			//var_dump(json_encode($params));
-		}
-		
 		$start = microtime(true);
 		$resp = Z_Core::$ES->search($params);
 		StatsD::timing("elasticsearch.client.item_fulltext.search", (microtime(true) - $start) * 1000);
@@ -348,11 +344,7 @@ class Zotero_FullText {
 		self::deleteByLibraryMySQL($libraryID);
 		
 		// Delete from S3
-		$s3Client = Z_Core::$AWS->createS3([
-			'http' => [
-				'timeout' => 10
-			]
-		]);
+		$s3Client = Z_Core::$AWS->createS3();
 		$start = microtime(true);
 		// Potentially slow, because internally it lists objects and then deletes by batches of 1000
 		$s3Client->deleteMatchingObjects(Z_CONFIG::$S3_BUCKET_FULLTEXT, $libraryID . '/');
