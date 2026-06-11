@@ -328,8 +328,8 @@ class Zotero_FullText {
 	 * If the library's full text was removed from the index, clear the deindexed
 	 * flag and enqueue a rebuild from stored content.
 	 *
-	 * Returns 'deindexed' if this request triggered a rebuild, 'reindexing' if a
-	 * rebuild is underway, or false if the index is intact
+	 * Returns true if a rebuild is now underway, whether triggered by this request
+	 * or earlier, or false if the index is intact
 	 */
 	public static function reindexLibraryIfDeindexed($libraryID) {
 		$state = Zotero_Libraries::getFullTextIndexState($libraryID);
@@ -338,25 +338,22 @@ class Zotero_FullText {
 			// Clearing the deindexed flag before enqueuing keeps the indexer's gate
 			// from skipping the refill we're about to request. The claim is
 			// conditional on the flag still being set, so concurrent searches can't
-			// enqueue duplicate rebuilds.
+			// enqueue duplicate rebuilds -- a failed claim means another request
+			// just triggered the rebuild.
 			if (Zotero_Libraries::claimFullTextReindex($libraryID)) {
 				Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $libraryID]));
-				return 'deindexed';
 			}
-			// Another request claimed the rebuild first
-			return 'reindexing';
+			return true;
 		}
 
 		if ($state['reindexing'] !== null) {
-			if (self::isReindexing($state['reindexing'])) {
-				return 'reindexing';
-			}
-			// The rebuild stalled or its completion was never recorded -- re-enqueue,
-			// conditionally on the stale timestamp so only one request does
-			if (Zotero_Libraries::claimFullTextReindex($libraryID, $state['reindexing'])) {
+			// Re-enqueue a rebuild that stalled or whose completion was never
+			// recorded, conditionally on the stale timestamp so only one request does
+			if (!self::isReindexing($state['reindexing'])
+					&& Zotero_Libraries::claimFullTextReindex($libraryID, $state['reindexing'])) {
 				Z_SQS::send(Z_CONFIG::$REINDEX_QUEUE_URL, json_encode(['libraryID' => $libraryID]));
 			}
-			return 'reindexing';
+			return true;
 		}
 
 		return false;

@@ -666,16 +666,10 @@ class ItemsController extends ApiController {
 			// deindexed, automatically enqueue a rebuild, and flag the response so
 			// clients know the full-text half of the results is missing until the
 			// rebuild finishes. Advisory only -- if the state read or enqueue
-			// fails, return the search normally without a header.
+			// fails, return the search normally without the header.
 			if (!empty($this->queryParams['q']) && $this->queryParams['qmode'] == 'everything') {
 				try {
-					$state = Zotero_FullText::reindexLibraryIfDeindexed($this->objectLibraryID);
-					// This search triggered a rebuild
-					if ($state == 'deindexed') {
-						header("Zotero-Full-Text-Deindexed: 1");
-					}
-					// A previously triggered rebuild is still running
-					else if ($state == 'reindexing') {
+					if (Zotero_FullText::reindexLibraryIfDeindexed($this->objectLibraryID)) {
 						header("Zotero-Full-Text-Reindexing: 1");
 					}
 				}

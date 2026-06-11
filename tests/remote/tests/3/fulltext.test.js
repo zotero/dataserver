@@ -483,7 +483,6 @@ describe('Full Text', function () {
 			'items?q=anything&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
 		assert.isFalse(await getFullTextDeindexed(config.get('libraryID')));
 		assert.isNull(await getFullTextReindexing(config.get('libraryID')));
@@ -507,8 +506,7 @@ describe('Full Text', function () {
 			'items?q=anything&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.equal(response.getHeader('Zotero-Full-Text-Deindexed'), '1');
-		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
+		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
 
 		// The server cleared the flag and stamped the rebuild before enqueuing
 		assert.isFalse(await getFullTextDeindexed(libraryID));
@@ -521,7 +519,6 @@ describe('Full Text', function () {
 			'items?q=anything&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
 		assert.equal(await getFullTextReindexing(libraryID), reindexing);
 
@@ -545,7 +542,6 @@ describe('Full Text', function () {
 			'items?q=anything&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
 		assert.isAbove(await getFullTextReindexing(libraryID), staleTime);
 
@@ -601,7 +597,7 @@ describe('Full Text', function () {
 		);
 		assert200(response);
 		assert.equal(response.getBody().trim(), '');
-		assert.equal(response.getHeader('Zotero-Full-Text-Deindexed'), '1');
+		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
 		assert.isFalse(await getFullTextDeindexed(libraryID));
 
 		// The rebuild is now underway: the status endpoint reports it with progress
@@ -617,20 +613,18 @@ describe('Full Text', function () {
 			'items?q=wombat&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 		assert.equal(response.getHeader('Zotero-Full-Text-Reindexing'), '1');
 
 		// Clear the rebuild stamp, standing in for the reindexer Lambda, so later
 		// tests/runs start clean
 		await setFullTextReindexing(libraryID, false);
 
-		// No headers once the library index state is clear
+		// No header once the library index state is clear
 		response = await API.userGet(
 			config.get('userID'),
 			'items?q=wombat&qmode=everything&format=keys'
 		);
 		assert200(response);
-		assert.isNull(response.getHeader('Zotero-Full-Text-Deindexed'));
 		assert.isNull(response.getHeader('Zotero-Full-Text-Reindexing'));
 	});
 
