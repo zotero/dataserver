@@ -691,12 +691,25 @@ trait Zotero_DataObjects {
 			// ON DELETE CASCADE will only go 15 levels deep, so if we get an FK error, try
 			// deleting subcollections first, starting with the most recent, which isn't foolproof
 			// but will probably almost always do the trick.
-			if ($type == 'collection'
-					// Newer MySQL
-					&& (strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth") !== false
-					// Older MySQL
-					|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false)) {
+			$isFKError =
+				// Newer MySQL
+				strpos($e->getMessage(), "Foreign key cascade delete/update exceeds max depth") !== false
+				// Older MySQL
+				|| strpos($e->getMessage(), "Cannot delete or update a parent row") !== false;
+			if ($type == 'collection' && $isFKError) {
 				$deleted = self::deleteSubcollections($libraryID, $key);
+			}
+			// A corrupt item (e.g., a regular item converted from an attachment by a
+			// past client bug or plugin) can carry a stray itemAttachments row. Its
+			// dependent itemFulltext row has no ON DELETE CASCADE (to avoid orphaning
+			// the S3 and Elasticsearch entries the cascade can't clean up), so the
+			// cascade from items -> itemAttachments is blocked. The normal attachment
+			// cleanup above is skipped because the item isn't typed as an attachment,
+			// leaving the itemFulltext row behind. Clear it via deleteItemContent()
+			// (which also removes the S3/ES objects) and retry.
+			else if ($type == 'item' && $isFKError) {
+				Zotero_FullText::deleteItemContent($obj);
+				$deleted = Zotero_DB::query($sql, array($libraryID, $key), $shardID);
 			}
 			else {
 				throw $e;
