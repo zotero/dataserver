@@ -337,4 +337,61 @@ describe('TTS', function () {
 			assert.isTrue(seeded, 'Expected at least one provider to populate sibling on first synth');
 		});
 	});
+
+	describe('/speak -- empty/unspeakable audio', function () {
+		// Whitespace-only input normalizes to an empty string server-side, so
+		// the provider produces no audio. The server must serve a silent
+		// placeholder inline (200, not a 302 cache redirect), mark it no-store,
+		// and never cache it -- so a transient backend failure self-heals on the
+		// next request instead of pinning silence to the cache key.
+		//
+		// The empty-audio path is identified by `Cache-Control: no-store`; a
+		// normal synthesis (real audio) is cached and returns `immutable`. We
+		// can't key off the status code, since a real synthesis with
+		// timestamps=1 also returns 200. If some provider ever synthesizes real
+		// audio for empty input, the case doesn't apply and we skip.
+		let unspeakable = '   ';
+
+		function isEmptyAudioResponse(response) {
+			return /no-store/.test(response.getHeader('Cache-Control') || '');
+		}
+
+		it('should serve silent audio inline without caching', async function () {
+			let voice = voices['en-US'][0];
+			let response = await speak({ voice, text: unspeakable });
+			if (!isEmptyAudioResponse(response)) {
+				this.skip();
+			}
+			assert200(response);
+			assert.match(response.getHeader('Content-Type'), /^audio\//, 'Expected inline audio');
+			assert.notOk(response.getHeader('Location'), 'Empty audio must not redirect to cache');
+			assert.isAbove(response.getBody().length, 0, 'Expected a non-empty silent placeholder');
+
+			// A repeat call must also be served inline and uncached (no-store,
+			// no Location), proving nothing was cached during the first call.
+			let response2 = await speak({ voice, text: unspeakable });
+			assert200(response2);
+			assert.match(response2.getHeader('Cache-Control'), /no-store/, 'Repeat request must not be cached');
+			assert.notOk(response2.getHeader('Location'), 'Repeat request must not hit a cache');
+		});
+
+		it('should return JSON with an inline data URI when timestamps requested', async function () {
+			let voice = perProviderVoices[0] || voices['en-US'][0];
+			let response = await speak({ voice, text: unspeakable, timestamps: 1 });
+			if (!isEmptyAudioResponse(response)) {
+				this.skip();
+			}
+			assert200(response);
+			assert.match(response.getHeader('Content-Type'), /^application\/json/);
+			let json = JSON.parse(response.getBody());
+			assert.property(json, 'audioURL');
+			assert.match(json.audioURL, /^data:audio\/[^;]+;base64,/, 'audioURL should be an inline data URI');
+			// `timestamps` is absent for providers that can't align, or an empty
+			// array for those that can -- never populated for empty audio.
+			if (json.timestamps !== undefined) {
+				assert.isArray(json.timestamps);
+				assert.lengthOf(json.timestamps, 0);
+			}
+		});
+	});
 });

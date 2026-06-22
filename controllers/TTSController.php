@@ -291,10 +291,34 @@ class TTSController extends ApiController {
 		// Emit synthesis latency to CloudWatch for percentile analysis
 		$this->emitSynthesisLatency($resolved['provider'], $synthesisMS, mb_strlen($text));
 
-		// If the provider returned empty audio (e.g., unspeakable input like punctuation),
-		// substitute a minimal valid silent audio file so clients can play it without errors
+		// If the provider returned empty audio, serve a minimal valid silent audio file
+		// inline without caching it or charging credits. Empty audio is indistinguishable
+		// between a transient backend failure and genuinely unspeakable input
+		// (punctuation/whitespace), so rather than classify the cause we just refuse to
+		// persist the result. Caching it would pin silence to the cache key for
+		// AUDIO_CACHE_DAYS; serving it inline instead lets the next request self-heal once
+		// synthesis recovers, and an unspeakable input is simply re-synthesized (cheaply)
+		// next time. Emit an EmptyAudio CloudWatch metric so a real outage shows up as a
+		// spike.
 		if (empty($result['audio'])) {
-			$result['audio'] = base64_decode(self::$silentAudio[$result['mimeType']] ?? self::$silentAudio['audio/mpeg']);
+			$this->emitEmptyAudioMetric($resolved['provider']);
+			$silentAudio = base64_decode(self::$silentAudio[$result['mimeType']] ?? self::$silentAudio['audio/mpeg']);
+			header("Cache-Control: no-store");
+			if ($timestampsRequested) {
+				header("Content-Type: application/json");
+				$body = [
+					'audioURL' => 'data:' . $result['mimeType'] . ';base64,' . base64_encode($silentAudio),
+				];
+				if ($emitTimestampsKey) {
+					$body['timestamps'] = [];
+				}
+				echo json_encode($body, JSON_UNESCAPED_UNICODE);
+			}
+			else {
+				header("Content-Type: " . $result['mimeType']);
+				echo $silentAudio;
+			}
+			return;
 		}
 
 		// Parse audio duration
@@ -811,6 +835,32 @@ class TTSController extends ApiController {
 		}
 		catch (\Exception $e) {
 			error_log("Failed to emit TTS CloudWatch metric: " . $e->getMessage());
+		}
+	}
+
+
+	private function emitEmptyAudioMetric(string $provider): void {
+		try {
+			$cw = Z_Core::$AWS->createCloudWatch();
+			$cw->putMetricData([
+				'Namespace' => 'Zotero/TTS',
+				'MetricData' => [
+					[
+						'MetricName' => 'EmptyAudio',
+						'Value' => 1,
+						'Unit' => 'Count',
+						'Dimensions' => [
+							[
+								'Name' => 'Provider',
+								'Value' => $provider,
+							],
+						],
+					],
+				],
+			]);
+		}
+		catch (\Exception $e) {
+			error_log("Failed to emit TTS EmptyAudio metric: " . $e->getMessage());
 		}
 	}
 
