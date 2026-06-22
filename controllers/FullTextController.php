@@ -178,9 +178,10 @@ class FullTextController extends ApiController {
 			// Number of stored full-text content rows Elasticsearch should mirror
 			$expectedCount = Zotero_FullText::countStoredInLibrary($this->objectLibraryID);
 
-			// Matching counts mean the index is complete, even if a rebuild's
-			// completion hasn't been recorded yet
-			if ($indexedCount === $expectedCount) {
+			// At least as many indexed documents as stored content means the index is
+			// complete, even if a rebuild's completion hasn't been recorded yet.
+			// (Indexed count could be greated due to orphaned docs in Elasticsearch.)
+			if ($indexedCount >= $expectedCount) {
 				$result = ["status" => "indexed"];
 			}
 			// A rebuild triggered from a search is underway -- report it with the
