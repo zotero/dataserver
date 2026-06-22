@@ -514,6 +514,11 @@ class TTSController extends ApiController {
 		foreach (self::$providerClasses as $class) {
 			$provider = $class::getVoices($userID, $includeArenaOnly);
 			$tier = $provider['tier'];
+			// Expose the provider's cache version so the client can fold it into
+			// its own cache key, letting a server-side CACHE_VERSION bump
+			// invalidate client caches too. Provider-group placement only --
+			// the version is uniform across a provider's voices.
+			$provider['cacheVersion'] = $class::CACHE_VERSION;
 			// Add labels to each voice and remove number/gender
 			foreach ($provider['voices'] as $hexID => &$v) {
 				$v['label'] = sprintf($labels[$tier], $v['number']);

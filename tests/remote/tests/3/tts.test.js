@@ -84,6 +84,20 @@ describe('TTS', function () {
 		return `${prefix} ${crypto.randomBytes(8).toString('hex')}`;
 	}
 
+	describe('/voices', function () {
+		it('should expose cacheVersion on each provider group', async function () {
+			let response = await API.get('tts/voices');
+			assert200(response);
+			let json = JSON.parse(response.getBody());
+			let groups = [...(json.standard || []), ...(json.premium || [])];
+			assert.isAbove(groups.length, 0, 'Expected at least one provider group');
+			for (let group of groups) {
+				assert.property(group, 'cacheVersion');
+				assert.isNumber(group.cacheVersion);
+			}
+		});
+	});
+
 	describe('/credits', function () {
 		it('should return remaining credits', async function () {
 			let response = await API.get('tts/credits');
