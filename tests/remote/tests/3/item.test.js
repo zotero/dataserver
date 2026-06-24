@@ -2023,6 +2023,46 @@ describe('Items', function () {
 		assert.equal(json[0].data.title, 'aaa');
 	});
 
+	// Annotations should never be returned by an itemType negation
+	it('should exclude annotations from itemType negation', async function () {
+		await API.userClear(config.get('userID'));
+
+		let bookKey = await API.createItem('book', {}, 'key');
+		let attachmentKey = await API.createAttachmentItem(
+			'imported_url',
+			{ contentType: 'application/pdf' },
+			bookKey,
+			'key'
+		);
+		let annotationKey = await API.createAnnotationItem(
+			'highlight',
+			{},
+			attachmentKey,
+			'key'
+		);
+
+		// Negation of a type not present should still exclude the annotation
+		let response = await API.userGet(
+			config.get('userID'),
+			'items?format=keys&itemType=-journalArticle'
+		);
+		assert200(response);
+		let keys = response.getBody().trim().split('\n');
+		assert.notInclude(keys, annotationKey);
+		assert.include(keys, bookKey);
+		assert.include(keys, attachmentKey);
+
+		// Negation of the parent's type should also exclude the annotation
+		response = await API.userGet(
+			config.get('userID'),
+			'items?format=keys&itemType=-book'
+		);
+		assert200(response);
+		keys = response.getBody().trim().split('\n');
+		assert.notInclude(keys, annotationKey);
+		assert.include(keys, attachmentKey);
+	});
+
 	// PHP: testIncludeTrashed
 	it('should return items in trash with includeTrashed', async function () {
 		await API.userClear(config.get('userID'));

@@ -387,6 +387,13 @@ class Zotero_Items {
 						. implode(',', array_fill(0, sizeOf($itemTypeIDs), '?'))
 						. ") ";
 				$sqlParams = array_merge($sqlParams, $itemTypeIDs);
+				
+				// A negation isn't asking for annotations, which almost never
+				// carry item metadata, so exclude them from the result set
+				if ($itemTypes['negation']) {
+					$sql .= "AND I.itemTypeID != ? ";
+					$sqlParams[] = Zotero_ItemTypes::getID('annotation');
+				}
 			}
 		}
 		
@@ -420,8 +427,13 @@ class Zotero_Items {
 			
 			$positives = array();
 			$negatives = array();
+			$hasNegation = false;
 			
 			foreach ($tagSets as $set) {
+				if ($set['negation']) {
+					$hasNegation = true;
+				}
+				
 				$tagIDs = array();
 				
 				foreach ($set['values'] as $tag) {
@@ -452,6 +464,13 @@ class Zotero_Items {
 				$sql2 .= " AND itemID " . ($set['negation'] ? "NOT " : "") . " IN ("
 					. implode(',', array_fill(0, sizeOf($ids), '?')) . ")";
 				$sqlParams2 = array_merge($sqlParams2, $ids);
+			}
+			
+			// A negation isn't asking for annotations, which almost never carry
+			// tags, so exclude them from the result set
+			if ($hasNegation) {
+				$sql2 .= " AND itemTypeID != ?";
+				$sqlParams2[] = Zotero_ItemTypes::getID('annotation');
 			}
 			
 			$tagItems = Zotero_DB::columnQuery($sql2, $sqlParams2, $shardID);

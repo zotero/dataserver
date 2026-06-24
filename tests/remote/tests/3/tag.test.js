@@ -275,6 +275,46 @@ describe('Tags', function () {
 		assert.include(keys, key2);
 	});
 
+	// Annotations should never be returned by a tag negation
+	it('should exclude annotations from tag negation', async function () {
+		let bookKey = await API.createItem('book', {
+			tags: [{ tag: 'a' }]
+		}, 'key');
+		let attachmentKey = await API.createAttachmentItem(
+			'imported_url',
+			{ contentType: 'application/pdf' },
+			bookKey,
+			'key'
+		);
+		let annotationKey = await API.createAnnotationItem(
+			'highlight',
+			{},
+			attachmentKey,
+			'key'
+		);
+
+		// Negation of an existing tag should exclude the annotation
+		let response = await API.userGet(
+			config.get('userID'),
+			'items?format=keys&tag=-a'
+		);
+		assert200(response);
+		let keys = response.getBody().trim().split('\n');
+		assert.notInclude(keys, annotationKey);
+		assert.include(keys, attachmentKey);
+
+		// Negation of a nonexistent tag should also exclude the annotation
+		response = await API.userGet(
+			config.get('userID'),
+			'items?format=keys&tag=-nonexistent'
+		);
+		assert200(response);
+		keys = response.getBody().trim().split('\n');
+		assert.notInclude(keys, annotationKey);
+		assert.include(keys, bookKey);
+		assert.include(keys, attachmentKey);
+	});
+
 	// PHP: testKeyedItemWithTags
 	it('should handle keyed item with tags', async function () {
 		let itemKey = API.generateKey();
