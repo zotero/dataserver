@@ -314,4 +314,47 @@ describe('Searches', function () {
 		);
 		assert400ForObject(response, 'Search operator cannot be empty');
 	});
+
+	// Condition groups, the result level, and the Title/Creator/Year condition were added at
+	// schema version 43; the server flags searches using them as invalidProp for older clients
+	// (see Zotero_Search::needsInvalidProp())
+	it('should flag a grouped search as invalidProp for clients below schema version 43', async function () {
+		let key = await API.createSearch(
+			'Grouped',
+			[
+				{ condition: 'joinMode', operator: 'all', value: '' },
+				{ condition: 'groupStart', operator: 'true', value: '' },
+				{ condition: 'title', operator: 'contains', value: 'foo' },
+				{ condition: 'groupEnd', operator: 'true', value: '' }
+			],
+			'key'
+		);
+
+		// Older client: flagged as uneditable
+		API.useSchemaVersion(42);
+		let json = await API.getSearch(key);
+		assert.property(json.data, 'invalidProp');
+		API.resetSchemaVersion();
+
+		// Current client: not flagged
+		API.useSchemaVersion(43);
+		json = await API.getSearch(key);
+		assert.notProperty(json.data, 'invalidProp');
+		API.resetSchemaVersion();
+	});
+
+	it('should not flag a plain search as invalidProp for clients below schema version 43', async function () {
+		let key = await API.createSearch(
+			'Plain',
+			[
+				{ condition: 'title', operator: 'contains', value: 'foo' }
+			],
+			'key'
+		);
+
+		API.useSchemaVersion(42);
+		let json = await API.getSearch(key);
+		assert.notProperty(json.data, 'invalidProp');
+		API.resetSchemaVersion();
+	});
 });
