@@ -3119,6 +3119,36 @@ describe('Items', function () {
 		API.resetSchemaVersion();
 	});
 
+	it('should not return lastRead to Android clients even with a current schema version', async function () {
+		let json = await API.createAttachmentItem('imported_file', { lastRead: 1674668111 }, false, 'jsonData');
+		let itemKey = json.key;
+		assert.equal(json.lastRead, 1674668111);
+
+		// Should not be returned to Android clients, regardless of schema version
+		let response = await API.userGet(
+			config.get('userID'),
+			`items/${itemKey}`,
+			[
+				'Zotero-Schema-Version: 42',
+				'User-Agent: Mozilla/5.0 (Linux; Android 14) Zotero/1.0'
+			]
+		);
+		assert200(response);
+		assert.notProperty(API.getJSONFromResponse(response).data, 'lastRead');
+
+		// Should still be returned to non-Android clients with the same schema version
+		response = await API.userGet(
+			config.get('userID'),
+			`items/${itemKey}`,
+			[
+				'Zotero-Schema-Version: 42',
+				'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/7.0'
+			]
+		);
+		assert200(response);
+		assert.equal(API.getJSONFromResponse(response).data.lastRead, 1674668111);
+	});
+
 	// PHP: test_should_not_return_empty_fields_from_newer_schema_to_old_client
 	it('should not return empty fields from newer schema to old client', async function () {
 		API.useSchemaVersion(false);

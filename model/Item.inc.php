@@ -908,6 +908,31 @@ class Zotero_Item extends Zotero_DataObject {
 	}
 
 
+	/**
+	 * Whether the requesting client should receive the attachment lastRead property
+	 *
+	 * lastRead is stored in the cached response JSON client-neutrally (see toJSON()),
+	 * so this gate is applied at serve time in toResponseJSON() instead of via the
+	 * cache key, which uses effectiveSchemaVersion rather than the raw client value.
+	 */
+	private function lastReadVisibleToClient($schemaVersion) {
+		// lastRead was added at schema version 42; clients that explicitly request an
+		// older version don't expect it. (Clients that send no version are treated as
+		// current.) Gate on the raw schemaVersion, since effectiveSchemaVersion can
+		// snap a sub-42 value up past the boundary.
+		if ($schemaVersion && $schemaVersion < 42) {
+			return false;
+		}
+		// TEMP: The Android client now advertises a global schema version >= 42 (via the
+		// search-condition-group bump, zotero-client #5962) but doesn't yet handle
+		// lastRead, so omit it for Android regardless of schema version.
+		if (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'Android')) {
+			return false;
+		}
+		return true;
+	}
+
+
 	private function getCreatorSummary() {
 		if ($this->creatorSummary !== null) {
 			return $this->creatorSummary;
@@ -4279,6 +4304,11 @@ class Zotero_Item extends Zotero_DataObject {
 				// Keep in sync with 'library' assignment below
 				$cached['library'] = Zotero_Libraries::toJSON($this->libraryID);
 				unset($cached['_cachedBy']);
+				// lastRead is cached client-neutrally; omit it for clients that don't support it
+				if (isset($cached['data']['lastRead'])
+						&& !$this->lastReadVisibleToClient($requestParams['schemaVersion'] ?? null)) {
+					unset($cached['data']['lastRead']);
+				}
 				return $cached;
 			}
 		}
@@ -4617,6 +4647,13 @@ class Zotero_Item extends Zotero_DataObject {
 			$json['data']['invalidProp'] = 1;
 		}
 
+		// lastRead is cached client-neutrally above; omit it from this client's response
+		// if the client doesn't support it (raw schema < 42 or Android)
+		if (isset($json['data']['lastRead'])
+				&& !$this->lastReadVisibleToClient($requestParams['schemaVersion'] ?? null)) {
+			unset($json['data']['lastRead']);
+		}
+
 		// Keep in sync with 'library' assignment in early return above
 		$json['library'] = Zotero_Libraries::toJSON($this->libraryID);
 
@@ -4806,11 +4843,12 @@ class Zotero_Item extends Zotero_DataObject {
 				}
 			}
 
-			// Only include lastRead for user library items with schema version >= 42
+			// Include lastRead for all user-library attachments here so the cached
+			// response entry is client-neutral; the schema-version/client gate is applied
+			// at serve time in toResponseJSON() via lastReadVisibleToClient(), since the
+			// response-JSON cache key uses effectiveSchemaVersion, not the raw client value.
 			$val = $this->attachmentLastRead;
-			if ($val
-					&& (!$schemaVersion || $schemaVersion >= 42)
-					&& Zotero_Libraries::getType($this->libraryID) == 'user') {
+			if ($val && Zotero_Libraries::getType($this->libraryID) == 'user') {
 				$arr['lastRead'] = $val;
 			}
 		}
