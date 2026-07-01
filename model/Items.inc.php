@@ -1200,6 +1200,14 @@ class Zotero_Items {
 			if (isset($details['size'])) {
 				$link['length'] = $details['size'];
 			}
+			if (!empty($details['zip'])) {
+				$link = $xml->addChild('link');
+				$link['rel'] = 'zip';
+				$link['type'] = 'application/zip';
+				$link['href'] = $details['zip']['url'];
+				$link['title'] = $details['zip']['filename'];
+				$link['length'] = $details['zip']['size'];
+			}
 		}
 		
 		$xml->addChild('zapi:key', $item->key, Zotero_Atom::$nsZoteroAPI);
