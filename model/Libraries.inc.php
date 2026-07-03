@@ -74,14 +74,17 @@ class Zotero_Libraries {
 				'pk' => ['S' => "LIBRARY#$libraryID"],
 				'sk' => ['S' => "STATE"]
 			],
-			'ProjectionExpression' => 'deindexed, reindexing',
+			'ProjectionExpression' => 'deindexed, reindexing, indexableCount',
 			'ConsistentRead' => true
 		]);
 		return [
 			'deindexed' => isset($result['Item']['deindexed']['BOOL'])
 				&& $result['Item']['deindexed']['BOOL'] === true,
 			'reindexing' => isset($result['Item']['reindexing']['N'])
-				? (int) $result['Item']['reindexing']['N'] : null
+				? (int) $result['Item']['reindexing']['N'] : null,
+			// Objects the last reindex enqueued (= what's actually in S3); null if never reindexed
+			'indexableCount' => isset($result['Item']['indexableCount']['N'])
+				? (int) $result['Item']['indexableCount']['N'] : null
 		];
 	}
 

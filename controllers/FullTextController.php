@@ -189,6 +189,11 @@ class FullTextController extends ApiController {
 			else if (Zotero_FullText::isReindexing($state['reindexing'])) {
 				$result = ["status" => "reindexing", "indexedCount" => $indexedCount, "expectedCount" => $expectedCount];
 			}
+			// Use the stored count of indexable documents from the reindex run, since the DB count might
+			// not reflect what's actually in S3 (if, say, an S3 write failed)
+			else if ($state['indexableCount'] !== null && $indexedCount >= $state['indexableCount']) {
+				$result = ["status" => "indexed"];
+			}
 			// Fewer documents in Elasticsearch than stored content; the cause (in progress,
 			// stalled, failed) isn't observable here, so report only that it's incomplete
 			else {
