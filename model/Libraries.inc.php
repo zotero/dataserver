@@ -133,8 +133,52 @@ class Zotero_Libraries {
 		}
 		return true;
 	}
-	
-	
+
+
+	/**
+	 * Record that a library's items were searched, for search-index eviction
+	 *
+	 * Stamps lastMetadataSearch (any quick search) and lastFullTextSearch (everything-mode
+	 * searches) on the library's indexing STATE item in DynamoDB. Eviction windows are months,
+	 * so throttle to one write per library/mode per day via memcached.
+	 */
+	public static function recordItemSearch($libraryID, $fullText = false) {
+		$attrs = [];
+		if (Z_Core::$MC->add("lastMetadataSearchStamped_$libraryID", 1, 86400)) {
+			$attrs[] = 'lastMetadataSearch';
+		}
+		if ($fullText && Z_Core::$MC->add("lastFullTextSearchStamped_$libraryID", 1, 86400)) {
+			$attrs[] = 'lastFullTextSearch';
+		}
+		if (!$attrs) {
+			return;
+		}
+		try {
+			$ddb = Z_Core::$AWS->createDynamoDb();
+			$ddb->updateItem([
+				'TableName' => Z_CONFIG::$FULLTEXT_INDEXING_TABLE,
+				'Key' => [
+					'pk' => ['S' => "LIBRARY#$libraryID"],
+					'sk' => ['S' => "STATE"]
+				],
+				'UpdateExpression' => 'SET ' . implode(', ', array_map(
+					function ($attr) {
+						return "$attr = :now";
+					},
+					$attrs
+				)),
+				'ExpressionAttributeValues' => [
+					':now' => ['N' => (string) time()]
+				]
+			]);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("WARNING: Failed to stamp " . implode("/", $attrs)
+				. " for library $libraryID: " . $e->getMessage());
+		}
+	}
+
+
 	public static function getName($libraryID) {
 		$type = self::getType($libraryID);
 		switch ($type) {

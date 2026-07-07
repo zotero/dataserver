@@ -71,7 +71,15 @@ class Zotero_Items {
 		$results = array('results' => array(), 'total' => 0);
 		
 		$shardID = Zotero_Shards::getByLibraryID($libraryID);
-		
+
+		// Record the search for search-index eviction
+		if (!empty($params['q'])) {
+			Zotero_Libraries::recordItemSearch(
+				$libraryID,
+				!empty($params['qmode']) && $params['qmode'] == 'everything'
+			);
+		}
+
 		$includeTrashed = $params['includeTrashed'];
 		
 		$isPublications = !empty($params['publications']);
