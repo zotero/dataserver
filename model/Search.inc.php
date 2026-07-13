@@ -285,33 +285,10 @@ class Zotero_Search extends Zotero_DataObject {
 			}
 		}
 
-		if ($this->needsInvalidProp($requestParams['schemaVersion'] ?? null)) {
-			$arr['invalidProp'] = 1;
-		}
-
 		return $arr;
 	}
 
 
-	/**
-	 * groupStart/groupEnd, the result level, and the Title/Creator/Year condition were added
-	 * at schema version 43. Older clients would error on them, so flag such searches with
-	 * invalidProp, which keeps those clients from downloading them.
-	 */
-	private function needsInvalidProp($schemaVersion) {
-		if (!$schemaVersion || $schemaVersion >= 43) {
-			return false;
-		}
-		$this->loadConditions();
-		foreach ($this->conditions as $condition) {
-			if (in_array($condition['condition'], ['groupStart', 'groupEnd', 'resultLevel', 'titleCreatorYear'])) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	
 	/**
 	 * Generate a SimpleXMLElement Atom object for the search
 	 *
