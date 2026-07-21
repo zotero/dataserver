@@ -923,10 +923,9 @@ class Zotero_Item extends Zotero_DataObject {
 		if ($schemaVersion && $schemaVersion < 42) {
 			return false;
 		}
-		// TEMP: The Android client now advertises a global schema version >= 42 (via the
-		// search-condition-group bump, zotero-client #5962) but doesn't yet handle
-		// lastRead, so omit it for Android regardless of schema version.
-		if (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'Android')) {
+		// Android didn't handle lastRead until schema version 44, so omit it for older
+		// Android clients (including version-less ones) regardless of the 42 gate above.
+		if (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'Android') && $schemaVersion < 44) {
 			return false;
 		}
 		return true;

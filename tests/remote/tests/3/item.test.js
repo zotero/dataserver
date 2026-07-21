@@ -3119,12 +3119,12 @@ describe('Items', function () {
 		API.resetSchemaVersion();
 	});
 
-	it('should not return lastRead to Android clients even with a current schema version', async function () {
+	it('should return lastRead to Android clients only with schema version >= 44', async function () {
 		let json = await API.createAttachmentItem('imported_file', { lastRead: 1674668111 }, false, 'jsonData');
 		let itemKey = json.key;
 		assert.equal(json.lastRead, 1674668111);
 
-		// Should not be returned to Android clients, regardless of schema version
+		// Should not be returned to Android clients below schema version 44
 		let response = await API.userGet(
 			config.get('userID'),
 			`items/${itemKey}`,
@@ -3136,7 +3136,19 @@ describe('Items', function () {
 		assert200(response);
 		assert.notProperty(API.getJSONFromResponse(response).data, 'lastRead');
 
-		// Should still be returned to non-Android clients with the same schema version
+		// Should be returned to Android clients at schema version 44
+		response = await API.userGet(
+			config.get('userID'),
+			`items/${itemKey}`,
+			[
+				'Zotero-Schema-Version: 44',
+				'User-Agent: Mozilla/5.0 (Linux; Android 14) Zotero/1.0'
+			]
+		);
+		assert200(response);
+		assert.equal(API.getJSONFromResponse(response).data.lastRead, 1674668111);
+
+		// Should still be returned to non-Android clients with schema version 42
 		response = await API.userGet(
 			config.get('userID'),
 			`items/${itemKey}`,
