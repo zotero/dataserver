@@ -3,15 +3,6 @@
 set_include_path("../../../include");
 require("header.inc.php");
 
-// Some stored-file attachments were synced with a full path (e.g., 'D:\Foo\Bar\file.pdf') after
-// 'storage:' instead of just a filename (from a third-party tool, presumably), which breaks file
-// syncing. Strip the path down to the basename. No particular reason to think a file with that
-// basename exists in storage, but at least it's looking for the right filename.
-//
-// Runs read-only by default; pass 'apply' to write changes.
-//
-// Usage: stripStoredFileAttachmentPaths [apply] [startShardID]
-
 $apply = !empty($argv[1]) && $argv[1] == 'apply';
 $startShardID = empty($argv[2]) ? 1 : $argv[2];
 
@@ -29,9 +20,10 @@ $total = 0;
 foreach ($shardIDs as $shardID) {
 	echo "Shard: $shardID\n";
 
-	// linkMode 0/1 = imported_file/imported_url (stored-file attachments)
+	// linkMode 0/1 = imported_file/imported_url (stored-file attachments). Match anything with a
+	// separator as a candidate; the precise decision is made in PHP below.
 	$rows = Zotero_DB::query(
-		"SELECT itemID, libraryID FROM itemAttachments JOIN items USING (itemID) "
+		"SELECT itemID, libraryID, path FROM itemAttachments JOIN items USING (itemID) "
 		. "WHERE linkMode IN (0, 1) AND path LIKE 'storage:%' "
 		. "AND (INSTR(path, '/') > 0 OR INSTR(path, 0x5C) > 0)",
 		false,
@@ -40,31 +32,37 @@ foreach ($shardIDs as $shardID) {
 	if (!$rows) {
 		continue;
 	}
-	echo "Found " . sizeOf($rows) . " item(s)\n";
 
 	foreach ($rows as $row) {
+		// Work on the raw stored value: separators are ASCII and literal in both the descriptor-
+		// encoded and plaintext forms, so the basename needs no decode, and writing via
+		// attachmentPath stores it verbatim without changing the encoding. A leaked directory path
+		// is a forward slash (never valid in a filename) or a Windows absolute path (drive-letter
+		// or UNC prefix); a bare backslash can't be distinguished from a legal filename character
+		// (LaTeX, etc.), so it's left alone.
+		$rel = substr($row['path'], 8);
+		$isPath = strpos($rel, '/') !== false
+			|| preg_match('#^[a-zA-Z]:[\\\\/]#', $rel)
+			|| substr($rel, 0, 2) == '\\\\';
+		if (!$isPath) {
+			continue;
+		}
+		$basename = preg_replace('#^.*[/\\\\]#', '', $rel);
+		if ($basename === '' || $basename === $rel) {
+			continue;
+		}
+
 		$item = Zotero_Items::get($row['libraryID'], $row['itemID']);
 		if (!$item) {
 			echo "  Item {$row['itemID']} not found -- skipping\n";
 			continue;
 		}
 
-		$filename = $item->attachmentFilename;
-		// Strip any directory path, keeping only the basename
-		$fixed = preg_replace('/^.*[\/\\\\]/', '', $filename);
-		if ($fixed === $filename) {
-			continue;
-		}
-		if ($fixed === '') {
-			echo "  Item {$item->libraryKey}: no filename in '$filename' -- skipping\n";
-			continue;
-		}
-
-		echo "  Item {$item->libraryKey}: '$filename' -> '$fixed'\n";
+		echo "  Item {$item->libraryKey}: '$rel' -> '$basename'\n";
 		$total++;
 
 		if ($apply) {
-			$item->attachmentFilename = $fixed;
+			$item->attachmentPath = 'storage:' . $basename;
 			$item->save();
 		}
 	}

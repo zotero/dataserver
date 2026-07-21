@@ -918,10 +918,25 @@ describe('Items', function () {
 		assert200(response);
 	});
 
-	it('should reject a stored-file filename containing a slash', async function () {
-		for (let filename of ['D:/Foo/Bar/test.pdf', 'D:\\Foo\\Bar\\test.pdf']) {
+	it('should reject a stored-file filename containing a directory path', async function () {
+		for (let filename of [
+			'D:/Foo/Bar/test.pdf',
+			'C:\\Users\\matth\\test.pdf',
+			'\\\\server\\share\\test.pdf',
+			'\\\\?\\C:\\Users\\x\\test.pdf'
+		]) {
 			let response = await API.createAttachmentItem('imported_file', { filename }, false, 'response');
-			assert400ForObject(response, `Stored-file filename '${filename}' cannot contain a slash`);
+			assert400ForObject(response, `Stored-file filename '${filename}' cannot contain a directory path`);
+		}
+	});
+
+	it('should allow a stored-file filename containing a bare backslash', async function () {
+		// Backslashes appear in legitimate filenames (e.g. LaTeX in titles) and can't be
+		// distinguished from a directory separator without a drive-letter or UNC prefix, so
+		// they're left alone
+		for (let filename of ['Sutton - 2.4 \\AA resolution.pdf', 'foo\\bar.pdf']) {
+			let response = await API.createAttachmentItem('imported_file', { filename }, false, 'response');
+			assert200(response);
 		}
 	});
 

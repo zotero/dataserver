@@ -3364,11 +3364,15 @@ class Zotero_Item extends Zotero_DataObject {
 				throw new Exception("Cannot change filename for linked file");
 			}
 			
-			// Stored-file paths should contain only a filename, but some third-party tools synced
-			// full paths (e.g., 'D:\Foo\Bar\file.pdf'), which break file syncing
-			if (preg_match('#[/\\\\]#', $val)) {
+			// Reject a leaked directory path (likely from some plugin) -- a forward slash
+			// (never valid in a filename) or a Windows absolute path (drive-letter or UNC
+			// prefix). A bare backslash can't be distinguished from a legal filename character
+			// (LaTeX, etc.), so it's left alone.
+			if (strpos($val, '/') !== false
+					|| preg_match('#^[a-zA-Z]:[\\\\/]#', $val)
+					|| substr($val, 0, 2) == '\\\\') {
 				throw new Exception(
-					"Stored-file filename '$val' cannot contain a slash", Z_ERROR_INVALID_INPUT
+					"Stored-file filename '$val' cannot contain a directory path", Z_ERROR_INVALID_INPUT
 				);
 			}
 			
