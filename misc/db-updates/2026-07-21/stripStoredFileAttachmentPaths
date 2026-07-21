@@ -23,7 +23,7 @@ foreach ($shardIDs as $shardID) {
 	// linkMode 0/1 = imported_file/imported_url (stored-file attachments). Match anything with a
 	// separator as a candidate; the precise decision is made in PHP below.
 	$rows = Zotero_DB::query(
-		"SELECT itemID, libraryID, path FROM itemAttachments JOIN items USING (itemID) "
+		"SELECT itemID, path FROM itemAttachments "
 		. "WHERE linkMode IN (0, 1) AND path LIKE 'storage:%' "
 		. "AND (INSTR(path, '/') > 0 OR INSTR(path, 0x5C) > 0)",
 		false,
@@ -35,11 +35,10 @@ foreach ($shardIDs as $shardID) {
 
 	foreach ($rows as $row) {
 		// Work on the raw stored value: separators are ASCII and literal in both the descriptor-
-		// encoded and plaintext forms, so the basename needs no decode, and writing via
-		// attachmentPath stores it verbatim without changing the encoding. A leaked directory path
-		// is a forward slash (never valid in a filename) or a Windows absolute path (drive-letter
-		// or UNC prefix); a bare backslash can't be distinguished from a legal filename character
-		// (LaTeX, etc.), so it's left alone.
+		// encoded and plaintext forms, so the basename needs no decode and the encoding is left
+		// untouched. A leaked directory path is a forward slash (never valid in a filename) or a
+		// Windows absolute path (drive-letter or UNC prefix); a bare backslash can't be
+		// distinguished from a legal filename character (LaTeX, etc.), so it's left alone.
 		$rel = substr($row['path'], 8);
 		$isPath = strpos($rel, '/') !== false
 			|| preg_match('#^[a-zA-Z]:[\\\\/]#', $rel)
@@ -51,19 +50,17 @@ foreach ($shardIDs as $shardID) {
 		if ($basename === '' || $basename === $rel) {
 			continue;
 		}
+		$newPath = 'storage:' . $basename;
 
-		$item = Zotero_Items::get($row['libraryID'], $row['itemID']);
-		if (!$item) {
-			echo "  Item {$row['itemID']} not found -- skipping\n";
-			continue;
-		}
-
-		echo "  Item {$item->libraryKey}: '$rel' -> '$basename'\n";
+		echo "  Shard $shardID item {$row['itemID']}: '{$row['path']}' -> '$newPath'\n";
 		$total++;
 
 		if ($apply) {
-			$item->attachmentPath = 'storage:' . $basename;
-			$item->save();
+			Zotero_DB::query(
+				"UPDATE itemAttachments SET path=? WHERE itemID=?",
+				[$newPath, $row['itemID']],
+				$shardID
+			);
 		}
 	}
 }
