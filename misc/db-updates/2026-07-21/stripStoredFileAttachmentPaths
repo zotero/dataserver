@@ -1,0 +1,74 @@
+#!/usr/bin/php -d mysqlnd.net_read_timeout=3600
+<?php
+set_include_path("../../../include");
+require("header.inc.php");
+
+// Some stored-file attachments were synced with a full path (e.g., 'D:\Foo\Bar\file.pdf') after
+// 'storage:' instead of just a filename (from a third-party tool, presumably), which breaks file
+// syncing. Strip the path down to the basename. No particular reason to think a file with that
+// basename exists in storage, but at least it's looking for the right filename.
+//
+// Runs read-only by default; pass 'apply' to write changes.
+//
+// Usage: stripStoredFileAttachmentPaths [apply] [startShardID]
+
+$apply = !empty($argv[1]) && $argv[1] == 'apply';
+$startShardID = empty($argv[2]) ? 1 : $argv[2];
+
+if (!$apply) {
+	echo "*** DRY RUN -- pass 'apply' to write changes ***\n\n";
+}
+
+$shardIDs = Zotero_DB::columnQuery(
+	"SELECT shardID FROM shards S JOIN shardHosts SH USING (shardHostID) "
+	. "WHERE S.state='up' AND SH.state='up' AND shardID>=? ORDER BY shardID",
+	$startShardID
+);
+
+$total = 0;
+foreach ($shardIDs as $shardID) {
+	echo "Shard: $shardID\n";
+
+	// linkMode 0/1 = imported_file/imported_url (stored-file attachments)
+	$rows = Zotero_DB::query(
+		"SELECT itemID, libraryID FROM itemAttachments JOIN items USING (itemID) "
+		. "WHERE linkMode IN (0, 1) AND path LIKE 'storage:%' "
+		. "AND (INSTR(path, '/') > 0 OR INSTR(path, 0x5C) > 0)",
+		false,
+		$shardID
+	);
+	if (!$rows) {
+		continue;
+	}
+	echo "Found " . sizeOf($rows) . " item(s)\n";
+
+	foreach ($rows as $row) {
+		$item = Zotero_Items::get($row['libraryID'], $row['itemID']);
+		if (!$item) {
+			echo "  Item {$row['itemID']} not found -- skipping\n";
+			continue;
+		}
+
+		$filename = $item->attachmentFilename;
+		// Strip any directory path, keeping only the basename
+		$fixed = preg_replace('/^.*[\/\\\\]/', '', $filename);
+		if ($fixed === $filename) {
+			continue;
+		}
+		if ($fixed === '') {
+			echo "  Item {$item->libraryKey}: no filename in '$filename' -- skipping\n";
+			continue;
+		}
+
+		echo "  Item {$item->libraryKey}: '$filename' -> '$fixed'\n";
+		$total++;
+
+		if ($apply) {
+			$item->attachmentFilename = $fixed;
+			$item->save();
+		}
+	}
+}
+
+echo "\n" . ($apply ? "Fixed" : "Would fix") . " $total item(s)\n";
+?>

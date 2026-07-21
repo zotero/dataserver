@@ -918,6 +918,13 @@ describe('Items', function () {
 		assert200(response);
 	});
 
+	it('should reject a stored-file filename containing a slash', async function () {
+		for (let filename of ['D:/Foo/Bar/test.pdf', 'D:\\Foo\\Bar\\test.pdf']) {
+			let response = await API.createAttachmentItem('imported_file', { filename }, false, 'response');
+			assert400ForObject(response, `Stored-file filename '${filename}' cannot contain a slash`);
+		}
+	});
+
 	// PHP: test_should_create_embedded_image_attachment_for_note
 	it('should create embedded image attachment for note', async function () {
 		let noteKey = await API.createNoteItem('Test', null, 'key');

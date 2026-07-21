@@ -3364,6 +3364,14 @@ class Zotero_Item extends Zotero_DataObject {
 				throw new Exception("Cannot change filename for linked file");
 			}
 			
+			// Stored-file paths should contain only a filename, but some third-party tools synced
+			// full paths (e.g., 'D:\Foo\Bar\file.pdf'), which break file syncing
+			if (preg_match('#[/\\\\]#', $val)) {
+				throw new Exception(
+					"Stored-file filename '$val' cannot contain a slash", Z_ERROR_INVALID_INPUT
+				);
+			}
+			
 			$field = 'path';
 			$fieldCap = 'Path';
 			$val = 'storage:' . Zotero_Attachments::encodeRelativeDescriptorString($val);
