@@ -958,13 +958,11 @@ class TTSController extends ApiController {
 			':one' => ['N' => '1'],
 			':dur' => ['N' => (string) $durationSeconds],
 		];
-		// Per-platform request count. Duration isn't tracked per platform -- apply the
-		// global duration/request ratio if a per-platform minutes estimate is ever needed.
-		// $client is from a fixed set (desktop/ios/android/other), so the attribute name is
-		// safe to interpolate.
+		// Per-platform audio duration (seconds). $client is from a fixed set
+		// (desktop/ios/android/other), so the attribute name is safe to interpolate.
 		$client = $meta['client'] ?? '';
 		if ($client) {
-			$dailyUpdateExpr .= ", client" . ucfirst($client) . "Requests :one";
+			$dailyUpdateExpr .= ", client" . ucfirst($client) . "DurationSeconds :dur";
 		}
 		if ($provider) {
 			$dailyUpdateExpr .= ", {$provider}Requests :one, {$provider}DurationSeconds :dur";
