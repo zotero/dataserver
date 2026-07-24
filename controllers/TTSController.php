@@ -164,6 +164,8 @@ class TTSController extends ApiController {
 			$this->e400("API key not provided");
 		}
 
+		$client = self::detectClientPlatform($_SERVER['HTTP_USER_AGENT'] ?? '');
+
 		$hexID = $params['voice'] ?? '';
 		$text = $params['text'] ?? '';
 		$prompt = $params['prompt'] ?? null;
@@ -218,6 +220,7 @@ class TTSController extends ApiController {
 				'lang' => $lang,
 				'text' => $text,
 				'cacheHit' => true,
+				'client' => $client,
 			]);
 			$maxAge = self::AUDIO_CACHE_DAYS * 86400 - (time() - $cached['lastModified']);
 			if ($maxAge > 0) {
@@ -277,6 +280,7 @@ class TTSController extends ApiController {
 			'text' => $text,
 			'cacheHit' => false,
 			'synthesisMS' => $synthesisMS,
+			'client' => $client,
 		]);
 
 		header("Cache-Control: private, max-age=" . (self::AUDIO_CACHE_DAYS * 86400) . ", immutable");
@@ -755,6 +759,37 @@ class TTSController extends ApiController {
 	}
 
 
+	/**
+	 * Detect the client platform from the User-Agent for usage stats
+	 *
+	 *   - iOS:     "Zotero/2.x (org.zotero.ios.Zotero; build:N; iOS <ver>) Alamofire/..."
+	 *   - Android: "Zotero/1.0.0[-build] (Android <api>)"
+	 *   - Desktop: "Mozilla/5.0 (<OS>...) ... Zotero/<ver>" (OS = Macintosh/Windows/X11)
+	 *
+	 * Anything else (bots, mobile browsers, curl) is 'other'.
+	 *
+	 * Returns one of: 'desktop', 'ios', 'android', 'other'
+	 */
+	private static function detectClientPlatform(string $ua): string {
+		if ($ua === '') {
+			return 'other';
+		}
+		if (strpos($ua, 'org.zotero.ios') !== false) {
+			return 'ios';
+		}
+		if (strpos($ua, 'Zotero/') !== false && preg_match('/\bAndroid\b/', $ua)) {
+			return 'android';
+		}
+		if (strpos($ua, 'Zotero/') !== false
+				&& (strpos($ua, 'Macintosh') !== false
+					|| strpos($ua, 'Windows') !== false
+					|| strpos($ua, 'X11') !== false)) {
+			return 'desktop';
+		}
+		return 'other';
+	}
+
+
 	private function logUsage(int $userID, string $tier, float $creditCost, array $meta = []): void {
 		$creditCost = round($creditCost, 4);
 		$tableName = Z_CONFIG::$TTS_TABLE;
@@ -794,6 +829,9 @@ class TTSController extends ApiController {
 		}
 		if (!empty($meta['synthesisMS'])) {
 			$item['synthesisMS'] = ['N' => (string) round($meta['synthesisMS'])];
+		}
+		if (!empty($meta['client'])) {
+			$item['client'] = ['S' => $meta['client']];
 		}
 		$ddb->putItem([
 			'TableName' => $tableName,
@@ -920,6 +958,14 @@ class TTSController extends ApiController {
 			':one' => ['N' => '1'],
 			':dur' => ['N' => (string) $durationSeconds],
 		];
+		// Per-platform request count. Duration isn't tracked per platform -- apply the
+		// global duration/request ratio if a per-platform minutes estimate is ever needed.
+		// $client is from a fixed set (desktop/ios/android/other), so the attribute name is
+		// safe to interpolate.
+		$client = $meta['client'] ?? '';
+		if ($client) {
+			$dailyUpdateExpr .= ", client" . ucfirst($client) . "Requests :one";
+		}
 		if ($provider) {
 			$dailyUpdateExpr .= ", {$provider}Requests :one, {$provider}DurationSeconds :dur";
 			if (!$cacheHit && $synthesisMS > 0) {
