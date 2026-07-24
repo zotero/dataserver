@@ -408,6 +408,7 @@ class Zotero_API {
 					//case 'numChildren':
 					
 					case 'addedBy':
+					case 'editedBy':
 					case 'numItems':
 					case 'serverDateModified':
 					
