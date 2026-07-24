@@ -46,8 +46,17 @@ class Zotero_Storage {
 		$url = Zotero_API::getItemURI($item) . "/file/view";
 		$info = self::getFileInfoByID($storageFileID);
 		if ($info['zip']) {
+			// Top-level 'filename'/'size' are omitted because 'links.enclosure' points
+			// at /file/view (viewer output, dynamic length).
+			// Wrapper identifiers go under 'zip' for the sibling 'links.zip' link.
 			return array(
-				'url' => $url
+				'url' => $url,
+				'zip' => array(
+					'url' => Zotero_API::getItemURI($item) . "/file",
+					'filename' => $info['filename'],
+					'size' => $info['size'],
+					'md5' => $info['hash']
+				)
 			);
 		}
 		else {

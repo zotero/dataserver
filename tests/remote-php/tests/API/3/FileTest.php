@@ -1220,9 +1220,23 @@ class FileTests extends APITests {
 		$this->assert200($response);
 		// S3 should return ZIP content type
 		$this->assertEquals('application/zip', $response->getHeader("Content-Type"));
+
+		// Verify links.zip on the item JSON view
+		$response = API::userGet(self::$config['userID'], "items/$key");
+		$this->assert200($response);
+		$json = API::getJSONFromResponse($response);
+		$this->assertArrayHasKey('zip', $json['links']);
+		$this->assertEquals('application/zip', $json['links']['zip']['type']);
+		$this->assertEquals($zipFilename, $json['links']['zip']['title']);
+		$this->assertSame($zipSize, $json['links']['zip']['length']);
+		$this->assertEquals($zipHash, $json['links']['zip']['md5']);
+		$this->assertRegExp(
+			"%^https?://[^/]+/users/" . self::$config['userID'] . "/items/$key/file$%",
+			$json['links']['zip']['href']
+		);
 	}
-	
-	
+
+
 	public function test_should_reject_file_in_personal_library_if_it_would_put_user_over_quota() {
 		API::userClear(self::$config['userID']);
 		
