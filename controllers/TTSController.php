@@ -537,6 +537,8 @@ class TTSController extends ApiController {
 		$result = [];
 		foreach (self::$providerClasses as $class) {
 			$provider = $class::getVoices($userID, $includeArenaOnly);
+			// Skip providers with no voices available to this user
+			if (!$provider['voices']) continue;
 			$tier = $provider['tier'];
 			// Expose the provider's cache version so the client can fold it into
 			// its own cache key, letting a server-side CACHE_VERSION bump
