@@ -928,6 +928,15 @@ class Zotero_Item extends Zotero_DataObject {
 		if (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'Android') && $schemaVersion < 44) {
 			return false;
 		}
+		// If a user upgrades to Zotero 9 and then downgrades, the DB schema version --
+		// which determines what gets sent to the API -- will be >=42, but Zotero 7 and 8
+		// don't support lastRead and would fail on an unknown property, so also check the
+		// app version in the UA ("...  Gecko/20100101 Zotero/7.0.15"). Require the adjacent
+		// Gecko token to restrict to the desktop app, so mobile clients stay unaffected
+		// even when their version numbers reach this range.
+		if (preg_match('#Gecko/\d+ Zotero/[78]\.#', $_SERVER['HTTP_USER_AGENT'] ?? '')) {
+			return false;
+		}
 		return true;
 	}
 
@@ -4659,7 +4668,7 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 
 		// lastRead is cached client-neutrally above; omit it from this client's response
-		// if the client doesn't support it (raw schema < 42 or Android)
+		// if the client doesn't support it
 		if (isset($json['data']['lastRead'])
 				&& !$this->lastReadVisibleToClient($requestParams['schemaVersion'] ?? null)) {
 			unset($json['data']['lastRead']);

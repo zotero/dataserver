@@ -3176,7 +3176,52 @@ describe('Items', function () {
 			`items/${itemKey}`,
 			[
 				'Zotero-Schema-Version: 42',
-				'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/7.0'
+				'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/9.0'
+			]
+		);
+		assert200(response);
+		assert.equal(API.getJSONFromResponse(response).data.lastRead, 1674668111);
+	});
+
+	it('should not return lastRead to old desktop clients regardless of schema version', async function () {
+		let json = await API.createAttachmentItem('imported_file', { lastRead: 1674668111 }, false, 'jsonData');
+		let itemKey = json.key;
+
+		// Should not be returned to Zotero 7/8 sending a newer schema version from a
+		// database upgraded by a newer version before a downgrade
+		let response;
+		for (let version of ['7.0.15', '8.0.2']) {
+			response = await API.userGet(
+				config.get('userID'),
+				`items/${itemKey}`,
+				[
+					'Zotero-Schema-Version: 42',
+					`User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Zotero/${version}`
+				]
+			);
+			assert200(response);
+			assert.notProperty(API.getJSONFromResponse(response).data, 'lastRead');
+		}
+
+		// Should be returned to Zotero 9
+		response = await API.userGet(
+			config.get('userID'),
+			`items/${itemKey}`,
+			[
+				'Zotero-Schema-Version: 42',
+				'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Zotero/9.0.1'
+			]
+		);
+		assert200(response);
+		assert.equal(API.getJSONFromResponse(response).data.lastRead, 1674668111);
+
+		// Should not affect a hypothetical mobile client with a desktop-range version
+		response = await API.userGet(
+			config.get('userID'),
+			`items/${itemKey}`,
+			[
+				'Zotero-Schema-Version: 44',
+				'User-Agent: Mozilla/5.0 (Linux; Android 14) Zotero/7.0'
 			]
 		);
 		assert200(response);
