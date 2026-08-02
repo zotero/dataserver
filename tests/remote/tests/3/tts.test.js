@@ -341,9 +341,11 @@ describe('TTS', function () {
 	describe('/speak -- empty/unspeakable audio', function () {
 		// Whitespace-only input normalizes to an empty string server-side, so
 		// the provider produces no audio. The server must serve a silent
-		// placeholder inline (200, not a 302 cache redirect), mark it no-store,
-		// and never cache it -- so a transient backend failure self-heals on the
-		// next request instead of pinning silence to the cache key.
+		// placeholder -- inline audio without timestamps, or an audioURL
+		// pointing at a fixed placeholder key with timestamps -- mark the
+		// response no-store, and never cache it under the request's cache key,
+		// so a transient backend failure self-heals on the next request instead
+		// of pinning silence to the cache key.
 		//
 		// The empty-audio path is identified by `Cache-Control: no-store`; a
 		// normal synthesis (real audio) is cached and returns `immutable`. We
@@ -375,7 +377,7 @@ describe('TTS', function () {
 			assert.notOk(response2.getHeader('Location'), 'Repeat request must not hit a cache');
 		});
 
-		it('should return JSON with an inline data URI when timestamps requested', async function () {
+		it('should return JSON with a fetchable silent audio URL when timestamps requested', async function () {
 			let voice = perProviderVoices[0] || voices['en-US'][0];
 			let response = await speak({ voice, text: unspeakable, timestamps: 1 });
 			if (!isEmptyAudioResponse(response)) {
@@ -385,7 +387,14 @@ describe('TTS', function () {
 			assert.match(response.getHeader('Content-Type'), /^application\/json/);
 			let json = JSON.parse(response.getBody());
 			assert.property(json, 'audioURL');
-			assert.match(json.audioURL, /^data:audio\/[^;]+;base64,/, 'audioURL should be an inline data URI');
+			// Clients fetch audioURL via an HTTP layer that only handles http(s)
+			// URLs, so the silent placeholder must be served from a real URL
+			assert.match(json.audioURL, /^https:\/\//, 'audioURL should be an https URL');
+			let audioResponse = await fetch(json.audioURL);
+			assert.equal(audioResponse.status, 200);
+			assert.match(audioResponse.headers.get('content-type'), /^audio\//, 'Expected audio content type');
+			let buffer = await audioResponse.arrayBuffer();
+			assert.isAbove(buffer.byteLength, 0, 'Expected a non-empty silent placeholder');
 			// `timestamps` is absent for providers that can't align, or an empty
 			// array for those that can -- never populated for empty audio.
 			if (json.timestamps !== undefined) {

@@ -292,22 +292,24 @@ class TTSController extends ApiController {
 		$this->emitSynthesisLatency($resolved['provider'], $synthesisMS, mb_strlen($text));
 
 		// If the provider returned empty audio, serve a minimal valid silent audio file
-		// inline without caching it or charging credits. Empty audio is indistinguishable
-		// between a transient backend failure and genuinely unspeakable input
-		// (punctuation/whitespace), so rather than classify the cause we just refuse to
-		// persist the result. Caching it would pin silence to the cache key for
-		// AUDIO_CACHE_DAYS; serving it inline instead lets the next request self-heal once
-		// synthesis recovers, and an unspeakable input is simply re-synthesized (cheaply)
-		// next time. Emit an EmptyAudio CloudWatch metric so a real outage shows up as a
-		// spike.
+		// without caching it under the request's cache key or charging credits. Empty
+		// audio is indistinguishable between a transient backend failure and genuinely
+		// unspeakable input (punctuation/whitespace), so rather than classify the cause
+		// we just refuse to persist the result. Caching it would pin silence to the
+		// cache key for AUDIO_CACHE_DAYS; a no-store response lets the next request
+		// self-heal once synthesis recovers, and an unspeakable input is simply
+		// re-synthesized (cheaply) next time. When timestamps are requested, audioURL
+		// must be an http(s) URL -- clients fetch it via an HTTP layer that can't
+		// handle other schemes -- so it points at a silent placeholder stored at a
+		// fixed S3 key. Emit an EmptyAudio CloudWatch metric so a real outage shows up
+		// as a spike.
 		if (empty($result['audio'])) {
 			$this->emitEmptyAudioMetric($resolved['provider']);
-			$silentAudio = base64_decode(self::$silentAudio[$result['mimeType']] ?? self::$silentAudio['audio/mpeg']);
 			header("Cache-Control: no-store");
 			if ($timestampsRequested) {
 				header("Content-Type: application/json");
 				$body = [
-					'audioURL' => 'data:' . $result['mimeType'] . ';base64,' . base64_encode($silentAudio),
+					'audioURL' => $this->getSilentAudioURL($result['mimeType']),
 				];
 				if ($emitTimestampsKey) {
 					$body['timestamps'] = [];
@@ -315,6 +317,7 @@ class TTSController extends ApiController {
 				echo json_encode($body, JSON_UNESCAPED_UNICODE);
 			}
 			else {
+				$silentAudio = base64_decode(self::$silentAudio[$result['mimeType']] ?? self::$silentAudio['audio/mpeg']);
 				header("Content-Type: " . $result['mimeType']);
 				echo $silentAudio;
 			}
@@ -383,6 +386,27 @@ class TTSController extends ApiController {
 			$body['timestamps'] = $timestamps ?? [];
 		}
 		echo json_encode($body, JSON_UNESCAPED_UNICODE);
+	}
+
+
+	/**
+	 * Upload the silent placeholder for the given MIME type to a fixed S3 key
+	 * and return its CloudFront URL. The bucket's lifecycle rule deletes
+	 * objects AUDIO_CACHE_DAYS after creation, so the placeholder has to be
+	 * re-uploaded periodically to keep the URL resolving -- at most once a
+	 * week, tracked in memcached.
+	 */
+	private function getSilentAudioURL(string $mimeType): string {
+		if (!isset(self::$silentAudio[$mimeType])) {
+			$mimeType = 'audio/mpeg';
+		}
+		$key = 'silent.' . ($mimeType === 'audio/mpeg' ? 'mp3' : 'ogg');
+		$mcKey = "ttsSilentAudioUploaded_$key";
+		if (!Z_Core::$MC->get($mcKey)) {
+			$this->uploadToS3Cache($key, base64_decode(self::$silentAudio[$mimeType]), $mimeType, 0);
+			Z_Core::$MC->set($mcKey, 1, 7 * 86400);
+		}
+		return $this->getCloudFrontURL($key);
 	}
 
 
