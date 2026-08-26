@@ -1413,9 +1413,21 @@ class TTSController extends ApiController {
 	// "I'm [Standard/Premium] Voice N." keyed by language prefix and tier.
 	// %d is the voice number.
 	private static $sampleTexts = [
+		'af' => [
+			'standard' => "Ek is standaardstem %d.",
+			'premium' => "Ek is premiumstem %d.",
+		],
+		'am' => [
+			'standard' => "እኔ መደበኛ ድምጽ %d ነኝ።",
+			'premium' => "እኔ ፕሪሚየም ድምጽ %d ነኝ።",
+		],
 		'ar' => [
 			'standard' => "أنا الصوت القياسي %d.",
 			'premium' => "أنا الصوت المميز %d.",
+		],
+		'az' => [
+			'standard' => "Mən standart səs %d-əm.",
+			'premium' => "Mən premium səs %d-əm.",
 		],
 		'bg' => [
 			'standard' => "Аз съм стандартен глас %d.",
@@ -1425,9 +1437,21 @@ class TTSController extends ApiController {
 			'standard' => "আমি স্ট্যান্ডার্ড ভয়েস %d।",
 			'premium' => "আমি প্রিমিয়াম ভয়েস %d।",
 		],
+		'bs' => [
+			'standard' => "Ja sam standardni glas %d.",
+			'premium' => "Ja sam premium glas %d.",
+		],
+		'ca' => [
+			'standard' => "Sóc la veu estàndard %d.",
+			'premium' => "Sóc la veu premium %d.",
+		],
 		'cs' => [
 			'standard' => "Jsem standardní hlas číslo %d.",
 			'premium' => "Jsem prémiový hlas číslo %d.",
+		],
+		'cy' => [
+			'standard' => "Fi yw'r llais safonol %d.",
+			'premium' => "Fi yw'r llais premium %d.",
 		],
 		'da' => [
 			'standard' => "Jeg er standardstemme %d.",
@@ -1453,13 +1477,33 @@ class TTSController extends ApiController {
 			'standard' => "Olen standardhääl %d.",
 			'premium' => "Olen premiumhääl %d.",
 		],
+		'eu' => [
+			'standard' => "Ahots estandarra %d naiz.",
+			'premium' => "Premium ahotsa %d naiz.",
+		],
+		'fa' => [
+			'standard' => "من صدای استاندارد شماره %d هستم.",
+			'premium' => "من صدای پریمیوم شماره %d هستم.",
+		],
 		'fi' => [
 			'standard' => "Olen standardiääni %d.",
 			'premium' => "Olen premium-ääni %d.",
 		],
+		'fil' => [
+			'standard' => "Ako ang karaniwang boses %d.",
+			'premium' => "Ako ang premium na boses %d.",
+		],
 		'fr' => [
 			'standard' => "Je suis la voix standard %d.",
 			'premium' => "Je suis la voix premium %d.",
+		],
+		'ga' => [
+			'standard' => "Is mise gnáthghuth %d.",
+			'premium' => "Is mise príomhghuth %d.",
+		],
+		'gl' => [
+			'standard' => "Son a voz estándar %d.",
+			'premium' => "Son a voz premium %d.",
 		],
 		'gu' => [
 			'standard' => "હું સ્ટાન્ડર્ડ વૉઇસ %d છું.",
@@ -1481,9 +1525,17 @@ class TTSController extends ApiController {
 			'standard' => "Standard hang %d vagyok.",
 			'premium' => "Prémium hang %d vagyok.",
 		],
+		'hy' => [
+			'standard' => "Ես ստանդարտ ձայնն եմ՝ %d։",
+			'premium' => "Ես պրեմիում ձայնն եմ՝ %d։",
+		],
 		'id' => [
 			'standard' => "Saya suara standar nomor %d.",
 			'premium' => "Saya suara premium nomor %d.",
+		],
+		'is' => [
+			'standard' => "Ég er staðalrödd %d.",
+			'premium' => "Ég er úrvalsrödd %d.",
 		],
 		'it' => [
 			'standard' => "Sono la voce standard %d.",
@@ -1493,6 +1545,22 @@ class TTSController extends ApiController {
 			'standard' => "スタンダードボイス%dです。",
 			'premium' => "プレミアムボイス%dです。",
 		],
+		'jv' => [
+			'standard' => "Aku swara standar %d.",
+			'premium' => "Aku swara premium %d.",
+		],
+		'ka' => [
+			'standard' => "მე ვარ სტანდარტული ხმა %d.",
+			'premium' => "მე ვარ პრემიუმ ხმა %d.",
+		],
+		'kk' => [
+			'standard' => "Мен стандартты дауыс %d.",
+			'premium' => "Мен премиум дауыс %d.",
+		],
+		'km' => [
+			'standard' => "ខ្ញុំជាសំឡេងស្តង់ដារ %d។",
+			'premium' => "ខ្ញុំជាសំឡេងព្រីមៀម %d។",
+		],
 		'kn' => [
 			'standard' => "ನಾನು ಸ್ಟ್ಯಾಂಡರ್ಡ್ ವಾಯ್ಸ್ %d.",
 			'premium' => "ನಾನು ಪ್ರೀಮಿಯಂ ವಾಯ್ಸ್ %d.",
@@ -1500,6 +1568,10 @@ class TTSController extends ApiController {
 		'ko' => [
 			'standard' => "저는 스탠다드 음성 %d입니다.",
 			'premium' => "저는 프리미엄 음성 %d입니다.",
+		],
+		'lo' => [
+			'standard' => "ຂ້ອຍແມ່ນສຽງມາດຕະຖານ %d.",
+			'premium' => "ຂ້ອຍແມ່ນສຽງພຣີມຽມ %d.",
 		],
 		'lt' => [
 			'standard' => "Aš esu standartinis balsas %d.",
@@ -1509,6 +1581,10 @@ class TTSController extends ApiController {
 			'standard' => "Es esmu standarta balss %d.",
 			'premium' => "Es esmu premium balss %d.",
 		],
+		'mk' => [
+			'standard' => "Јас сум стандарден глас %d.",
+			'premium' => "Јас сум премиум глас %d.",
+		],
 		'ml' => [
 			'standard' => "ഞാൻ സ്റ്റാൻഡേർഡ് വോയ്‌സ് %d ആണ്.",
 			'premium' => "ഞാൻ പ്രീമിയം വോയ്‌സ് %d ആണ്.",
@@ -1517,9 +1593,25 @@ class TTSController extends ApiController {
 			'standard' => "मी स्टँडर्ड व्हॉइस %d आहे.",
 			'premium' => "मी प्रीमियम व्हॉइस %d आहे.",
 		],
+		'ms' => [
+			'standard' => "Saya suara standard nombor %d.",
+			'premium' => "Saya suara premium nombor %d.",
+		],
+		'mt' => [
+			'standard' => "Jien il-vuċi standard %d.",
+			'premium' => "Jien il-vuċi premium %d.",
+		],
+		'my' => [
+			'standard' => "ကျွန်ုပ်သည် စံအသံ %d ဖြစ်ပါသည်။",
+			'premium' => "ကျွန်ုပ်သည် ပရီမီယံအသံ %d ဖြစ်ပါသည်။",
+		],
 		'nb' => [
 			'standard' => "Jeg er standardstemme %d.",
 			'premium' => "Jeg er premiumstemme %d.",
+		],
+		'ne' => [
+			'standard' => "म स्ट्यान्डर्ड भ्वाइस %d हुँ।",
+			'premium' => "म प्रिमियम भ्वाइस %d हुँ।",
 		],
 		'nl' => [
 			'standard' => "Ik ben standaardstem %d.",
@@ -1545,6 +1637,10 @@ class TTSController extends ApiController {
 			'standard' => "Я — стандартный голос номер %d.",
 			'premium' => "Я — премиум голос номер %d.",
 		],
+		'si' => [
+			'standard' => "මම සම්මත කටහඬ %d වෙමි.",
+			'premium' => "මම ප්‍රිමියම් කටහඬ %d වෙමි.",
+		],
 		'sk' => [
 			'standard' => "Som štandardný hlas číslo %d.",
 			'premium' => "Som prémiový hlas číslo %d.",
@@ -1552,6 +1648,10 @@ class TTSController extends ApiController {
 		'sl' => [
 			'standard' => "Jaz sem standardni glas številka %d.",
 			'premium' => "Jaz sem premium glas številka %d.",
+		],
+		'so' => [
+			'standard' => "Waxaan ahay codka caadiga ah %d.",
+			'premium' => "Waxaan ahay codka premium %d.",
 		],
 		'sr' => [
 			'standard' => "Ја сам стандардни глас број %d.",
@@ -1589,9 +1689,17 @@ class TTSController extends ApiController {
 			'standard' => "میں معیاری آواز %d ہوں۔",
 			'premium' => "میں پریمیم آواز %d ہوں۔",
 		],
+		'uz' => [
+			'standard' => "Men standart ovoz %d.",
+			'premium' => "Men premium ovoz %d.",
+		],
 		'vi' => [
 			'standard' => "Tôi là giọng tiêu chuẩn số %d.",
 			'premium' => "Tôi là giọng cao cấp số %d.",
+		],
+		'wuu' => [
+			'standard' => "我是标准语音%d。",
+			'premium' => "我是高端语音%d。",
 		],
 		'yue' => [
 			'standard' => "我係標準語音%d。",
@@ -1600,6 +1708,10 @@ class TTSController extends ApiController {
 		'zh' => [
 			'standard' => "我是标准语音%d。",
 			'premium' => "我是高端语音%d。",
+		],
+		'zu' => [
+			'standard' => "Mina ngiyizwi le-standard %d.",
+			'premium' => "Mina ngiyizwi le-premium %d.",
 		],
 	];
 
