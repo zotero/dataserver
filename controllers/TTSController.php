@@ -81,7 +81,8 @@ class TTSController extends ApiController {
 			header("Zotero-TTS-Dev: 1");
 		}
 		$lang = $_GET['lang'] ?? 'en-US';
-		echo json_encode(self::getVoices($this->userID, $lang), JSON_PRETTY_PRINT);
+		$isPrerelease = self::detectPrereleaseClient($_SERVER['HTTP_USER_AGENT'] ?? '');
+		echo json_encode(self::getVoices($this->userID, $lang, false, $isPrerelease), JSON_PRETTY_PRINT);
 	}
 
 
@@ -552,7 +553,8 @@ class TTSController extends ApiController {
 	}
 
 
-	private static function getVoices(?int $userID = null, string $lang = 'en-US', bool $includeArenaOnly = false): array {
+	private static function getVoices(?int $userID = null, string $lang = 'en-US',
+			bool $includeArenaOnly = false, bool $isPrerelease = false): array {
 		self::loadProviders();
 		$isDev = $userID && in_array($userID, Z_CONFIG::$TTS_DEV_USERS);
 		// Localized label templates
@@ -560,6 +562,7 @@ class TTSController extends ApiController {
 		$labels = self::$voiceLabels[$lang] ?? self::$voiceLabels[$langPrefix] ?? self::$voiceLabels['en'];
 		$result = [];
 		foreach (self::$providerClasses as $class) {
+			if ($class::PRERELEASE_ONLY && !$isPrerelease) continue;
 			$classIncludeArenaOnly = $includeArenaOnly || ($isDev && $class::DEV_PREVIEW);
 			$provider = $class::getVoices($userID, $classIncludeArenaOnly);
 			// Skip providers with no voices available to this user
@@ -947,6 +950,23 @@ class TTSController extends ApiController {
 			return 'desktop';
 		}
 		return 'other';
+	}
+
+
+	/**
+	 * Detect a desktop client on the beta or source channel from the User-Agent
+	 *
+	 * The version follows "Zotero/" and carries the same markers the client tests for in
+	 * Zotero.isBetaBuild/isSourceBuild: "-beta" for beta builds
+	 * ("Zotero/7.1.0-beta.12+a1b2c3d") and ".SOURCE" for source builds
+	 * ("Zotero/10.0.2.SOURCE"). iOS and Android builds carry no channel marker.
+	 */
+	private static function detectPrereleaseClient(string $ua): bool {
+		if (!preg_match('#\bZotero/(\S+)#', $ua, $matches)) {
+			return false;
+		}
+		$version = $matches[1];
+		return stripos($version, '-beta') !== false || stripos($version, '.SOURCE') !== false;
 	}
 
 

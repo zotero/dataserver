@@ -42,6 +42,9 @@ class Zotero_TTSProvider {
 	// to TTS dev users (TTS_DEV_USERS). Regular users still don't see them.
 	const DEV_PREVIEW = false;
 
+	// Subclasses override to true to offer their voices to prerelease clients only
+	const PRERELEASE_ONLY = false;
+
 
 	/**
 	 * @return array{httpCode: int, body: string}
