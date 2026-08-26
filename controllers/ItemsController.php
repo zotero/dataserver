@@ -657,7 +657,7 @@ class ItemsController extends ApiController {
 			
 			if ($this->queryParams['format'] == 'bib') {
 				$maxBibItems = Zotero_API::MAX_BIBLIOGRAPHY_ITEMS;
-				if ($results['total'] > $maxBibItems) {
+				if (isset($results['total']) && $results['total'] > $maxBibItems) {
 					$this->e413("Cannot generate bibliography with more than $maxBibItems items");
 				}
 			}
