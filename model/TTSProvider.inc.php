@@ -38,6 +38,10 @@ class Zotero_TTSProvider {
 	// Subclasses override to true if synthesize() returns 'timestamps'.
 	const SUPPORTS_WORD_TIMESTAMPS = false;
 
+	// Subclasses override to true to expose arenaOnly voices via /voices
+	// to TTS dev users (TTS_DEV_USERS). Regular users still don't see them.
+	const DEV_PREVIEW = false;
+
 
 	/**
 	 * @return array{httpCode: int, body: string}

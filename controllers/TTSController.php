@@ -560,7 +560,8 @@ class TTSController extends ApiController {
 		$labels = self::$voiceLabels[$lang] ?? self::$voiceLabels[$langPrefix] ?? self::$voiceLabels['en'];
 		$result = [];
 		foreach (self::$providerClasses as $class) {
-			$provider = $class::getVoices($userID, $includeArenaOnly);
+			$classIncludeArenaOnly = $includeArenaOnly || ($isDev && $class::DEV_PREVIEW);
+			$provider = $class::getVoices($userID, $classIncludeArenaOnly);
 			// Skip providers with no voices available to this user
 			if (!$provider['voices']) continue;
 			$tier = $provider['tier'];
