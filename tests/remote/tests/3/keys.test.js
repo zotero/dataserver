@@ -299,6 +299,29 @@ describe('Keys', function () {
 		);
 		assert403(response);
 
+		// Can't modify another user's key with credentials
+		response = await API.put(
+			`keys/${key}`,
+			JSON.stringify({
+				username: config.get('username2'),
+				password: config.get('password2'),
+				name: name,
+				access: {
+					user: {
+						library: true,
+						write: true
+					}
+				}
+			})
+		);
+		assert403(response);
+
+		// Key should be unchanged
+		response = await API.get(`keys/${key}`);
+		assert200(response);
+		json = API.getJSONFromResponse(response);
+		assert.deepEqual(json.access, { user: { library: true, files: true } });
+
 		// Modify with credentials
 		response = await API.put(
 			`keys/${key}`,

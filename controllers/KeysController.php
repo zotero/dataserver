@@ -292,6 +292,10 @@ class KeysController extends ApiController {
 					if (!$keyObj) {
 						$this->e404("Key '$key' does not exist");
 					}
+					// Credentialed requests can only modify the authenticated user's own keys
+					if (!$isWebsite && $userID != $keyObj->userID) {
+						$this->e403();
+					}
 					foreach ($fields as $field=>$val) {
 						if ($field == 'accessJSON') {
 							// JSON format -- use setPermissionsFromAccessJSON
