@@ -4191,6 +4191,9 @@ class Zotero_Item extends Zotero_DataObject {
 				// Link to publications download URL in My Publications
 				if ($downloadDetails && $requestParams['publications']) {
 					$downloadDetails['url'] = str_replace("/items/", "/publications/items/", $downloadDetails['url']);
+					if (!empty($downloadDetails['zip'])) {
+						$downloadDetails['zip']['url'] = str_replace("/items/", "/publications/items/", $downloadDetails['zip']['url']);
+					}
 				}
 			}
 		}
@@ -4241,7 +4244,7 @@ class Zotero_Item extends Zotero_DataObject {
 			$requestParams['schemaVersion'] ?? null
 		);
 
-		$cacheVersion = 8;
+		$cacheVersion = 9;
 		$cacheKey = "jsonEntry_" . $this->libraryID . "/" . $this->id . "_"
 			. md5(
 				$version
@@ -4398,6 +4401,15 @@ class Zotero_Item extends Zotero_DataObject {
 			}
 			if (isset($details['size'])) {
 				$json['links']['enclosure']['length'] = $details['size'];
+			}
+			if (!empty($details['zip'])) {
+				$json['links']['zip'] = [
+					'type' => 'application/zip',
+					'href' => $details['zip']['url'],
+					'title' => $details['zip']['filename'],
+					'length' => (int) $details['zip']['size'],
+					'md5' => $details['zip']['md5'],
+				];
 			}
 		}
 		

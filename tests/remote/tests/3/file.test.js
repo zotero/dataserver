@@ -1074,6 +1074,20 @@ describe('File', function () {
 		assert200(response);
 		// S3 should return ZIP content type
 		assert.equal(response.getHeader('Content-Type'), 'application/zip');
+
+		// Verify links.zip on the item JSON view
+		response = await API.userGet(config.get('userID'), `items/${key}`);
+		assert200(response);
+		json = API.getJSONFromResponse(response);
+		assert.property(json.links, 'zip');
+		assert.equal(json.links.zip.type, 'application/zip');
+		assert.equal(json.links.zip.title, zipFilename);
+		assert.strictEqual(json.links.zip.length, zipSize);
+		assert.equal(json.links.zip.md5, zipHash);
+		assert.match(
+			json.links.zip.href,
+			new RegExp(`^https?://[^/]+/users/${config.get('userID')}/items/${key}/file$`)
+		);
 	});
 
 	// PHP: test_should_reject_file_in_personal_library_if_it_would_put_user_over_quota
