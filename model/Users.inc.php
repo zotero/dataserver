@@ -32,6 +32,7 @@ class Zotero_Users {
 	private static $userLibraryIDs = [];
 	private static $libraryUserIDs = [];
 	private static $deletedUsers = [];
+	private static $validUsers = [];
 	
 	
 	/**
@@ -582,11 +583,19 @@ class Zotero_Users {
 	
 	
 	private static function getValidUserCached($userID) {
+		if (isset(self::$validUsers[$userID])) {
+			return self::$validUsers[$userID];
+		}
 		$cacheKey = "validUser_" . $userID;
-		return Z_Core::$MC->get($cacheKey);
+		$valid = Z_Core::$MC->get($cacheKey);
+		if ($valid === 1 || $valid === 0) {
+			self::$validUsers[$userID] = $valid;
+		}
+		return $valid;
 	}
 	
 	private static function setValidUserCached($userID, $valid) {
+		self::$validUsers[$userID] = $valid ? 1 : 0;
 		$cacheKey = "validUser_" . $userID;
 		Z_Core::$MC->set($cacheKey, $valid ? 1 : 0, 300);
 	}

@@ -327,6 +327,11 @@ class ApiController extends Controller {
 			}
 		}
 		
+		// Make sure the authenticated user isn't banned
+		if (!empty($this->userID) && !Zotero_Users::isValidUser($this->userID)) {
+			$this->e403('Forbidden');
+		}
+		
 		// Request limiter needs initialized authentication parameters
 		$this->initRequestLimiter();
 		
