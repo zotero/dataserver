@@ -418,6 +418,35 @@ describe('Collections', function () {
 		assert.include(keys, itemKey2);
 	});
 
+	it('should add items to collection via collection items POST', async function () {
+		let collectionKey = await API.createCollection('Test', false, 'key');
+		let json = await API.createItem('book', {}, 'jsonData');
+		let itemKey = json.key;
+		let libraryVersion = await API.getLibraryVersion();
+
+		let response = await API.userPost(
+			config.get('userID'),
+			`collections/${collectionKey}/items`,
+			itemKey,
+			['Content-Type: text/plain']
+		);
+		assert204(response);
+		let newLibraryVersion = parseInt(response.getHeader('Last-Modified-Version'));
+		assert.isAbove(newLibraryVersion, libraryVersion);
+		assert.equal(await API.getLibraryVersion(), newLibraryVersion);
+
+		json = await API.getItem(itemKey, 'json');
+		assert.deepEqual(json.data.collections, [collectionKey]);
+		assert.equal(json.version, newLibraryVersion);
+
+		response = await API.userGet(
+			config.get('userID'),
+			`items?since=${libraryVersion}&format=versions`
+		);
+		assert200(response);
+		assert.property(JSON.parse(response.getBody()), itemKey);
+	});
+
 	// PHP: testCollectionItemMissingCollection
 	it('should handle collection item missing collection', async function () {
 		let response = await API.createItem('book', { collections: ['AAAAAAAA'] }, 'response');

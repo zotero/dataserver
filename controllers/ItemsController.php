@@ -346,10 +346,15 @@ class ItemsController extends ApiController {
 							}
 							
 							Zotero_DB::beginTransaction();
+							Zotero_Libraries::updateVersionAndTimestamp(
+								$this->objectLibraryID,
+								!empty($libraryTimestampChecked) ? $_SERVER['HTTP_IF_UNMODIFIED_SINCE_VERSION'] : null
+							);
 							$collection->addItems($itemIDs);
 							Zotero_Items::updateVersions($items, $this->userID);
 							Zotero_DB::commit();
-							
+							$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
+
 							$this->e204();
 						}
 						
