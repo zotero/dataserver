@@ -62,6 +62,7 @@ class Zotero_DB {
 	);
 	
 	protected $db = 'master';
+	protected $connectTimeout = 5;
 	
 	protected function __construct() {
 		// Set up main link
@@ -257,7 +258,7 @@ class Zotero_DB {
 			'dbname'   => $info['db'],
 			'charset'  => !empty($info['charset']) ? $info['charset'] : 'utf8',
 			'driver_options' => [
-				"MYSQLI_OPT_CONNECT_TIMEOUT" => 5
+				"MYSQLI_OPT_CONNECT_TIMEOUT" => $this->connectTimeout
 			]
 		];
 		
@@ -1428,6 +1429,8 @@ class Zotero_DB {
 //
 class Zotero_ID_DB_1 extends Zotero_DB {
 	protected $db = 'id1';
+	// Fail fast so getNext() can fall back to the other ID server
+	protected $connectTimeout = 1;
 	
 	protected function __construct() {
 		parent::__construct();
@@ -1437,6 +1440,8 @@ class Zotero_ID_DB_1 extends Zotero_DB {
 
 class Zotero_ID_DB_2 extends Zotero_DB {
 	protected $db = 'id2';
+	// Fail fast so getNext() can fall back to the other ID server
+	protected $connectTimeout = 1;
 	
 	protected function __construct() {
 		parent::__construct();

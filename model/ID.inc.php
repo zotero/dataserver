@@ -72,31 +72,37 @@ class Zotero_ID {
 	}
 	
 	
+	// ID server that failed during this request, which is skipped for the rest of it
+	private static $failedServer;
+	
 	/*              
 	* Get MAX(id) + 1 from ids databases
 	*/                     
 	private static function getNext($table) {
 		$sql = "REPLACE INTO $table (stub) VALUES ('a')";
-		if (Z_Core::probability(2)) {
-			try {
-				Zotero_ID_DB_1::query($sql);
-				$id = Zotero_ID_DB_1::valueQuery("SELECT LAST_INSERT_ID()");
-			}
-			catch (Exception $e) {
-				Z_Core::logError("Error accessing ID server 1");
-				Zotero_ID_DB_2::query($sql);
-				$id = Zotero_ID_DB_2::valueQuery("SELECT LAST_INSERT_ID()");
-			}
+		if (self::$failedServer) {
+			$servers = [self::$failedServer == 1 ? 2 : 1];
 		}
 		else {
+			$servers = Z_Core::probability(2) ? [1, 2] : [2, 1];
+		}
+		
+		foreach ($servers as $i => $server) {
+			$class = "Zotero_ID_DB_$server";
 			try {
-				Zotero_ID_DB_2::query($sql);
-				$id = Zotero_ID_DB_2::valueQuery("SELECT LAST_INSERT_ID()");
+				$class::query($sql);
+				$id = $class::valueQuery("SELECT LAST_INSERT_ID()");
+				break;
 			}
 			catch (Exception $e) {
-				Z_Core::logError("Error accessing ID server 2");
-				Zotero_ID_DB_1::query($sql);
-				$id = Zotero_ID_DB_1::valueQuery("SELECT LAST_INSERT_ID()");
+				Z_Core::logError(
+					"Error accessing ID server $server: " . strtok($e->getMessage(), "\n")
+				);
+				// Rethrow if there's no other server to try
+				if ($i == sizeOf($servers) - 1) {
+					throw $e;
+				}
+				self::$failedServer = $server;
 			}
 		}
 		
