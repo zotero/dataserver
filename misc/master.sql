@@ -227,7 +227,7 @@ CREATE TABLE `shardHostReplicas` (
 
 CREATE TABLE `shardHosts` (
   `shardHostID` tinyint(3) unsigned NOT NULL,
-  `address` varchar(15) NOT NULL,
+  `address` varchar(75) NOT NULL,
   `port` smallint(5) unsigned NOT NULL DEFAULT 3306,
   `state` enum('up','readonly','down') NOT NULL,
   PRIMARY KEY (`shardHostID`)
