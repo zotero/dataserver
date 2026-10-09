@@ -229,6 +229,7 @@ CREATE TABLE `shardHosts` (
   `address` varchar(75) NOT NULL,
   `port` smallint(5) unsigned NOT NULL DEFAULT 3306,
   `state` enum('up','readonly','down') NOT NULL,
+  `acceptNewLibraries` tinyint(3) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY (`shardHostID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

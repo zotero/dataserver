@@ -164,8 +164,14 @@ class Zotero_Shards {
 	 * Get one of the smallest shards
 	 */
 	public static function getNextShard() {
-		$sql = "SELECT shardID FROM shards ORDER BY items ASC LIMIT 10";
+		// Shard hosts that receive new libraries are flagged in shardHosts.acceptNewLibraries
+		$sql = "SELECT shardID FROM shards S JOIN shardHosts SH USING (shardHostID) "
+			. "WHERE SH.acceptNewLibraries=1 AND SH.state='up' AND S.state='up' "
+			. "ORDER BY S.items ASC, RAND() LIMIT 20";
 		$shards = Zotero_DB::columnQuery($sql);
+		if (!$shards) {
+			throw new Exception("No shard hosts accepting new libraries");
+		}
 		return $shards[array_rand($shards, 1)];
 	}
 	
