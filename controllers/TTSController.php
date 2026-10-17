@@ -631,6 +631,11 @@ class TTSController extends ApiController {
 
 
 	private function getTTSCreditLimits(int $userID): array {
+		static $cache = [];
+		if (isset($cache[$userID])) {
+			return $cache[$userID];
+		}
+
 		$personalQuota = Zotero_Storage::getUserValues($userID);
 		$hasPersonal = $personalQuota && $personalQuota['expiration'] >= time();
 
@@ -649,15 +654,16 @@ class TTSController extends ApiController {
 			$subType = 'free';
 		}
 
-		return [
+		return $cache[$userID] = [
 			'standard' => $limits['standard'][$subType],
 			'premium' => $limits['premium'][$subType],
+			'subType' => $subType,
 		];
 	}
 
 
 	/**
-	 * @return array{monthlyUsed:int, monthlyRemaining:int}
+	 * @return array{monthlyUsed:int, monthlyRemaining:int, limit:int, subType:string}
 	 */
 	private function getCreditsRemaining(int $userID, string $tier): array {
 		$tableName = Z_CONFIG::$TTS_TABLE;
@@ -691,6 +697,8 @@ class TTSController extends ApiController {
 		return [
 			'monthlyUsed' => $monthlyUsed,
 			'monthlyRemaining' => $subscriptionRemaining + $bundleCredits,
+			'limit' => $limits[$tier],
+			'subType' => $limits['subType'],
 		];
 	}
 
@@ -819,12 +827,103 @@ class TTSController extends ApiController {
 	private function checkQuota(int $userID, string $tier, float $estimatedCreditCost, float $estimatedDuration): void {
 		$usage = $this->getCreditsRemaining($userID, $tier);
 		if ($estimatedCreditCost > $usage['monthlyRemaining'] && !$this->testMode) {
+			$this->logFirstCapHit($userID, $tier, $usage);
 			$this->e402("quota_exceeded");
 		}
 		$estimatedMinutes = (int) ceil($estimatedDuration / 60);
 		$dailyMinutes = $this->getDailyMinutesRemaining($userID);
 		if ($estimatedMinutes > $dailyMinutes && !$this->testMode) {
+			$this->logDailyLimitHit($userID, $tier, $usage['subType']);
 			$this->e402("daily_limit_exceeded");
+		}
+	}
+
+
+	/**
+	 * Count unique users per day who hit the daily minutes limit, to see whether
+	 * the safety valve ever affects real usage
+	 */
+	private function logDailyLimitHit(int $userID, string $tier, string $subType): void {
+		$tableName = Z_CONFIG::$TTS_TABLE;
+		$dailyKey = $this->getDailyPeriodKey();
+		$client = self::detectClientPlatform($_SERVER['HTTP_USER_AGENT'] ?? '');
+		try {
+			$ddb = Z_Core::$AWS->createDynamoDb();
+			$ddb->putItem([
+				'TableName' => $tableName,
+				'Item' => [
+					'PK' => ['S' => 'DAILY_LIMIT_HIT'],
+					'SK' => ['S' => "$dailyKey#$userID"],
+					'timestamp' => ['S' => gmdate('c')],
+					'tier' => ['S' => $tier],
+					'subType' => ['S' => $subType],
+					'client' => ['S' => $client],
+				],
+				'ConditionExpression' => 'attribute_not_exists(PK)',
+			]);
+			// $client is from a fixed set (desktop/ios/android/other), so the
+			// attribute name is safe to interpolate
+			$ddb->updateItem([
+				'TableName' => $tableName,
+				'Key' => [
+					'PK' => ['S' => 'DAILY_STATS'],
+					'SK' => ['S' => $dailyKey],
+				],
+				'UpdateExpression' => 'ADD dailyLimitUsers :one, client' . ucfirst($client) . 'DailyLimitUsers :one',
+				'ExpressionAttributeValues' => [
+					':one' => ['N' => '1'],
+				],
+			]);
+		}
+		catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+			if ($e->getAwsErrorCode() !== 'ConditionalCheckFailedException') {
+				Z_Core::logError("WARNING: Failed to log TTS daily limit hit: $e");
+			}
+		}
+	}
+
+
+	/**
+	 * Record the first time each month a user hits the monthly cap for a
+	 * tier/subscription type, for measuring cap-to-subscription conversion. Later
+	 * hits in the same month are no-ops.
+	 */
+	private function logFirstCapHit(int $userID, string $tier, array $usage): void {
+		$tableName = Z_CONFIG::$TTS_TABLE;
+		$subType = $usage['subType'];
+		$now = gmdate('c');
+		try {
+			$ddb = Z_Core::$AWS->createDynamoDb();
+			$ddb->putItem([
+				'TableName' => $tableName,
+				'Item' => [
+					'PK' => ['S' => 'CAP_HIT'],
+					'SK' => ['S' => "{$this->getMonthlyPeriodKey()}#$tier#$subType#$userID"],
+					'firstHitAt' => ['S' => $now],
+					'limit' => ['N' => (string) $usage['limit']],
+					'client' => ['S' => self::detectClientPlatform($_SERVER['HTTP_USER_AGENT'] ?? '')],
+				],
+				'ConditionExpression' => 'attribute_not_exists(PK)',
+			]);
+			$ddb->updateItem([
+				'TableName' => $tableName,
+				'Key' => [
+					'PK' => ['S' => 'DAILY_STATS'],
+					'SK' => ['S' => $this->getDailyPeriodKey()],
+				],
+				'UpdateExpression' => 'ADD #hits :one',
+				'ExpressionAttributeNames' => [
+					'#hits' => "capFirstHits#$tier#$subType",
+				],
+				'ExpressionAttributeValues' => [
+					':one' => ['N' => '1'],
+				],
+			]);
+		}
+		catch (\Aws\DynamoDb\Exception\DynamoDbException $e) {
+			if ($e->getAwsErrorCode() !== 'ConditionalCheckFailedException') {
+				Z_Core::logError("WARNING: Failed to log TTS cap hit: $e");
+			}
 		}
 	}
 
