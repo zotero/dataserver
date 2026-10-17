@@ -73,7 +73,7 @@ class Z_CONFIG {
 	public static $TTS_AUDIO_DOMAIN = '';
 	public static $TTS_CREDIT_LIMITS = [
 		'standard' => ['free' => 240, 'personal' => 999999, 'institutional' => 999999],
-		'premium' => ['free' => 150, 'personal' => 3000, 'institutional' => 300],
+		'premium' => ['free' => 300, 'personal' => 12000, 'institutional' => 12000],
 	];
 	public static $TTS_DAILY_LIMIT_MINUTES = 720; // 12 hours -- safety valve for runaway tabs
 
