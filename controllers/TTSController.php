@@ -644,21 +644,80 @@ class TTSController extends ApiController {
 
 		$limits = Z_CONFIG::$TTS_CREDIT_LIMITS;
 
+		$institution = $hasInstitutional ? self::getInstitution($userID) : null;
+
 		if ($hasInstitutional) {
-			$subType = 'institutional';
+			$limitType = 'institutional';
+			// Lab plans use the institutional limits but are counted separately
+			// in usage stats
+			$subType = $institution && $institution['lab'] ? 'lab' : 'institutional';
 		}
 		else if ($hasPersonal) {
-			$subType = 'personal';
+			$limitType = $subType = 'personal';
 		}
 		else {
-			$subType = 'free';
+			$limitType = $subType = 'free';
 		}
 
 		return $cache[$userID] = [
-			'standard' => $limits['standard'][$subType],
-			'premium' => $limits['premium'][$subType],
+			'standard' => $limits['standard'][$limitType],
+			'premium' => $limits['premium'][$limitType],
 			'subType' => $subType,
+			'institutionID' => $institution['institutionID'] ?? null,
 		];
+	}
+
+
+	/**
+	 * Get the institutional plan covering the user, for usage stats: a lab plan
+	 * (an email list with no domain) if the user is on one, so lab usage can be
+	 * counted separately, and otherwise the plan with the largest storage quota,
+	 * as in Zotero_Storage::getInstitutionalUserQuota()
+	 *
+	 * @return array{institutionID:int, lab:bool}|null
+	 */
+	private static function getInstitution(int $userID): ?array {
+		$dev = Z_ENV_TESTING_SITE ? "_dev" : "";
+		$databaseName = "zotero_www{$dev}";
+		// Domain match, from Zotero_Storage::getInstitutionalUserQuota()
+		$sql = "SELECT institutionID, domain = '' AS lab, storageQuota "
+			. "FROM $databaseName.users_email "
+			. "JOIN $databaseName.storage_institutions "
+			. "ON (domain != '' "
+				. "AND SUBSTRING_INDEX(email, '@', -1) REGEXP CONCAT('^(.+\\\.)?', domain, '$')"
+				. "AND (domainBlacklist = '' "
+					. "OR SUBSTRING_INDEX(email, '@', -1) NOT REGEXP domainBlacklist)"
+			. ") WHERE userID=? AND validated=1 "
+			. "UNION ALL "
+			// Email match
+			. "SELECT institutionID, domain = '' AS lab, storageQuota "
+			. "FROM $databaseName.users_email "
+			. "JOIN $databaseName.storage_institution_email USING (email) "
+			. "JOIN $databaseName.storage_institutions USING (institutionID) "
+			. "WHERE userID=? AND validated=1";
+		try {
+			$rows = Zotero_WWW_DB_2::query($sql, [$userID, $userID]);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("WARNING: $e -- retrying on primary");
+			$rows = Zotero_WWW_DB_1::query($sql, [$userID, $userID]);
+		}
+		$best = null;
+		foreach ($rows ?: [] as $row) {
+			$rank = [(bool) $row['lab'], (int) $row['storageQuota']];
+			if (!$best || $rank > $best['rank']) {
+				$best = [
+					'institutionID' => (int) $row['institutionID'],
+					'lab' => (bool) $row['lab'],
+					'rank' => $rank,
+				];
+			}
+		}
+		if (!$best) {
+			return null;
+		}
+		unset($best['rank']);
+		return $best;
 	}
 
 
@@ -1243,11 +1302,24 @@ class TTSController extends ApiController {
 		if ($client) {
 			$dailyUpdateExpr .= ", client" . ucfirst($client) . "DurationSeconds :dur";
 		}
+		// Per-plan audio duration (seconds), total and premium. Plan types are from
+		// a fixed set (free/personal/lab/institutional), so the attribute names are
+		// safe to interpolate.
+		$plan = ucfirst($this->getTTSCreditLimits($userID)['subType']);
+		$dailyUpdateExpr .= ", plan{$plan}DurationSeconds :dur";
+		if ($tier === 'premium') {
+			$dailyUpdateExpr .= ", plan{$plan}PremiumDurationSeconds :dur";
+		}
 		if ($provider) {
 			$dailyUpdateExpr .= ", {$provider}Requests :one, {$provider}DurationSeconds :dur";
 			if (!$cacheHit && $synthesisMS > 0) {
 				$dailyUpdateExpr .= ", {$provider}SynthesisMS :ms, {$provider}SynthesisCalls :one";
 				$dailyValues[':ms'] = ['N' => (string) $synthesisMS];
+				// Characters sent to the provider, which is what most providers bill by
+				if (!empty($meta['text'])) {
+					$dailyUpdateExpr .= ", {$provider}SynthesisChars :chars";
+					$dailyValues[':chars'] = ['N' => (string) mb_strlen($meta['text'])];
+				}
 			}
 		}
 		$ddb->updateItem([
@@ -1270,14 +1342,15 @@ class TTSController extends ApiController {
 				],
 				'ConditionExpression' => 'attribute_not_exists(PK)',
 			]);
-			// New user for today -- increment unique user count
+			// New user for today -- increment unique user counts, overall and for
+			// the user's plan
 			$ddb->updateItem([
 				'TableName' => $tableName,
 				'Key' => [
 					'PK' => ['S' => 'DAILY_STATS'],
 					'SK' => ['S' => $dailyKey],
 				],
-				'UpdateExpression' => 'ADD uniqueUsers :one',
+				'UpdateExpression' => "ADD uniqueUsers :one, plan{$plan}Users :one",
 				'ExpressionAttributeValues' => [
 					':one' => ['N' => '1'],
 				],
@@ -1289,21 +1362,32 @@ class TTSController extends ApiController {
 			}
 		}
 
-		// Per-user monthly usage by provider (for setting credit limits)
+		// Per-user monthly usage by provider (for setting credit limits), with the
+		// user's plan and institution for usage by plan type and per institution
 		if ($provider) {
+			$limits = $this->getTTSCreditLimits($userID);
+			$monthlyValues = [
+				':now' => ['S' => $now],
+				':one' => ['N' => '1'],
+				':dur' => ['N' => (string) $durationSeconds],
+				':subType' => ['S' => $limits['subType']],
+			];
+			// 'subType' is a DynamoDB reserved word
+			$monthlySet = 'SET updatedAt = :now, #subType = :subType';
+			if ($limits['institutionID']) {
+				$monthlySet .= ', institutionID = :inst';
+				$monthlyValues[':inst'] = ['N' => (string) $limits['institutionID']];
+			}
 			$ddb->updateItem([
 				'TableName' => $tableName,
 				'Key' => [
 					'PK' => ['S' => 'MONTHLY_USERS'],
 					'SK' => ['S' => "$monthlyKey#$userID"],
 				],
-				'UpdateExpression' => 'SET updatedAt = :now'
+				'UpdateExpression' => $monthlySet
 					. " ADD {$provider}Requests :one, {$provider}DurationSeconds :dur",
-				'ExpressionAttributeValues' => [
-					':now' => ['S' => $now],
-					':one' => ['N' => '1'],
-					':dur' => ['N' => (string) $durationSeconds],
-				],
+				'ExpressionAttributeNames' => ['#subType' => 'subType'],
+				'ExpressionAttributeValues' => $monthlyValues,
 			]);
 		}
 
