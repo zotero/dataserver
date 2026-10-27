@@ -34,6 +34,12 @@ class TTSController extends ApiController {
 	// Must match ExpirationInDays in cloudformation/tts/template.yaml.j2
 	const AUDIO_CACHE_DAYS = 90;
 
+	// Retention of per-user records and per-day markers in the TTS table, via
+	// DynamoDB TTL on 'expiresAt'. Totals without user IDs (DAILY_STATS,
+	// LOCALE_STATS) and credit bundles don't expire.
+	const USER_DATA_RETENTION_DAYS = 395; // ~13 months
+	const MARKER_RETENTION_DAYS = 62;
+
 	// Minimal valid silent audio files (~50ms) for unspeakable input
 	private static $silentAudio = [
 		'audio/mpeg' => '//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xLEKYPAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xDEU4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==',
@@ -917,6 +923,7 @@ class TTSController extends ApiController {
 					'tier' => ['S' => $tier],
 					'subType' => ['S' => $subType],
 					'client' => ['S' => $client],
+					'expiresAt' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 				],
 				'ConditionExpression' => 'attribute_not_exists(PK)',
 			]);
@@ -961,6 +968,7 @@ class TTSController extends ApiController {
 					'firstHitAt' => ['S' => $now],
 					'limit' => ['N' => (string) $usage['limit']],
 					'client' => ['S' => self::detectClientPlatform($_SERVER['HTTP_USER_AGENT'] ?? '')],
+					'expiresAt' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 				],
 				'ConditionExpression' => 'attribute_not_exists(PK)',
 			]);
@@ -1128,6 +1136,15 @@ class TTSController extends ApiController {
 	}
 
 
+	/**
+	 * DynamoDB TTL value for an item that should expire after the given number
+	 * of days
+	 */
+	private static function expiresAt(int $days): array {
+		return ['N' => (string) (time() + $days * 86400)];
+	}
+
+
 	private function logUsage(int $userID, string $tier, float $creditCost, array $meta = []): void {
 		$creditCost = round($creditCost, 4);
 		$tableName = Z_CONFIG::$TTS_TABLE;
@@ -1146,6 +1163,7 @@ class TTSController extends ApiController {
 			'timestamp' => ['S' => $now],
 			'creditCost' => ['N' => (string) $creditCost],
 			'tier' => ['S' => $tier],
+			'expiresAt' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 		];
 		if (!empty($meta['voiceID'])) {
 			$item['voiceID'] = ['S' => $meta['voiceID']];
@@ -1183,9 +1201,10 @@ class TTSController extends ApiController {
 				'PK' => ['S' => "USER#$userID"],
 				'SK' => ['S' => "COUNTER#{$feature}#{$monthlyKey}"],
 			],
-			'UpdateExpression' => 'SET updatedAt = :now ADD creditsUsed :creditCost, requests :one',
+			'UpdateExpression' => 'SET updatedAt = :now, expiresAt = :exp ADD creditsUsed :creditCost, requests :one',
 			'ExpressionAttributeValues' => [
 				':now' => ['S' => $now],
+				':exp' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 				':creditCost' => ['N' => (string) $creditCost],
 				':one' => ['N' => '1'],
 			],
@@ -1211,9 +1230,10 @@ class TTSController extends ApiController {
 				'PK' => ['S' => "USER#$userID"],
 				'SK' => ['S' => "COUNTER#DAILY#$dailyKey"],
 			],
-			'UpdateExpression' => 'SET updatedAt = :now ADD minutesUsed :minutes, requests :one',
+			'UpdateExpression' => 'SET updatedAt = :now, expiresAt = :exp ADD minutesUsed :minutes, requests :one',
 			'ExpressionAttributeValues' => [
 				':now' => ['S' => $now],
+				':exp' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 				':minutes' => ['N' => (string) $durationMinutes],
 				':one' => ['N' => '1'],
 			],
@@ -1240,6 +1260,7 @@ class TTSController extends ApiController {
 					'Item' => [
 						'PK' => ['S' => 'VOICE_DAILY_FIRST'],
 						'SK' => ['S' => "$dailyKey#$lang#$voiceID#$userID"],
+						'expiresAt' => self::expiresAt(self::MARKER_RETENTION_DAYS),
 					],
 					'ConditionExpression' => 'attribute_not_exists(PK)',
 				]);
@@ -1339,6 +1360,7 @@ class TTSController extends ApiController {
 				'Item' => [
 					'PK' => ['S' => 'DAILY_FIRST'],
 					'SK' => ['S' => "$dailyKey#$userID"],
+					'expiresAt' => self::expiresAt(self::MARKER_RETENTION_DAYS),
 				],
 				'ConditionExpression' => 'attribute_not_exists(PK)',
 			]);
@@ -1371,9 +1393,10 @@ class TTSController extends ApiController {
 				':one' => ['N' => '1'],
 				':dur' => ['N' => (string) $durationSeconds],
 				':subType' => ['S' => $limits['subType']],
+				':exp' => self::expiresAt(self::USER_DATA_RETENTION_DAYS),
 			];
 			// 'subType' is a DynamoDB reserved word
-			$monthlySet = 'SET updatedAt = :now, #subType = :subType';
+			$monthlySet = 'SET updatedAt = :now, #subType = :subType, expiresAt = :exp';
 			if ($limits['institutionID']) {
 				$monthlySet .= ', institutionID = :inst';
 				$monthlyValues[':inst'] = ['N' => (string) $limits['institutionID']];
@@ -1403,6 +1426,7 @@ class TTSController extends ApiController {
 					'Item' => [
 						'PK' => ['S' => 'TEXT_SEEN'],
 						'SK' => ['S' => "$monthlyKey#$lang#$provider#$textHash"],
+						'expiresAt' => self::expiresAt(self::MARKER_RETENTION_DAYS),
 					],
 					'ConditionExpression' => 'attribute_not_exists(PK)',
 				]);
