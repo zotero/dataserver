@@ -107,6 +107,7 @@ describe('TTS', function () {
 			assert.property(json, 'premiumCreditsRemaining');
 			assert.isNumber(json.standardCreditsRemaining);
 			assert.isNumber(json.premiumCreditsRemaining);
+			assert.oneOf(json.plan, ['free', 'personal', 'lab', 'institutional']);
 		});
 	});
 

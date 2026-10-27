@@ -491,6 +491,10 @@ class TTSController extends ApiController {
 		echo json_encode([
 			'standardCreditsRemaining' => $standardUsage['monthlyRemaining'],
 			'premiumCreditsRemaining' => $premiumUsage['monthlyRemaining'],
+			// Plan the TTS limits are based on: free, personal, lab, or institutional.
+			// Users covered by an institution are reported as institutional/lab even if
+			// they also have a personal subscription.
+			'plan' => $premiumUsage['subType'],
 		]);
 	}
 
