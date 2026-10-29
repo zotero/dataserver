@@ -745,10 +745,7 @@ class ApiController extends Controller {
 			return $limits;
 		}
 
-		// Clients on the enforce lists override any bucket's logOnly flag
-		$forceEnforce = in_array($ip, Z_CONFIG_RATE_LIMITS::$ENFORCE_IPS)
-			|| (!empty($this->userID)
-				&& in_array($this->userID, Z_CONFIG_RATE_LIMITS::$ENFORCE_USER_IDS));
+		$forceEnforce = $this->isRateLimitEnforced();
 
 		// Citation/bib renders invoke server-side CSL formatting, which is
 		// expensive per request. Route them to a dedicated tighter bucket.
@@ -849,7 +846,16 @@ class ApiController extends Controller {
 		return $limits;
 	}
 
-	private function buildRateLimit($key, $bucket, $forceEnforce = false) {
+	/**
+	 * Clients on the enforce lists override any bucket's logOnly flag
+	 */
+	protected function isRateLimitEnforced() {
+		return in_array(IPAddress::getIP(), Z_CONFIG_RATE_LIMITS::$ENFORCE_IPS)
+			|| (!empty($this->userID)
+				&& in_array($this->userID, Z_CONFIG_RATE_LIMITS::$ENFORCE_USER_IDS));
+	}
+
+	protected function buildRateLimit($key, $bucket, $forceEnforce = false) {
 		$c = Z_CONFIG_RATE_LIMITS::$RATES[$key] ?? Z_CONFIG_RATE_LIMITS::DEFAULT_RATE;
 		return [
 			'logOnly' => $forceEnforce ? false : ($c['logOnly'] ?? false),

@@ -85,6 +85,42 @@ class Z_RequestLimiter {
 
 		return { allowed, filled_tokens }';
 
+	// Refills based on elapsed time and subtracts an arbitrary cost, allowing
+	// the balance to go negative. Used for buckets measured in units other
+	// than requests (e.g., seconds of audio), where the cost is only known
+	// after the work is done. The TTL covers the time needed to refill to
+	// capacity from the new balance, after which an expired bucket is
+	// equivalent to a full one. The balance is returned as a string, since
+	// Redis truncates Lua numbers to integers.
+	const RATE_LIMITER_DEBIT_LUA = '
+		local tokens_key = KEYS[1]
+		local timestamp_key = KEYS[2]
+
+		local rate = tonumber(ARGV[1])
+		local capacity = tonumber(ARGV[2])
+		local now = tonumber(ARGV[3])
+		local cost = tonumber(ARGV[4])
+
+		local last_tokens = tonumber(redis.call("get", tokens_key))
+		if last_tokens == nil then
+			last_tokens = capacity
+		end
+
+		local last_refreshed = tonumber(redis.call("get", timestamp_key))
+		if last_refreshed == nil then
+			last_refreshed = 0
+		end
+
+		local delta = math.max(0, now-last_refreshed)
+		local filled_tokens = math.min(capacity, last_tokens+(delta*rate))
+		local new_tokens = filled_tokens - cost
+		local ttl = math.ceil((capacity-new_tokens)/rate) + 1
+
+		redis.call("setex", tokens_key, ttl, new_tokens)
+		redis.call("setex", timestamp_key, ttl, now)
+
+		return { 1, tostring(new_tokens) }';
+
 	// Lua script is based on https://gist.github.com/ptarjan/e38f45f2dfe601419ca3af937fff574d
 	const CONCURRENCY_LIMITER_LUA = '
 		local key = KEYS[1]
@@ -170,6 +206,44 @@ class Z_RequestLimiter {
 			return null;
 		}
 		return !!$res[0];
+	}
+
+	/**
+	 * Subtract a cost from the bucket, allowing the balance to go negative
+	 *
+	 * @param $params {bucket, capacity, replenishRate}
+	 * @param float $cost
+	 * @return float|null New balance, or null on error
+	 */
+	public static function debitBucket($params, $cost) {
+		if (!isset($params['bucket'], $params['capacity'], $params['replenishRate'])) {
+			Z_Core::logError('Warning: Misconfigured request rate limit');
+			return null;
+		}
+		$prefix = self::REDIS_PREFIX . 'rrl:' . $params['bucket'];
+		$keys = [$prefix . '.tk', $prefix . '.ts'];
+		$args = [$params['replenishRate'], $params['capacity'], time(), $cost];
+		try {
+			$res = self::evalLua(self::RATE_LIMITER_DEBIT_LUA, $keys, $args);
+		}
+		catch (Exception $e) {
+			Z_Core::logError("Warning: " . $e);
+			return null;
+		}
+		return (float) $res[1];
+	}
+
+	/**
+	 * Get the current balance of a bucket that can go negative
+	 *
+	 * Equivalent to a zero-cost debit, which persists the refilled balance
+	 * without changing it.
+	 *
+	 * @param $params {bucket, capacity, replenishRate}
+	 * @return float|null Balance, or null on error
+	 */
+	public static function getBucketBalance($params) {
+		return self::debitBucket($params, 0);
 	}
 
 	/**

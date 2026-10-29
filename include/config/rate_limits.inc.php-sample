@@ -38,7 +38,18 @@ class Z_CONFIG_RATE_LIMITS {
 	//                  rejecting them. Defaults to false (enforce).
 	//
 	// Buckets not listed here use DEFAULT_RATE.
-	public static $RATES = [];
+	//
+	// tts_live is used by TTSController::speak() rather than limits(). Its
+	// tokens are seconds of synthesized audio, debited after each cache miss,
+	// so the balance can go negative. Cache hits aren't counted.
+	//
+	// Clients can play audio at up to 3x, so a refill of 6 seconds per
+	// second leaves 2x headroom. The capacity of 600 (10 minutes of audio)
+	// covers bursts from starting a document, seeking, voice switches, and
+	// multiple devices.
+	public static $RATES = [
+		'tts_live' => ['replenishRate' => 6, 'capacity' => 600],
+	];
 
 	// Per-bucket concurrent-request limits. Keys:
 	//   user_writes, user_citation, user_default, anon_citation,

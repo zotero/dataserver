@@ -36,6 +36,7 @@ let assert410 = assertStatus(410);
 let assert412 = assertStatus(412);
 let assert413 = assertStatus(413);
 let assert428 = assertStatus(428);
+let assert429 = assertStatus(429);
 
 function assert200ForObject(response, _expectedMessage = false, index = 0) {
 	assert200(response);
@@ -150,6 +151,7 @@ export {
 	assert412,
 	assert413,
 	assert428,
+	assert429,
 	assert200ForObject,
 	assertUnchangedForObject,
 	assertFailedForObject,

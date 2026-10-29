@@ -12,6 +12,7 @@ import {
 	assert302,
 	assert400,
 	assert403,
+	assert429,
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
@@ -336,6 +337,73 @@ describe('TTS', function () {
 				}
 			}
 			assert.isTrue(seeded, 'Expected at least one provider to populate sibling on first synth');
+		});
+	});
+
+	describe('/speak -- live rate limit', function () {
+		// Test requests skip the live bucket unless they pass 'rateLimit', which
+		// selects an isolated, always-enforced bucket. A small capacity and slow
+		// refill let a single synthesis of the long text below exhaust it.
+		let capacity = 5;
+		let replenishRate = 0.01;
+		let longText = 'The quick brown fox jumps over the lazy dog, and then it runs '
+			+ 'all the way across the field to the river, where it stops to drink.';
+
+		function speakLimited(bucket, params) {
+			return speak({ ...params, rateLimit: { bucket, capacity, replenishRate } });
+		}
+
+		function randomBucket() {
+			return crypto.randomBytes(8).toString('hex');
+		}
+
+		it('should debit a cache miss and return 429 with Retry-After once exhausted', async function () {
+			let voice = voices['en-US'][0];
+			let bucket = randomBucket();
+
+			let response = await speakLimited(bucket, { voice, text: randomText(longText) });
+			assert302(response);
+
+			response = await speakLimited(bucket, { voice, text: randomText() });
+			assert429(response);
+			let retryAfter = response.getHeader('Retry-After');
+			assert.match(retryAfter, /^[1-9][0-9]*$/, 'Expected Retry-After in whole seconds');
+			// The long text produces more than 'capacity' seconds of audio, so the
+			// balance is negative and refilling to 1 takes over 1/replenishRate seconds
+			assert.isAbove(parseInt(retryAfter), 1 / replenishRate);
+		});
+
+		it('should not debit or block a cache hit', async function () {
+			let voice = voices['en-US'][0];
+			let cachedText = randomText(longText);
+			// Prime the cache without a bucket
+			let response = await speak({ voice, text: cachedText });
+			assert302(response);
+
+			// Repeated hits on audio longer than the capacity leave the bucket full
+			let bucket = randomBucket();
+			for (let i = 0; i < 3; i++) {
+				response = await speakLimited(bucket, { voice, text: cachedText });
+				assert302(response);
+			}
+			response = await speakLimited(bucket, { voice, text: randomText(longText) });
+			assert302(response);
+
+			// The bucket is now exhausted: misses are rejected, hits still succeed
+			response = await speakLimited(bucket, { voice, text: randomText() });
+			assert429(response);
+			response = await speakLimited(bucket, { voice, text: cachedText });
+			assert302(response);
+		});
+
+		it('should return 400 with invalid rateLimit', async function () {
+			let voice = voices['en-US'][0];
+			let response = await speak({
+				voice,
+				text: randomText(),
+				rateLimit: { bucket: randomBucket(), capacity, replenishRate: 0 },
+			});
+			assert400(response);
 		});
 	});
 

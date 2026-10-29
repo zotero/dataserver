@@ -30,6 +30,7 @@ use Aws\DynamoDb\DynamoDbClient;
 
 class TTSController extends ApiController {
 	private bool $testMode = false;
+	private ?array $liveRateLimit = null;
 
 	// Must match ExpirationInDays in cloudformation/tts/template.yaml.j2
 	const AUDIO_CACHE_DAYS = 90;
@@ -175,6 +176,8 @@ class TTSController extends ApiController {
 			$this->e400("API key not provided");
 		}
 
+		$this->liveRateLimit = $this->getLiveRateLimit($params);
+
 		$client = self::detectClientPlatform($_SERVER['HTTP_USER_AGENT'] ?? '');
 
 		$hexID = $params['voice'] ?? '';
@@ -279,6 +282,7 @@ class TTSController extends ApiController {
 		$estimatedDuration = strlen($text) / 15;
 		$estimatedCreditCost = $estimatedDuration * $creditRate / 60;
 		$this->checkQuota($this->userID, $tier, $estimatedCreditCost, $estimatedDuration);
+		$this->checkLiveRateLimit();
 
 		// Synthesize audio
 		$options = array_merge($resolved, [
@@ -368,6 +372,7 @@ class TTSController extends ApiController {
 			'synthesisMS' => $synthesisMS,
 			'client' => $client,
 		]);
+		$this->debitLiveRateLimit($audioDuration > 0 ? $audioDuration : $estimatedDuration);
 
 		header("Cache-Control: private, max-age=" . (self::AUDIO_CACHE_DAYS * 86400) . ", immutable");
 		if ($timestampsRequested) {
@@ -890,6 +895,83 @@ class TTSController extends ApiController {
 			: 0;
 
 		return max(Z_CONFIG::$TTS_DAILY_LIMIT_MINUTES - $minutesUsed, 0);
+	}
+
+
+	/**
+	 * Get the per-user bucket that caps synthesis throughput, in seconds of
+	 * audio, for live listening
+	 *
+	 * Test requests skip the bucket unless they pass 'rateLimit' with
+	 * 'bucket', 'capacity', and 'replenishRate', which selects an isolated,
+	 * always-enforced bucket for testing.
+	 */
+	private function getLiveRateLimit(array $params): ?array {
+		if ($this->testMode) {
+			$rateLimit = $params['rateLimit'] ?? null;
+			if ($rateLimit === null) {
+				return null;
+			}
+			if (!is_array($rateLimit)
+					|| !preg_match('/^[A-Za-z0-9]{1,32}$/', $rateLimit['bucket'] ?? '')
+					|| !is_numeric($rateLimit['capacity'] ?? null)
+					|| !is_numeric($rateLimit['replenishRate'] ?? null)
+					|| $rateLimit['replenishRate'] <= 0) {
+				$this->e400("Invalid 'rateLimit'");
+			}
+			return [
+				'logOnly' => false,
+				'bucket' => 'tts-live-test-' . $this->userID . '-' . $rateLimit['bucket'],
+				'replenishRate' => (float) $rateLimit['replenishRate'],
+				'capacity' => (float) $rateLimit['capacity'],
+			];
+		}
+		return $this->buildRateLimit(
+			'tts_live', 'tts-live-' . $this->userID, $this->isRateLimitEnforced()
+		);
+	}
+
+
+	/**
+	 * Reject a cache miss with a 429 if the live bucket has less than one
+	 * second of audio left
+	 *
+	 * Allows the request if the limiter is unavailable.
+	 */
+	private function checkLiveRateLimit(): void {
+		$limit = $this->liveRateLimit;
+		if (!$limit) {
+			return;
+		}
+		try {
+			if (!Z_RequestLimiter::init()) return;
+		}
+		catch (Exception $e) {
+			Z_Core::logError("Warning: " . $e->getMessage());
+			return;
+		}
+		$balance = Z_RequestLimiter::getBucketBalance($limit);
+		if ($balance === null || $balance >= 1) {
+			return;
+		}
+		$retryAfter = max(1, (int) ceil((1 - $balance) / $limit['replenishRate']));
+		StatsD::increment('api.request.limit.tts_live.rejected', 1);
+		Z_Core::logError(($limit['logOnly'] ? '(WARN) ' : '')
+			. 'TTS live rate limit exceeded for ' . $limit['bucket']
+			. ' (balance ' . round($balance) . ', retry after ' . $retryAfter . 's)'
+			. ' (' . ($_SERVER['HTTP_USER_AGENT'] ?? '') . ')');
+		if (!$limit['logOnly']) {
+			header('Retry-After: ' . $retryAfter);
+			$this->e429('TTS rate limit exceeded');
+		}
+	}
+
+
+	private function debitLiveRateLimit(float $duration): void {
+		if (!$this->liveRateLimit || !Z_RequestLimiter::isInitialized()) {
+			return;
+		}
+		Z_RequestLimiter::debitBucket($this->liveRateLimit, $duration);
 	}
 
 
