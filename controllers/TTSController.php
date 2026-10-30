@@ -639,13 +639,20 @@ class TTSController extends ApiController {
 			unset($v);
 			// Remove tier from provider object -- it's already the key
 			unset($provider['tier']);
+			$provider['_priority'] = $class::SORT_PRIORITY;
 			$result[$tier][] = $provider;
 		}
-		// Sort providers within each tier by creditsPerMinute
+		// Sort providers within each tier by creditsPerMinute, then by
+		// SORT_PRIORITY
 		foreach ($result as &$providers) {
 			usort($providers, function ($a, $b) {
-				return $a['creditsPerMinute'] - $b['creditsPerMinute'];
+				return ($a['creditsPerMinute'] <=> $b['creditsPerMinute'])
+					?: ($a['_priority'] <=> $b['_priority']);
 			});
+			foreach ($providers as &$p) {
+				unset($p['_priority']);
+			}
+			unset($p);
 		}
 		unset($providers);
 		return $result;

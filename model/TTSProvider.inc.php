@@ -45,6 +45,10 @@ class Zotero_TTSProvider {
 	// Subclasses override to true to offer their voices to prerelease clients only
 	const PRERELEASE_ONLY = false;
 
+	// Order among providers in the same tier with the same creditsPerMinute
+	// (lower first)
+	const SORT_PRIORITY = 100;
+
 
 	/**
 	 * @return array{httpCode: int, body: string}
