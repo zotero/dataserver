@@ -296,6 +296,14 @@ class KeysController extends ApiController {
 					if (!$isWebsite && $userID != $keyObj->userID) {
 						$this->e403();
 					}
+					// Automatic client keys are managed by the client (via login sessions) and
+					// can't be edited directly, and other keys can't be given an automatic name
+					if (Zotero_Keys::isAutomaticClientKeyName($keyObj->name)) {
+						$this->e403("Automatic client keys cannot be modified");
+					}
+					if (isset($fields['name']) && Zotero_Keys::isAutomaticClientKeyName($fields['name'])) {
+						$this->e400("Invalid key name");
+					}
 					foreach ($fields as $field=>$val) {
 						if ($field == 'accessJSON') {
 							// JSON format -- use setPermissionsFromAccessJSON

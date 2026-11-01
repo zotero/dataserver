@@ -10,7 +10,9 @@ import {
 	assert200,
 	assert201,
 	assert204,
-	assert403
+	assert400,
+	assert403,
+	assert404
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
@@ -379,5 +381,191 @@ describe('Keys', function () {
 			assert.equal(json.name, name);
 			assert.deepEqual(json.access, { user: { library: true, files: true } });
 		}
+	});
+
+	describe('Automatic client keys', function () {
+		let automaticNames = [
+			'Automatic Zotero Client Key',
+			'Automatic Zotero iOS Client Key',
+			'Automatic Zotero Android Client Key',
+			'Automatic Zotero Client Key (macOS)'
+		];
+		
+		async function createKey(name) {
+			let response = await API.superPost(
+				`users/${config.get('userID')}/keys`,
+				JSON.stringify({
+					name,
+					access: {
+						user: {
+							library: true
+						}
+					}
+				})
+			);
+			assert201(response);
+			return API.getJSONFromResponse(response).key;
+		}
+		
+		async function getKeyJSON(key) {
+			let response = await API.superGet(`keys/${key}`);
+			assert200(response);
+			return API.getJSONFromResponse(response);
+		}
+		
+		async function deleteKey(key) {
+			API.useAPIKey('');
+			let response = await API.delete(`keys/${key}`);
+			assert204(response);
+		}
+		
+		for (let name of automaticNames) {
+			it(`shouldn't allow modifying a key named '${name}'`, async function () {
+				let key = await createKey(name);
+				
+				let response = await API.superPut(
+					`keys/${key}`,
+					JSON.stringify({
+						name,
+						access: {
+							user: {
+								library: true,
+								write: true
+							}
+						}
+					})
+				);
+				assert403(response);
+				
+				// Renaming is also blocked
+				response = await API.superPut(
+					`keys/${key}`,
+					JSON.stringify({
+						name: `Test ${Date.now()}`,
+						access: {
+							user: {
+								library: true
+							}
+						}
+					})
+				);
+				assert403(response);
+				
+				// Key should be unchanged
+				let json = await getKeyJSON(key);
+				assert.equal(json.name, name);
+				assert.deepEqual(json.access, { user: { library: true, files: true } });
+				
+				await deleteKey(key);
+			});
+		}
+		
+		it("shouldn't allow modifying an automatic key with credentials", async function () {
+			let name = 'Automatic Zotero Client Key (Windows)';
+			let key = await createKey(name);
+			
+			API.useAPIKey('');
+			let response = await API.put(
+				`keys/${key}`,
+				JSON.stringify({
+					username: config.get('username'),
+					password: config.get('password'),
+					name,
+					access: {
+						user: {
+							library: true,
+							write: true
+						}
+					}
+				})
+			);
+			assert403(response);
+			
+			let json = await getKeyJSON(key);
+			assert.deepEqual(json.access, { user: { library: true, files: true } });
+			
+			await deleteKey(key);
+		});
+		
+		it("shouldn't allow renaming a key to an automatic name", async function () {
+			let name = `Test ${Date.now()}`;
+			let key = await createKey(name);
+			
+			for (let automaticName of automaticNames) {
+				let response = await API.superPut(
+					`keys/${key}`,
+					JSON.stringify({
+						name: automaticName,
+						access: {
+							user: {
+								library: true
+							}
+						}
+					})
+				);
+				assert400(response);
+			}
+			
+			let json = await getKeyJSON(key);
+			assert.equal(json.name, name);
+			
+			await deleteKey(key);
+		});
+		
+		it('should allow modifying keys with names similar to automatic names', async function () {
+			let names = [
+				'Automatic Zotero Client Keys',
+				'My Automatic Zotero Client Key',
+				'Automatic Zotero Web Client Key'
+			];
+			for (let name of names) {
+				let key = await createKey(`Test ${Date.now()}`);
+				
+				// Rename to the lookalike name
+				let response = await API.superPut(
+					`keys/${key}`,
+					JSON.stringify({
+						name,
+						access: {
+							user: {
+								library: true
+							}
+						}
+					})
+				);
+				assert200(response);
+				assert.equal(API.getJSONFromResponse(response).name, name);
+				
+				// Modify the key with the lookalike name
+				response = await API.superPut(
+					`keys/${key}`,
+					JSON.stringify({
+						name,
+						access: {
+							user: {
+								library: true,
+								write: true
+							}
+						}
+					})
+				);
+				assert200(response);
+				let json = await getKeyJSON(key);
+				assert.equal(json.name, name);
+				assert.deepEqual(json.access, { user: { library: true, files: true, write: true } });
+				
+				await deleteKey(key);
+			}
+		});
+		
+		it('should allow deleting an automatic key', async function () {
+			let key = await createKey('Automatic Zotero Client Key (macOS)');
+			
+			let response = await API.superDelete(`users/${config.get('userID')}/keys/${key}`);
+			assert204(response);
+			
+			response = await API.superGet(`keys/${key}`);
+			assert404(response);
+		});
 	});
 });

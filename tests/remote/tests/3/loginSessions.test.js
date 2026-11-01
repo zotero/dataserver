@@ -346,6 +346,95 @@ describe('Login Sessions', function() {
 			assert400(response);
 		});
 
+		it('should update an automatic client key via key update flow but not via direct edit', async function() {
+			// Create a login-session key
+			API.useAPIKey('');
+			let response = await API.post(
+				'keys/sessions',
+				'',
+				['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/7.0']
+			);
+			assert201(response);
+			let sessionToken = API.getJSONFromResponse(response).sessionToken;
+			
+			response = await API.superPost(
+				'keys/sessions/complete',
+				JSON.stringify({
+					sessionToken: sessionToken,
+					userID: config.get('userID'),
+					access: { user: { library: true } }
+				})
+			);
+			assert204(response);
+			
+			response = await API.get(`keys/sessions/${sessionToken}`);
+			assert200(response);
+			let apiKey = API.getJSONFromResponse(response).apiKey;
+			
+			response = await API.superGet(`keys/${apiKey}`);
+			assert200(response);
+			let json = API.getJSONFromResponse(response);
+			let name = json.name;
+			assert.equal(name, 'Automatic Zotero Client Key (macOS)');
+			
+			// Update permissions via key update flow
+			API.useAPIKey(apiKey);
+			response = await API.post(
+				'keys/sessions',
+				'',
+				['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/7.0']
+			);
+			assert201(response);
+			sessionToken = API.getJSONFromResponse(response).sessionToken;
+			
+			response = await API.superPost(
+				'keys/sessions/complete',
+				JSON.stringify({
+					sessionToken: sessionToken,
+					userID: config.get('userID'),
+					access: { user: { library: true, notes: true, write: true } }
+				})
+			);
+			assert204(response);
+			
+			API.useAPIKey('');
+			response = await API.get(`keys/sessions/${sessionToken}`);
+			assert200(response);
+			json = API.getJSONFromResponse(response);
+			assert.equal(json.status, 'completed');
+			assert.equal(json.apiKey, apiKey);
+			
+			response = await API.superGet(`keys/${apiKey}`);
+			assert200(response);
+			json = API.getJSONFromResponse(response);
+			assert.equal(json.name, name);
+			assert.deepEqual(
+				json.access,
+				{ user: { library: true, files: true, notes: true, write: true } }
+			);
+			
+			// Direct edit is blocked
+			response = await API.superPut(
+				`keys/${apiKey}`,
+				JSON.stringify({
+					name,
+					access: { user: { library: true } }
+				})
+			);
+			assert403(response);
+			
+			response = await API.superGet(`keys/${apiKey}`);
+			assert200(response);
+			json = API.getJSONFromResponse(response);
+			assert.deepEqual(
+				json.access,
+				{ user: { library: true, files: true, notes: true, write: true } }
+			);
+			
+			response = await API.delete(`keys/${apiKey}`);
+			assert204(response);
+		});
+		
 		it('should return 409 when completing already completed session', async function() {
 			// Create and complete session
 			API.useAPIKey('');

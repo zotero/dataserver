@@ -25,6 +25,17 @@
 */
 
 class Zotero_Keys {
+	/**
+	 * Keys created automatically for Zotero clients -- legacy "Automatic Zotero Client Key",
+	 * "Automatic Zotero iOS Client Key", and "Automatic Zotero Android Client Key", and
+	 * login-session keys with a platform suffix (e.g., "Automatic Zotero Client Key (macOS)")
+	 *
+	 * Keep in sync with Models_KeysTable::isAutomaticClientKeyName() in www
+	 */
+	public static function isAutomaticClientKeyName($name) {
+		return (bool) preg_match('/^Automatic Zotero (?:iOS |Android )?Client Key\b/', (string) $name);
+	}
+	
 	public static function getByKey($key) {
 		// Keep in sync with Zotero_Key::erase()
 		$cacheKey = "keyIDByKey_" . $key;
