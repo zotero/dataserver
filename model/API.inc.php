@@ -99,6 +99,7 @@ class Zotero_API {
 		'collectionKey' => [],
 		'searchKey' => [],
 		'tag' => '',
+		'tagName' => '',
 		'tagType' => '',
 		'since' => false,
 		'sincetime' => false,
