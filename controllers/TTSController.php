@@ -112,7 +112,8 @@ class TTSController extends ApiController {
 
 		$cacheKey = $this->computeCacheKey(
 			$resolved['voiceID'], $text, null, $lang,
-			$resolved['cacheVersion'], $resolved['audioFormat']
+			$resolved['cacheVersion'], $resolved['audioFormat'],
+			$resolved['speakingRate'] ?? null
 		);
 
 		// Check S3 cache
@@ -226,7 +227,8 @@ class TTSController extends ApiController {
 
 		$cacheKey = $this->computeCacheKey(
 			$resolved['voiceID'], $text, $prompt, $lang,
-			$resolved['cacheVersion'], $resolved['audioFormat']
+			$resolved['cacheVersion'], $resolved['audioFormat'],
+			$resolved['speakingRate'] ?? null
 		);
 
 		// Check S3 cache. When timestamps are requested and the provider
@@ -447,7 +449,8 @@ class TTSController extends ApiController {
 
 		$cacheKey = $this->computeCacheKey(
 			$resolved['voiceID'], $text, null, $lang,
-			$resolved['cacheVersion'], $resolved['audioFormat']
+			$resolved['cacheVersion'], $resolved['audioFormat'],
+			$resolved['speakingRate'] ?? null
 		);
 
 		// Check S3 cache
@@ -1621,15 +1624,21 @@ class TTSController extends ApiController {
 
 	private function computeCacheKey(
 		string $voiceID, string $text, ?string $prompt, string $lang,
-		int $cacheVersion, string $audioFormat
+		int $cacheVersion, string $audioFormat, ?float $speakingRate = null
 	): string {
-		$canonical = json_encode([
+		$fields = [
 			'v' => $cacheVersion,
 			'voice' => $voiceID,
 			'text' => $text,
 			'prompt' => $prompt,
 			'lang' => $lang,
-		], JSON_UNESCAPED_UNICODE);
+		];
+		// Only voices with a speaking rate get the extra field, so other keys
+		// stay unchanged
+		if ($speakingRate !== null) {
+			$fields['rate'] = $speakingRate;
+		}
+		$canonical = json_encode($fields, JSON_UNESCAPED_UNICODE);
 		$hash = hash('sha256', $canonical);
 
 		$ext = $audioFormat === 'mp3' ? 'mp3' : 'ogg';
