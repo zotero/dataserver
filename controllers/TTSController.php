@@ -1286,9 +1286,10 @@ class TTSController extends ApiController {
 		$ddb = Z_Core::$AWS->createDynamoDb();
 
 		// Create event log entry
+		$eventTime = (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s.uP');
 		$item = [
 			'PK' => ['S' => "USER#$userID"],
-			'SK' => ['S' => "EVENT#$now"],
+			'SK' => ['S' => "EVENT#$eventTime"],
 			'timestamp' => ['S' => $now],
 			'creditCost' => ['N' => (string) $creditCost],
 			'tier' => ['S' => $tier],
