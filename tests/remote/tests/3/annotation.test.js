@@ -312,13 +312,12 @@ describe('Annotations', function () {
 		assert.notProperty(jsonData, 'annotationAuthorName');
 	});
 
-	// PHP: test_should_not_allow_changing_annotation_type
-	it('should not allow changing annotation type', async function () {
+	async function createTextAnnotation(annotationType) {
 		let json = {
 			itemType: 'annotation',
 			parentItem: pdfAttachmentKey,
-			annotationType: 'highlight',
-			annotationText: 'This is highlighted text.',
+			annotationType,
+			annotationText: 'This is annotated text.',
 			annotationSortIndex: '00015|002431|00000',
 			annotationPosition: JSON.stringify({
 				pageIndex: 123,
@@ -335,21 +334,112 @@ describe('Annotations', function () {
 		);
 		assert200ForObject(response);
 		let responseJSON = API.getJSONFromResponse(response);
-		let annotationKey = responseJSON.successful[0].key;
-		let version = responseJSON.successful[0].version;
-
-		// Try to change to note annotation
-		json = {
-			version: version,
-			annotationType: 'note'
+		return {
+			key: responseJSON.successful[0].key,
+			version: responseJSON.successful[0].version
 		};
-		response = await API.userPatch(
+	}
+	
+	it('should change underline annotation to highlight via PATCH', async function () {
+		let { key, version } = await createTextAnnotation('underline');
+		
+		let response = await API.userPatch(
 			config.get('userID'),
-			`items/${annotationKey}`,
+			`items/${key}`,
+			JSON.stringify({ version, annotationType: 'highlight' }),
+			['Content-Type: application/json']
+		);
+		assert204(response);
+		
+		let item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'highlight');
+		assert.equal(item.data.annotationText, 'This is annotated text.');
+		assert.isAbove(item.version, version);
+	});
+	
+	it('should change highlight annotation to underline via PUT', async function () {
+		let { key } = await createTextAnnotation('highlight');
+		
+		let item = await API.getItem(key, 'json');
+		let version = item.version;
+		let json = item.data;
+		json.annotationType = 'underline';
+		let response = await API.userPut(
+			config.get('userID'),
+			`items/${key}`,
 			JSON.stringify(json),
 			['Content-Type: application/json']
 		);
+		assert204(response);
+		
+		item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'underline');
+		assert.isAbove(item.version, version);
+	});
+	
+	it('should change annotation type between highlight and underline via multi-object POST', async function () {
+		let { key, version } = await createTextAnnotation('highlight');
+		
+		let response = await API.userPost(
+			config.get('userID'),
+			'items',
+			JSON.stringify([{ key, version, annotationType: 'underline' }]),
+			['Content-Type: application/json']
+		);
+		assert200ForObject(response);
+		let responseJSON = API.getJSONFromResponse(response);
+		assert.equal(responseJSON.successful[0].data.annotationType, 'underline');
+		assert.isAbove(responseJSON.successful[0].version, version);
+		
+		let item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'underline');
+		version = item.version;
+		
+		response = await API.userPost(
+			config.get('userID'),
+			'items',
+			JSON.stringify([{ key, version, annotationType: 'highlight' }]),
+			['Content-Type: application/json']
+		);
+		assert200ForObject(response);
+		
+		item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'highlight');
+		assert.isAbove(item.version, version);
+	});
+	
+	// PHP: test_should_not_allow_changing_annotation_type
+	it('should not allow changing highlight annotation to note', async function () {
+		let { key, version } = await createTextAnnotation('highlight');
+		
+		let response = await API.userPatch(
+			config.get('userID'),
+			`items/${key}`,
+			JSON.stringify({ version, annotationType: 'note' }),
+			['Content-Type: application/json']
+		);
 		assert400(response);
+		assert.include(response.getBody(), 'Cannot change existing annotationType');
+		
+		let item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'highlight');
+	});
+	
+	it('should not allow changing underline annotation to image via multi-object POST', async function () {
+		let { key, version } = await createTextAnnotation('underline');
+		
+		let response = await API.userPost(
+			config.get('userID'),
+			'items',
+			JSON.stringify([{ key, version, annotationType: 'image' }]),
+			['Content-Type: application/json']
+		);
+		assert400ForObject(response);
+		let responseJSON = API.getJSONFromResponse(response);
+		assert.include(responseJSON.failed[0].message, 'Cannot change existing annotationType');
+		
+		let item = await API.getItem(key, 'json');
+		assert.equal(item.data.annotationType, 'underline');
 	});
 
 	// PHP: test_should_update_annotation_comment

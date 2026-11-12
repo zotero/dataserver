@@ -2093,6 +2093,7 @@ class Zotero_Item extends Zotero_DataObject {
 						. "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 						. "ON DUPLICATE KEY UPDATE "
 						. "parentItemID=VALUES(parentItemID), "
+						. "`type`=VALUES(`type`), "
 						. "authorName=VALUES(authorName), "
 						. "text=VALUES(text), "
 						. "comment=VALUES(comment), "
@@ -3669,7 +3670,10 @@ class Zotero_Item extends Zotero_DataObject {
 		}
 		
 		if ($field == 'type') {
-			if ($current && $val !== $current) {
+			$interchangeable = ['highlight', 'underline'];
+			if ($current
+					&& $val !== $current
+					&& !(in_array($current, $interchangeable) && in_array($val, $interchangeable))) {
 				throw new Exception(
 					"Cannot change existing annotationType for item $this->libraryKey",
 					Z_ERROR_INVALID_INPUT
