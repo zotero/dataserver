@@ -886,4 +886,24 @@ describe('Tags', function () {
 		let json = API.getJSONFromResponse(response);
 		assert.equal(json[0].tag, '0');
 	});
+
+	it('should delete a 0 tag by name', async function () {
+		await API.createItem('book', {
+			tags: [{ tag: '0' }, { tag: 'a' }]
+		}, 'key');
+
+		let libraryVersion = await API.getLibraryVersion();
+
+		let response = await API.userDelete(
+			config.get('userID'),
+			'tags?tag=0',
+			[`If-Unmodified-Since-Version: ${libraryVersion}`]
+		);
+		assert204(response);
+
+		response = await API.userGet(config.get('userID'), 'tags');
+		assert200(response);
+		let json = API.getJSONFromResponse(response);
+		assert.deepEqual(json.map(x => x.tag), ['a']);
+	});
 });
