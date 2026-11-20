@@ -58,7 +58,7 @@ class TagsController extends ApiController {
 		$this->libraryVersion = Zotero_Libraries::getUpdatedVersion($this->objectLibraryID);
 		
 		// Set of tags matching name
-		if ($name && $this->subset != 'tags') {
+		if (is_string($name) && $name !== '' && $this->subset != 'tags') {
 			$this->allowMethods(array('GET'));
 			
 			$tagIDs = Zotero_Tags::getIDs($this->objectLibraryID, $name);
