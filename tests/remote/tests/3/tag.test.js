@@ -11,6 +11,7 @@ import {
 	assert200ForObject,
 	assert204,
 	assert400ForObject,
+	assert404,
 	assert412,
 	assert413ForObject,
 	assert428,
@@ -865,5 +866,24 @@ describe('Tags', function () {
 
 		assert.lengthOf(data.tags, 1);
 		assert.equal(data.tags[0].tag, '0');
+	});
+
+	it('should return a 0 tag by name', async function () {
+		await API.createItem('book', {
+			tags: [{ tag: 'a' }]
+		}, 'key');
+
+		let response = await API.userGet(config.get('userID'), 'tags/0');
+		assert404(response);
+
+		await API.createItem('book', {
+			tags: [{ tag: '0' }]
+		}, 'key');
+
+		response = await API.userGet(config.get('userID'), 'tags/0');
+		assert200(response);
+		assertNumResults(response, 1);
+		let json = API.getJSONFromResponse(response);
+		assert.equal(json[0].tag, '0');
 	});
 });
