@@ -196,7 +196,7 @@ class TagsController extends ApiController {
 			}
 			else if ($this->method == 'DELETE') {
 				// Filter for specific tags with "?tag=foo || bar"
-				$tagNames = !empty($this->queryParams['tag'])
+				$tagNames = isset($this->queryParams['tag']) && $this->queryParams['tag'] !== ''
 					? explode(' || ', $this->queryParams['tag']): array();
 				foreach ($tagNames as $tagName) {
 					$tagIDs = Zotero_Tags::getIDs($this->objectLibraryID, $tagName);
