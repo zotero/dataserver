@@ -65,10 +65,6 @@ class CollectionsController extends ApiController {
 		if ($this->singleObject) {
 			$this->allowMethods(['HEAD', 'GET', 'PUT', 'PATCH', 'DELETE']);
 			
-			if (!Zotero_ID::isValidKey($this->objectKey)) {
-				$this->e404();
-			}
-			
 			$collection = Zotero_Collections::getByLibraryAndKey($this->objectLibraryID, $this->objectKey);
 			
 			if ($this->isWriteMethod()) {

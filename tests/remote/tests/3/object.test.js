@@ -9,7 +9,9 @@ import { API } from '../../api3.js';
 import {
 	assert200,
 	assert204,
+	assert201,
 	assert400,
+	assert404,
 	assert200ForObject,
 	assert400ForObject,
 	assert413ForObject,
@@ -673,5 +675,128 @@ describe('Object', function () {
 			assert400ForObject(response, `Invalid value for index 0 in uploaded data; expected JSON ${objectType} object`, 0);
 			assert400ForObject(response, `Invalid value for index 1 in uploaded data; expected JSON ${objectType} object`, 1);
 		}
+	});
+	describe('Object keys in URLs', function () {
+		it('should return 404 for an invalid object key', async function () {
+			let userID = config.get('userID');
+			let groupID = config.get('ownedPrivateGroupID');
+			await API.createItem('book', {}, 'key');
+			
+			let paths = [
+				'items/10.5788/foo?start=0',
+				'items/12/K',
+				'items/junk',
+				'items/abcd2345',
+				'items/junk/children',
+				'collections/junk',
+				'collections/junk/items',
+				'collections/junk/items/top',
+				'searches/junk',
+				'searches/junk/x'
+			];
+			for (let path of paths) {
+				let response = await API.userGet(userID, path);
+				assert404(response, `Expected 404 for ${path}, got ${response.getStatus()}`);
+			}
+			
+			let response = await API.groupGet(groupID, 'items/12/K');
+			assert404(response);
+			
+			// Write methods
+			response = await API.userDelete(userID, 'items/junk', ['If-Unmodified-Since-Version: 0']);
+			assert404(response);
+			response = await API.userPut(
+				userID,
+				'collections/junk',
+				JSON.stringify({ name: 'Test' }),
+				['Content-Type: application/json']
+			);
+			assert404(response);
+		});
+		
+		it('should return 404 for an unknown path after a valid object key', async function () {
+			let userID = config.get('userID');
+			let itemKey = await API.createItem('book', {}, 'key');
+			let collectionKey = await API.createCollection('Test', {}, 'key');
+			let searchKey = await API.createSearch('Test', 'default', 'key');
+			
+			let paths = [
+				`items/${itemKey}/bogus`,
+				`items/${itemKey}/top`,
+				`items/${itemKey}/trash`,
+				`collections/${collectionKey}/bogus`,
+				`collections/${collectionKey}/top`,
+				`searches/${searchKey}/bogus`
+			];
+			for (let path of paths) {
+				let response = await API.userGet(userID, path);
+				assert404(response, `Expected 404 for ${path}, got ${response.getStatus()}`);
+			}
+		});
+		
+		it('should allow valid object paths', async function () {
+			let userID = config.get('userID');
+			let collectionKey = await API.createCollection('Test', {}, 'key');
+			let itemKey = await API.createItem('book', {
+				collections: [collectionKey],
+				tags: [{ tag: 'foo' }]
+			}, 'key');
+			await API.createNoteItem('Note', itemKey, 'key');
+			let searchKey = await API.createSearch('Test', 'default', 'key');
+			
+			let response = await API.userGet(userID, `items/${itemKey}`);
+			assert200(response);
+			
+			response = await API.userGet(userID, `items/${itemKey}/children`);
+			assert200(response);
+			assertNumResults(response, 1);
+			
+			response = await API.userGet(userID, 'items/top');
+			assert200(response);
+			assertNumResults(response, 1);
+			
+			response = await API.userGet(userID, 'items/trash');
+			assert200(response);
+			
+			response = await API.userGet(userID, `collections/${collectionKey}`);
+			assert200(response);
+			
+			response = await API.userGet(userID, `collections/${collectionKey}/items`);
+			assert200(response);
+			assertNumResults(response, 2);
+			
+			response = await API.userGet(userID, `collections/${collectionKey}/items/top`);
+			assert200(response);
+			assertNumResults(response, 1);
+			
+			response = await API.userGet(userID, `searches/${searchKey}`);
+			assert200(response);
+			
+			response = await API.userGet(userID, 'tags/foo');
+			assert200(response);
+			assertNumResults(response, 1);
+			
+			response = await API.userPut(
+				userID,
+				'settings/tagColors',
+				JSON.stringify({ value: [{ name: '_READ', color: '#990000' }] }),
+				['Content-Type: application/json', 'If-Unmodified-Since-Version: 0']
+			);
+			assert204(response);
+			response = await API.userGet(userID, 'settings/tagColors');
+			assert200(response);
+			
+			API.useAPIKey('');
+			response = await API.post(
+				'keys/sessions',
+				'',
+				['User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15) Zotero/7.0']
+			);
+			assert201(response);
+			let sessionToken = API.getJSONFromResponse(response).sessionToken;
+			response = await API.get(`keys/sessions/${sessionToken}`);
+			assert200(response);
+			API.useAPIKey(config.get('apiKey'));
+		});
 	});
 });

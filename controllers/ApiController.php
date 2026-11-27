@@ -483,6 +483,16 @@ class ApiController extends Controller {
 		
 		$this->singleObject = $this->objectKey && !$this->subset;
 		
+		// Reject invalid object keys and unknown subpaths
+		if ($this->objectKey && in_array($this->action, ['items', 'collections', 'searches'])) {
+			if (!Zotero_ID::isValidKey($this->objectKey)) {
+				$this->e404();
+			}
+			if ($this->subset && !($this->action == 'items' && $this->subset == 'children')) {
+				$this->e404();
+			}
+		}
+		
 		$this->checkLibraryIfModifiedSinceVersion($this->action);
 		
 		// If Accept header includes application/atom+xml, send Atom, as long as there's no 'format'
