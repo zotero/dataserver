@@ -614,12 +614,24 @@ class Zotero_Collection extends Zotero_DataObject {
 	
 	
 	/*
-	 * Returns an array keyed by tagID with the number of linked items for each tag
+	 * Returns an array keyed by tagID with the number of linked items, including their children, for each tag
 	 * in this collection
 	 */
 	public function getTagItemCounts() {
-		$sql = "SELECT tagID, COUNT(*) AS numItems FROM tags JOIN itemTags USING (tagID)
-				JOIN collectionItems USING (itemID) WHERE collectionID=? GROUP BY tagID";
+		$sql = 'SELECT tagID, COUNT(*) AS numItems 
+		FROM tags 
+		JOIN (
+			SELECT itemID, tagID FROM itemTags
+			UNION ALL
+			SELECT sourceItemID AS itemID, tagID FROM itemTags 
+			JOIN itemAttachments ON itemTags.itemID = itemAttachments.itemID
+			UNION ALL
+			SELECT sourceItemID AS itemID, tagID FROM itemTags 
+			JOIN itemNotes ON itemTags.itemID = itemNotes.itemID
+		) combinedTags USING (tagID)
+		JOIN collectionItems USING (itemID) 
+		WHERE collectionID = ? 
+		GROUP BY tagID';
 		$rows = Zotero_DB::query($sql, $this->id, Zotero_Shards::getByLibraryID($this->libraryID));
 		if (!$rows) {
 			return false;
