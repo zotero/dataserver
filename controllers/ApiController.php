@@ -772,16 +772,15 @@ class ApiController extends Controller {
 				$limits['rate'] = $this->buildRateLimit(
 					'user_citation', $this->userID . '-citation', $forceEnforce);
 			}
+			// Slightly higher for tags (web library autocomplete)
+			else if ($this->name == 'Tags'
+					&& isset($this->queryParams['q']) && $this->queryParams['q'] !== '') {
+				$limits['rate'] = $this->buildRateLimit(
+					'user_tag_searches', $this->userID . '-tags-searches', $forceEnforce);
+			}
 			else if (!empty($this->queryParams['q'])) {
-				// Slightly higher for tags (web library autocomplete)
-				if ($this->name == 'Tags') {
-					$limits['rate'] = $this->buildRateLimit(
-						'user_tag_searches', $this->userID . '-tags-searches', $forceEnforce);
-				}
-				else {
-					$limits['rate'] = $this->buildRateLimit(
-						'user_searches', $this->userID . '-searches', $forceEnforce);
-				}
+				$limits['rate'] = $this->buildRateLimit(
+					'user_searches', $this->userID . '-searches', $forceEnforce);
 			}
 			else {
 				$limits['rate'] = $this->buildRateLimit(

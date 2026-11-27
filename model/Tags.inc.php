@@ -176,7 +176,7 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 					. ") ";
 		}
 		
-		if (!empty($params['q'])) {
+		if (isset($params['q']) && $params['q'] !== '') {
 			if (!is_array($params['q'])) {
 				$params['q'] = array($params['q']);
 			}

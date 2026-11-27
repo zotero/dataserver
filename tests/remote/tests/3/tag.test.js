@@ -1004,4 +1004,13 @@ describe('Tags', function () {
 		let json = API.getJSONFromResponse(response);
 		assert.deepEqual(json.map(x => x.tag), ['a']);
 	});
+
+	it('should handle a 0 tag query', async function () {
+		await API.createItem('book', {
+			tags: [{ tag: '0' }, { tag: 'a10' }, { tag: 'b' }]
+		}, 'key');
+
+		assert.deepEqual(await getTagNames('tags?q=0'), ['0', 'a10']);
+		assert.deepEqual(await getTagNames('tags?q=0&qmode=startswith'), ['0']);
+	});
 });
