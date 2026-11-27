@@ -683,6 +683,27 @@ describe('Tags', function () {
 		);
 	});
 
+	it('should treat wildcard characters in tag query as literals', async function () {
+		await API.createItem('book', {
+			tags: [
+				{ tag: '100% done' },
+				{ tag: '100 percent' },
+				{ tag: 'a_b' },
+				{ tag: 'axb' },
+				{ tag: 'wow!' }
+			]
+		}, 'key');
+
+		assert.deepEqual(await getTagNames('tags?q=100%25'), ['100% done']);
+		assert.deepEqual(await getTagNames('tags?q=%25'), ['100% done']);
+		assert.deepEqual(await getTagNames('tags?q=a_b'), ['a_b']);
+		assert.deepEqual(await getTagNames('tags?q=_'), ['a_b']);
+		assert.deepEqual(await getTagNames('tags?q=a_&qmode=startswith'), ['a_b']);
+		assert.deepEqual(await getTagNames('tags?q=_b&qmode=startswith'), []);
+		assert.deepEqual(await getTagNames('tags?q=w!'), ['wow!']);
+		assert.deepEqual(await getTagNames('tags?q=!'), ['wow!']);
+	});
+
 	// PHP: testOrphanedTag
 	it('should handle orphaned tag', async function () {
 		let json = await API.createItem('book', {

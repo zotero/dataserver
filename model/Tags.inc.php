@@ -181,8 +181,10 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 				$params['q'] = array($params['q']);
 			}
 			foreach ($params['q'] as $q) {
+				// Match LIKE wildcards literally
+				$q = preg_replace('/[!%_]/', '!$0', $q);
 				// Force a case-insensitive match
-				$sql .= "AND name COLLATE utf8mb4_unicode_ci LIKE ? ";
+				$sql .= "AND name COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '!' ";
 				if ($params['qmode'] == 'startswith') {
 					$sqlParams[] = "$q%";
 				}
