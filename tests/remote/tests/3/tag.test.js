@@ -15,7 +15,8 @@ import {
 	assert412,
 	assert413ForObject,
 	assert428,
-	assertNumResults
+	assertNumResults,
+	assertTotalResults
 } from '../../assertions3.js';
 import { setup } from '../../setup.js';
 
@@ -36,6 +37,12 @@ describe('Tags', function () {
 	after(async function () {
 		await API.userClear(config.get('userID'));
 	});
+
+	async function getTagNames(suffix) {
+		let response = await API.userGet(config.get('userID'), suffix);
+		assert200(response);
+		return API.getJSONFromResponse(response).map(x => x.tag).sort();
+	}
 
 	// PHP: test_empty_tag_should_be_ignored
 	it('should ignore empty tag', async function () {
@@ -604,6 +611,76 @@ describe('Tags', function () {
 		);
 		assert200(response);
 		assertNumResults(response, 1);
+	});
+
+	it('should handle tag query case- and accent-insensitively', async function () {
+		await API.createItem('book', {
+			tags: [
+				{ tag: 'Foo Bar' },
+				{ tag: 'foo baz' },
+				{ tag: 'Café' }, // Café
+				{ tag: 'qux' }
+			]
+		}, 'key');
+
+		assert.deepEqual(await getTagNames('tags?q=FOO'), ['Foo Bar', 'foo baz']);
+		assert.deepEqual(await getTagNames('tags?q=foo&qmode=startswith'), ['Foo Bar', 'foo baz']);
+		assert.deepEqual(await getTagNames('tags?q=bar'), ['Foo Bar']);
+		assert.deepEqual(await getTagNames('tags?q=bar&qmode=startswith'), []);
+		assert.deepEqual(await getTagNames('tags?q=cafe'), ['Café']);
+		assert.deepEqual(await getTagNames('tags?q=CAF%C3%89'), ['Café']);
+
+		let response = await API.userGet(config.get('userID'), 'tags?q=FOO&limit=1');
+		assert200(response);
+		assertNumResults(response, 1);
+		assertTotalResults(response, 2);
+	});
+
+	it('should handle tag query case-insensitively within items', async function () {
+		let collectionKey = await API.createCollection('Collection', false, 'key');
+		await API.createItem('book', {
+			collections: [collectionKey],
+			tags: [
+				{ tag: 'Alpha' },
+				{ tag: 'beta' }
+			]
+		}, 'key');
+		await API.createItem('book', {
+			tags: [
+				{ tag: 'ALPHABET' },
+				{ tag: 'gamma' },
+				{ tag: 'alpha auto', type: 1 }
+			]
+		}, 'key');
+
+		assert.deepEqual(
+			await getTagNames('items/tags?q=alpha'),
+			['ALPHABET', 'Alpha', 'alpha auto']
+		);
+		assert.deepEqual(
+			await getTagNames('items/top/tags?q=ALPHA'),
+			['ALPHABET', 'Alpha', 'alpha auto']
+		);
+		assert.deepEqual(
+			await getTagNames('items/tags?q=ALPHA&tagType=0'),
+			['ALPHABET', 'Alpha']
+		);
+		assert.deepEqual(
+			await getTagNames('items/tags?q=alpha&itemTag=gamma'),
+			['ALPHABET', 'alpha auto']
+		);
+		assert.deepEqual(
+			await getTagNames(`collections/${collectionKey}/tags?q=alpha`),
+			['Alpha']
+		);
+		assert.deepEqual(
+			await getTagNames(`collections/${collectionKey}/items/tags?q=ALPHA`),
+			['Alpha']
+		);
+		assert.deepEqual(
+			await getTagNames(`collections/${collectionKey}/items/top/tags?q=alpha`),
+			['Alpha']
+		);
 	});
 
 	// PHP: testOrphanedTag

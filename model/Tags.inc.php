@@ -181,7 +181,8 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 				$params['q'] = array($params['q']);
 			}
 			foreach ($params['q'] as $q) {
-				$sql .= "AND name LIKE ? ";
+				// Force a case-insensitive match
+				$sql .= "AND name COLLATE utf8mb4_unicode_ci LIKE ? ";
 				if ($params['qmode'] == 'startswith') {
 					$sqlParams[] = "$q%";
 				}
