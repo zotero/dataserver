@@ -176,12 +176,15 @@ class Zotero_Tags extends Zotero_ClassicDataObjects {
 					. ") ";
 		}
 		
-		if (!empty($params['q'])) {
+		if (isset($params['q']) && $params['q'] !== '') {
 			if (!is_array($params['q'])) {
 				$params['q'] = array($params['q']);
 			}
 			foreach ($params['q'] as $q) {
-				$sql .= "AND name LIKE ? ";
+				// Match LIKE wildcards literally
+				$q = preg_replace('/[!%_]/', '!$0', $q);
+				// Force a case-insensitive match
+				$sql .= "AND name COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '!' ";
 				if ($params['qmode'] == 'startswith') {
 					$sqlParams[] = "$q%";
 				}
