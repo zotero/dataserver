@@ -29,7 +29,8 @@ class Z_CONFIG_RATE_LIMITS {
 	// ApiController::limits():
 	//   user_mappings, user_writes, user_tag_searches, user_searches,
 	//   user_citation, user_default, anon_mappings, anon_citation,
-	//   anon_default, errors_anon, errors_user
+	//   anon_default, errors_anon, errors_user, user_query_time,
+	//   anon_query_time, library_anon_query_time
 	//
 	// Each entry:
 	//   replenishRate: tokens added per second
@@ -38,6 +39,32 @@ class Z_CONFIG_RATE_LIMITS {
 	//                  rejecting them. Defaults to false (enforce).
 	//
 	// Buckets not listed here use DEFAULT_RATE.
+	//
+	// user_query_time and anon_query_time are measured in seconds of DB query
+	// time rather than requests. Each request's query time is debited at
+	// request end, so the balance can go negative, and requests are rejected
+	// while it's zero or below. They catch clients that make expensive
+	// requests (e.g., deep 'start' offsets in large libraries) at a rate the
+	// request-count buckets allow. A normal client uses well under 1 second
+	// of query time per second.
+	//
+	// Query time is wall-clock time, so a DB slowdown inflates every
+	// client's charges. But a request's query time can't exceed its
+	// duration, so a client with N requests in flight can't use more than N
+	// seconds of query time per second, however slow the DB gets. Keep
+	// replenishRate above the concurrency of legitimate clients, so that a
+	// slowdown can't get them rejected. Desktop sync makes up to 4 requests
+	// at once, and a user can have several devices syncing at once. Clients
+	// worth limiting use 10 to 100 times more (e.g., a script with 5 to 10
+	// deep pages in flight at 15 to 20 seconds each).
+	//
+	// library_anon_query_time is a query time bucket per library, charged by
+	// all anonymous requests to that library, to catch expensive requests to
+	// one public library spread across many IPs. Anonymous use of a public
+	// library is normally well under 1 second of query time per second.
+	// Because this bucket combines unrelated clients, no single client's
+	// concurrency limits it, so a severe DB slowdown can empty it for a busy
+	// library.
 	//
 	// tts_live is used by TTSController::speak() rather than limits(). Its
 	// tokens are seconds of synthesized audio, debited after each cache miss,
@@ -49,6 +76,9 @@ class Z_CONFIG_RATE_LIMITS {
 	// multiple devices.
 	public static $RATES = [
 		'tts_live' => ['replenishRate' => 6, 'capacity' => 600],
+		'user_query_time' => ['replenishRate' => 10, 'capacity' => 600],
+		'anon_query_time' => ['replenishRate' => 5, 'capacity' => 300],
+		'library_anon_query_time' => ['replenishRate' => 5, 'capacity' => 300],
 	];
 
 	// Per-bucket concurrent-request limits. Keys:

@@ -39,6 +39,9 @@ class Zotero_DB {
 	
 	protected static $instances;
 	
+	// Seconds spent executing statements during this request
+	private static $queryTime = 0.0;
+	
 	protected $connections = [];
 	protected $replicaConnections = [];
 	private $profilerEnabled = false;
@@ -1239,6 +1242,21 @@ class Zotero_DB {
 	}
 	
 	
+	public static function addQueryTime($seconds) {
+		self::$queryTime += $seconds;
+	}
+	
+	
+	/**
+	 * Get the total time spent executing statements during this request
+	 *
+	 * @return float Seconds
+	 */
+	public static function getQueryTime() {
+		return self::$queryTime;
+	}
+	
+	
 	public static function profileStart() {
 		$instance = self::getInstance();
 		$instance->profilerEnabled = true;
@@ -1513,6 +1531,16 @@ class Zotero_DB_Statement extends Zend_Db_Statement_Mysqli {
 		$this->shardID = $shardID;
 		
 		$this->isWriteQuery = Zotero_DB::isWriteQuery($sql);
+	}
+	
+	public function _execute(?array $params = null) {
+		$start = microtime(true);
+		try {
+			return parent::_execute($params);
+		}
+		finally {
+			Zotero_DB::addQueryTime(microtime(true) - $start);
+		}
 	}
 	
 	public function __get($name) {

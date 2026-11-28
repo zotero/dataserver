@@ -72,6 +72,7 @@ class ApiController extends Controller {
 	protected $headers = [];
 	protected $isLegacySchemaClient = false;
 	protected $errorRateLimit;
+	protected $queryTimeRateLimits = [];
 	
 	private $startTime = false;
 	private $timeLogged = false;
@@ -108,6 +109,7 @@ class ApiController extends Controller {
 		
 		register_shutdown_function(array($this, 'finishConcurrentRequest'));
 		register_shutdown_function(array($this, 'recordErrorForLimiter'));
+		register_shutdown_function(array($this, 'debitQueryTimeForLimiter'));
 		register_shutdown_function(array($this, 'checkDBTransactionState'));
 		register_shutdown_function(array($this, 'logTotalRequestTime'));
 		register_shutdown_function(array($this, 'checkForFatalError'));
@@ -677,8 +679,8 @@ class ApiController extends Controller {
 			return;
 		}
 		
-		// Skip if neither rate nor concurrency limit isn't set
-		if (empty($limits['rate']) && empty($limits['concurrency'])) {
+		// Skip if no limits are set
+		if (empty($limits['rate']) && empty($limits['concurrency']) && empty($limits['queryTime'])) {
 			return;
 		}
 
@@ -705,6 +707,35 @@ class ApiController extends Controller {
 				if (!$limits['errors']['logOnly']) {
 					header('Retry-After: ' . (int) ($limits['errors']['capacity'] / $limits['errors']['replenishRate']));
 					$this->e429('Too many invalid requests');
+				}
+			}
+		}
+
+		// Query time limits: check the balances at request entry. The time
+		// spent in DB queries is debited in debitQueryTimeForLimiter() at
+		// request end, so a balance can go negative after an expensive
+		// request.
+		if (!empty($limits['queryTime'])) {
+			$this->queryTimeRateLimits = $limits['queryTime'];
+			foreach ($limits['queryTime'] as $type => $limit) {
+				$balance = Z_RequestLimiter::getBucketBalance($limit);
+				if ($balance === null || $balance > 0) {
+					continue;
+				}
+				$retryAfter = (int) ceil(-$balance / $limit['replenishRate']) + 1;
+				StatsD::increment("api.request.limit.$type.rejected", 1);
+				$this->logLimitError(
+					$limit['bucket'],
+					($limit['logOnly'] ? '(WARN) ' : '')
+						. 'Request query time limit exceeded for ' . $limit['bucket']
+						. ' (balance ' . round($balance, 1) . 's, retry after ' . $retryAfter . 's)'
+						. ' for ' . $this->method . ' to ' . $_SERVER['REQUEST_URI']
+						. ' from ' . IPAddress::getIP()
+						. ' (' . ($_SERVER['HTTP_USER_AGENT'] ?? '') . ')'
+				);
+				if (!$limit['logOnly']) {
+					header('Retry-After: ' . $retryAfter);
+					$this->e429('Request query time limit exceeded');
 				}
 			}
 		}
@@ -748,7 +779,7 @@ class ApiController extends Controller {
 	 * Tunable values live in config/rate_limits.inc.php; this method only
 	 * selects a bucket for the current request.
 	 *
-	 * @return array ['rate'=>[], 'concurrency'=>[]]
+	 * @return array ['rate'=>[], 'concurrency'=>[], 'errors'=>[], 'queryTime'=>[]]
 	 */
 	protected function limits() {
 		$limits = [];
@@ -857,7 +888,66 @@ class ApiController extends Controller {
 			$limits['errors'] = $this->buildRateLimit(
 				'errors_anon', 'errors-anon-' . $ip, $forceEnforce);
 		}
+
+		// Query time budgets: tokens are seconds spent in DB queries, debited
+		// at request end (see debitQueryTimeForLimiter()). They catch clients
+		// making expensive requests at a rate the request-count buckets allow.
+		// Anonymous requests are also charged to a per-library bucket, which
+		// catches expensive requests to one library spread across many IPs.
+		if (!$this->fileMode) {
+			$queryTimeLimits = [];
+			if (!empty($this->userID)) {
+				$queryTimeLimits['user_query_time'] = 'query-time-user-' . $this->userID;
+			}
+			else {
+				$queryTimeLimits['anon_query_time'] = 'query-time-anon-' . $ip;
+				if (!empty($this->objectLibraryID)) {
+					$queryTimeLimits['library_anon_query_time']
+						= 'query-time-library-anon-' . $this->objectLibraryID;
+				}
+			}
+			foreach ($queryTimeLimits as $type => $bucket) {
+				$limit = $this->buildQueryTimeRateLimit($type, $bucket, $forceEnforce);
+				if ($limit) {
+					$limits['queryTime'][$type] = $limit;
+				}
+			}
+		}
 		return $limits;
+	}
+
+	/**
+	 * Build a query time bucket from the config
+	 *
+	 * On testing sites, a Zotero-Test-Query-Time-Limit header with 'type',
+	 * 'bucket', 'capacity', and 'replenishRate' in query-string format
+	 * replaces the query time bucket of that type with an isolated,
+	 * always-enforced one and skips the other query time buckets.
+	 *
+	 * @return array|null
+	 */
+	private function buildQueryTimeRateLimit($type, $bucket, $forceEnforce) {
+		if (!Z_ENV_TESTING_SITE || !isset($_SERVER['HTTP_ZOTERO_TEST_QUERY_TIME_LIMIT'])) {
+			return $this->buildRateLimit($type, $bucket, $forceEnforce);
+		}
+		parse_str($_SERVER['HTTP_ZOTERO_TEST_QUERY_TIME_LIMIT'], $params);
+		$types = ['user_query_time', 'anon_query_time', 'library_anon_query_time'];
+		if (!in_array($params['type'] ?? '', $types, true)
+				|| !preg_match('/^[A-Za-z0-9]{1,32}$/', $params['bucket'] ?? '')
+				|| !is_numeric($params['capacity'] ?? null)
+				|| !is_numeric($params['replenishRate'] ?? null)
+				|| $params['replenishRate'] <= 0) {
+			$this->e400("Invalid Zotero-Test-Query-Time-Limit header");
+		}
+		if ($params['type'] != $type) {
+			return null;
+		}
+		return [
+			'logOnly' => false,
+			'bucket' => 'query-time-test-' . $params['bucket'] . '-' . $bucket,
+			'replenishRate' => (float) $params['replenishRate'],
+			'capacity' => (float) $params['capacity'],
+		];
 	}
 
 	/**
@@ -1671,6 +1761,22 @@ class ApiController extends Controller {
 		}
 		Z_RequestLimiter::checkBucketRate($this->errorRateLimit);
 	}
+
+	/**
+	 * Debit the query time buckets by the time spent in DB queries
+	 */
+	public function debitQueryTimeForLimiter() {
+		if (!$this->queryTimeRateLimits) {
+			return;
+		}
+		$cost = Zotero_DB::getQueryTime();
+		if ($cost <= 0) {
+			return;
+		}
+		foreach ($this->queryTimeRateLimits as $limit) {
+			Z_RequestLimiter::debitBucket($limit, $cost);
+		}
+	}
 	
 	public function checkDBTransactionState($noLog = false) {
 		if (Zotero_DB::transactionInProgress()) {
@@ -1726,6 +1832,7 @@ class ApiController extends Controller {
 		}
 
 		StatsD::timing("api.memcached", Z_Core::$MC->requestTime * 1000, 0.25);
+		StatsD::timing("api.db", Zotero_DB::getQueryTime() * 1000, 0.25);
 		StatsD::timing("api.request.total", (microtime(true) - $this->startTime) * 1000, 0.25);
 	}
 }
