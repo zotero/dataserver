@@ -27,6 +27,9 @@
 declare(strict_types=1);
 
 class ApiController extends Controller {
+	// Deepest list offset allowed (see checkStartOffset())
+	const MAX_START = 50000;
+	
 	protected $writeTokenCacheTime = 43200; // 12 hours
 	
 	private $profile = false;
@@ -520,6 +523,7 @@ class ApiController extends Controller {
 
 		// Request limiter needs initialized authentication parameters, fileMode, and queryParams
 		$this->initRequestLimiter();
+		$this->checkStartOffset();
 
 		// Sorting by Item Type or Added By currently require writing to shard tables, so don't
 		// send those to the read replicas
@@ -854,6 +858,50 @@ class ApiController extends Controller {
 				'errors_anon', 'errors-anon-' . $ip, $forceEnforce);
 		}
 		return $limits;
+	}
+
+	/**
+	 * Reject list requests with a deep 'start'
+	 *
+	 * Each page of a deep offset scans every row before it, so re-paging a
+	 * large library this way is very expensive. Requests from the web
+	 * library are exempt so it can still scroll through large libraries.
+	 */
+	protected function checkStartOffset() {
+		if ($this->method != 'GET' || $this->singleObject) {
+			return;
+		}
+		if (empty($this->queryParams['start'])
+				|| $this->queryParams['start'] <= self::MAX_START) {
+			return;
+		}
+		if (($_SERVER['HTTP_ORIGIN'] ?? '') === rtrim(Z_CONFIG::$WWW_BASE_URI, '/')) {
+			return;
+		}
+		StatsD::increment('api.request.limit.start.rejected', 1);
+		$client = !empty($this->userID) ? 'user ' . $this->userID : IPAddress::getIP();
+		$this->logLimitError(
+			'start-' . $client,
+			"Rejected 'start' of " . $this->queryParams['start'] . ' from ' . $client
+				. ' for ' . $this->method . ' to ' . $_SERVER['REQUEST_URI']
+				. ' (' . ($_SERVER['HTTP_USER_AGENT'] ?? '') . ')'
+		);
+		$this->e400("'start' cannot be greater than " . self::MAX_START . ". "
+			. "To retrieve all data in a library, use version-based syncing: "
+			. "https://www.zotero.org/support/dev/web_api/v3/syncing");
+	}
+
+	/**
+	 * Log a limit error at most once a minute per key
+	 *
+	 * Clients over a limit often keep sending requests, so logging every
+	 * rejection would flood the log.
+	 */
+	protected function logLimitError($key, $message) {
+		if (!Z_Core::$MC->add('limitLog_' . md5($key), 1, 60)) {
+			return;
+		}
+		Z_Core::logError($message);
 	}
 
 	/**

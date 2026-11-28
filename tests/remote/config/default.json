@@ -1,6 +1,7 @@
 {
 	"verbose": 0,
 	"apiURLPrefix": "",
+	"wwwOrigin": "",
 	"rootUsername": "",
 	"rootPassword": "",
 	"awsRegion": "us-east-1",
